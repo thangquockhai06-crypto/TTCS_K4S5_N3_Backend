@@ -1115,3 +1115,9 @@ db = Database()
             'categories': sorted(list(set(p.get('category', 'General') for p in prods))),
             'active_catalog_version': '2026.Q4'
         }
+
+    def check_customer_credit_limit(self, customer_id: str, order_value: float) -> bool:
+        """Kiểm tra hạn mức công nợ khách hàng trước khi phê duyệt báo giá"""
+        cust = self.customers.get(customer_id)
+        if not cust: return True
+        return order_value <= cust.get('credit_limit', 500000000)
