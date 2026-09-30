@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Trình Kiểm Thử 5 Tiêu Chí Chấp Nhận (Simulator){% endblock %}
+
+{% block content %}
+<div style="max-width: 1050px; margin: 0 auto;">
+    <div style="margin-bottom: 24px;">
+        <span class="ticket-tag" style="background: #ede9fe; color: #5b21b6; border-color: #d8b4fe; font-size: 0.85rem;">
+            TICKET: {{ PARENT_EPIC }} / {{ TICKET_ID }}
+        </span>
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-top: 8px;">
+            ⚡ Trình Kiểm Thử & Chấm Điểm 5 Tiêu Chí Tự Động (Simulator)
+        </h1>
+        <p style="color: #64748b; font-size: 0.95rem;">
+            Bảng điều khiển cho phép người chấm hoặc lập trình viên kiểm thử trực quan và xác thực toàn diện 5 tiêu chí chấp nhận của User Story chỉ trong 1 thao tác bấm nút.
+        </p>
+    </div>
+
+    <!-- BẢNG TỔNG HỢP 5 TIÊU CHÍ CHẤP NHẬN -->
+    <div class="card" style="border-top: 4px solid #7c3aed; padding: 22px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e1b4b; margin: 0;">
+                📋 Bảng Đối Chiếu 5 Tiêu Chí Chấp Nhận (Acceptance Criteria Matrix):
+            </h2>
+            <button id="btnRunTests" class="btn btn-warning btn-lg" onclick="runAutomatedTests()" style="font-weight: 800; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                ▶️ Chạy Kiểm Thử 5 Tiêu Chí Ngay
+            </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;" id="criteriaContainer">
+            <!-- TIÊU CHÍ 1 -->
+            <div class="card" style="margin: 0; padding: 16px 20px; background: #f8fafc; border: 1px solid var(--border-color);" id="card-AC1">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="max-width: 800px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">
+                            Tiêu chí 1: Dòng sản phẩm được kế thừa từ cơ hội, sửa lại được
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            Hàm <code>create_quote_from_opportunity()</code> tự động clone toàn bộ sản phẩm từ cơ hội. Cho phép thêm, sửa số lượng, giá và xóa dòng linh hoạt qua <code>save_draft()</code>.
+                        </div>
+                        <div class="test-details" style="font-size: 0.8rem; color: #059669; margin-top: 6px; font-weight: 600;">
+                            Sẵn sàng kiểm thử.
+                        </div>
+                    </div>
+                    <span class="badge badge-slate status-badge" style="font-size: 0.85rem; padding: 6px 14px;">Chờ chạy</span>
+                </div>
+            </div>
+
+            <!-- TIÊU CHÍ 2 -->
+            <div class="card" style="margin: 0; padding: 16px 20px; background: #f8fafc; border: 1px solid var(--border-color);" id="card-AC2">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="max-width: 800px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">
+                            Tiêu chí 2: Mỗi dòng nhập chiết khấu theo phần trăm hoặc số tiền, hệ thống tính lại thành tiền ngay
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            Hỗ trợ 2 chế độ: <code>PERCENT</code> (Ví dụ: 10% tính tiền chiết khấu = SL * Đơn giá * 10%) và <code>AMOUNT</code> (Chiết khấu số tiền VNĐ cố định). Tính toán chính xác ở cả Frontend JS và Backend Python.
+                        </div>
+                        <div class="test-details" style="font-size: 0.8rem; color: #059669; margin-top: 6px; font-weight: 600;">
+                            Sẵn sàng kiểm thử.
+                        </div>
+                    </div>
+                    <span class="badge badge-slate status-badge" style="font-size: 0.85rem; padding: 6px 14px;">Chờ chạy</span>
+                </div>
+            </div>
+
+            <!-- TIÊU CHÍ 3 -->
+            <div class="card" style="margin: 0; padding: 16px 20px; background: #f8fafc; border: 1px solid var(--border-color);" id="card-AC3">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="max-width: 800px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">
+                            Tiêu chí 3: Hiển thị mức chiết khấu tổng và cảnh báo khi chạm ngưỡng cần duyệt
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            Tính mức chiết khấu tổng (%) = <code>(Tổng chiết khấu / Tổng trước chiết khấu) * 100%</code>. Khi chạm ngưỡng >= 10.0%, lập tức kích hoạt cảnh báo viền đỏ, chuyển trạng thái <code>PENDING_APPROVAL</code> gửi tới Trưởng nhóm / Giám đốc duyệt.
+                        </div>
+                        <div class="test-details" style="font-size: 0.8rem; color: #059669; margin-top: 6px; font-weight: 600;">
+                            Sẵn sàng kiểm thử.
+                        </div>
+                    </div>
+                    <span class="badge badge-slate status-badge" style="font-size: 0.85rem; padding: 6px 14px;">Chờ chạy</span>
+                </div>
+            </div>
+
+            <!-- TIÊU CHÍ 4 -->
+            <div class="card" style="margin: 0; padding: 16px 20px; background: #f8fafc; border: 1px solid var(--border-color);" id="card-AC4">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="max-width: 800px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">
+                            Tiêu chí 4: Khai báo hiệu lực báo giá, điều khoản thanh toán và điều khoản giao hàng
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            Cung cấp bộ trường dữ liệu và mẫu soạn sẵn cho Hiệu lực báo giá (ngày hết hạn tự động tính), Điều khoản thanh toán (Net 30, tạm ứng 50%, v.v.), Điều khoản giao hàng (DDP, 24h nội thành).
+                        </div>
+                        <div class="test-details" style="font-size: 0.8rem; color: #059669; margin-top: 6px; font-weight: 600;">
+                            Sẵn sàng kiểm thử.
+                        </div>
+                    </div>
+                    <span class="badge badge-slate status-badge" style="font-size: 0.85rem; padding: 6px 14px;">Chờ chạy</span>
+                </div>
+            </div>
+
+            <!-- TIÊU CHÍ 5 -->
+            <div class="card" style="margin: 0; padding: 16px 20px; background: #f8fafc; border: 1px solid var(--border-color);" id="card-AC5">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="max-width: 800px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">
+                            Tiêu chí 5: Lưu nháp và sửa tiếp được
+                        </div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            Hàm <code>save_draft()</code> bảo toàn trạng thái <code>DRAFT</code>, tự động tăng phiên bản nháp <code>v1, v2, v3...</code>. Báo giá nháp cho phép mở lại form chỉnh sửa bất kỳ lúc nào mà không bị khóa.
+                        </div>
+                        <div class="test-details" style="font-size: 0.8rem; color: #059669; margin-top: 6px; font-weight: 600;">
+                            Sẵn sàng kiểm thử.
+                        </div>
+                    </div>
+                    <span class="badge badge-slate status-badge" style="font-size: 0.85rem; padding: 6px 14px;">Chờ chạy</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- HỘP NHẬT KÝ KIỂM THỬ XUẤT RA -->
+        <div style="margin-top: 20px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 8px;">
+                📜 Nhật Ký Chi Tiết Quá Trình Kiểm Thử (Live Execution Logs):
+            </div>
+            <pre id="executionLogs" style="background: #0f172a; color: #38bdf8; padding: 16px; border-radius: var(--radius-md); font-family: Consolas, monospace; font-size: 0.84rem; max-height: 250px; overflow-y: auto; line-height: 1.6;">Nhấn "▶️ Chạy Kiểm Thử 5 Tiêu Chí Ngay" để bắt đầu quá trình kiểm tra tự động...</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+function runAutomatedTests() {
+    const btn = document.getElementById('btnRunTests');
+    const logs = document.getElementById('executionLogs');
+    btn.disabled = true;
+    btn.textContent = "⏳ Đang chạy kiểm thử...";
+    logs.textContent = "[BẮT ĐẦU] Khởi tạo phiên kiểm thử tự động 5 tiêu chí chấp nhận...\n";
+
+    fetch('/api/run-simulator-tests')
+        .then(res => res.json())
+        .then(data => {
+            logs.textContent += `[THỜI ĐIỂM] ${data.timestamp}\n`;
+            let allPassed = true;
+
+            data.results.forEach(item => {
+                const card = document.getElementById(`card-${item.id}`);
+                if (card) {
+                    const badge = card.querySelector('.status-badge');
+                    const details = card.querySelector('.test-details');
+                    
+                    if (item.status === 'PASSED') {
+                        badge.className = 'badge badge-green status-badge';
+                        badge.textContent = '✅ Đạt 100%';
+                        card.style.borderLeft = '4px solid #10b981';
+                        details.style.color = '#059669';
+                    } else {
+                        badge.className = 'badge badge-red status-badge';
+                        badge.textContent = '❌ Không đạt';
+                        card.style.borderLeft = '4px solid #ef4444';
+                        details.style.color = '#dc2626';
+                        allPassed = false;
+                    }
+                    details.textContent = item.details;
+                }
+                logs.textContent += `[${item.status}] ${item.title}\n  -> ${item.details}\n\n`;
+            });
+
+            if (allPassed) {
+                logs.textContent += "🎉 TẤT CẢ 5 TIÊU CHÍ ĐỀU VƯỢT QUA KIỂM THỬ XUẤT SẮC (5/5 PASSED - 100%)!\n";
+            } else {
+                logs.textContent += "⚠️ Có tiêu chí chưa vượt qua, vui lòng kiểm tra lại log chi tiết.\n";
+            }
+
+            btn.disabled = false;
+            btn.textContent = "🔄 Chạy Lại Kiểm Thử";
+        })
+        .catch(err => {
+            logs.textContent += `[LỖI HỆ THỐNG] ${err}\n`;
+            btn.disabled = false;
+            btn.textContent = "▶️ Thử Lại";
+        });
+}
+</script>
+{% endblock %}
