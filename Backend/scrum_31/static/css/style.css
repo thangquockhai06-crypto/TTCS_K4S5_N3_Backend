@@ -633,3 +633,10 @@ body {
         padding: 0 !important;
     }
 }
+
+/* Print styling optimizations */
+@media print {
+    .no-print { display: none !important; }
+    body { font-size: 12pt; color: #000; }
+    .quote-box { border: 1px solid #333; padding: 15mm; }
+}
