@@ -13,9 +13,11 @@ from app.routers.org_tree import router as org_tree_router
 from app.routers.custom_fields import router as custom_fields_router
 from app.routers.pipelines import router as pipelines_router
 from app.routers.win_loss import router as win_loss_router
+from app.routers.user_import import router as user_import_router
 
 __all__ = [
     "auth_router",
+    "user_import_router",
     "users_router",
     "customers_router",
     "deals_router",

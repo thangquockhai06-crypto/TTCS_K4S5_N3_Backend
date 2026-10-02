@@ -57,3 +57,19 @@ def get_current_user(
         )
 
     return user
+
+
+ADMIN_ROLES = {"super admin", "admin", "quản trị viên", "sales director"}
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Xác thực quyền quản trị viên (Admin / Super Admin / Sales Director).
+    Nếu không có quyền -> trả về HTTP 403 Forbidden.
+    """
+    user_role = (current_user.role or "").strip().lower()
+    if user_role not in ADMIN_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thực hiện thao tác quản trị này.",
+        )
+    return current_user
