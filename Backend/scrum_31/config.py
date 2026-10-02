@@ -181,3 +181,7 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 # Validation SKU rules
 VALID_SKU_PREFIXES = ['PRD', 'SRV', 'LIC', 'PKG']
 MIN_PRODUCT_NAME_LENGTH = 3
+
+# Helper formatting
+CURRENCY_SYMBOL = '₫'
+LOCALE_CODE = 'vi_VN'
