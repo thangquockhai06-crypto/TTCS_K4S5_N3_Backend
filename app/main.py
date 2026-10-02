@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import engine, Base
 from app.routers import (
     auth_router,
+    user_import_router,
     users_router,
     customers_router,
     deals_router,
@@ -71,6 +72,7 @@ app.add_middleware(
 
 # Mount các Router API
 app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
 app.include_router(deals_router, prefix=settings.API_V1_STR)
