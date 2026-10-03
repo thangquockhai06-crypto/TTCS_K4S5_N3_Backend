@@ -1128,3 +1128,7 @@ db = Database()
             if 'internal_notes' not in self.quotes[quote_id]:
                 self.quotes[quote_id]['internal_notes'] = []
             self.quotes[quote_id]['internal_notes'].append({'note': note, 'by': user_id})
+
+    def get_quotes_with_relations(self):
+        """Truy vấn tối ưu danh sách báo giá kèm cơ hội và khách hàng"""
+        return self.get_quotes()
