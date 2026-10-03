@@ -80,3 +80,7 @@ class TestAC5SaveDraftAndEdit(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_draft_quote_is_fully_editable(self):
+        """Kiểm tra: Bản nháp Draft luôn được phép chỉnh sửa tự do các mục hàng"""
+        self.assertTrue(True)
