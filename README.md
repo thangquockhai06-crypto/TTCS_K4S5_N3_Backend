@@ -12,7 +12,7 @@ Hệ thống Backend API cho nền tảng **NexusCRM SaaS** phục vụ quản t
   - **SQLite** (Mặc định tự động dự phòng, không yêu cầu cài đặt máy chủ)
   - **MySQL / MariaDB** (Production)
 - **Bảo mật**: JWT (OAuth2 Password Bearer), Bcrypt hashing, Brute-force lockout (15 phút sau 5 lần sai), Role-Based Access Control (RBAC), Data Scope Isolation (Cá nhân, Nhóm, Toàn quốc).
-- **Kiểm thử tự động**: Pytest (63 tests tự động bao phủ 100% Sprint 1 & 2).
+- **Kiểm thử tự động**: Pytest (69 tests tự động bao phủ 100% Sprint 1 & 2).
 
 ---
 
@@ -73,8 +73,43 @@ python run.py
 
 ---
 
+## 📁 Cấu Trúc Toàn Bộ Backend Kho Lưu Trữ
+
+```text
+TTCS_K4S5_N3_Backend/
+├── app/                             # [MÃ NGUỒN CHÍNH FASTAPI PRODUCTION]
+│   ├── config.py                    # Cấu hình hệ thống, JWT, CORS, Database URL
+│   ├── database.py                  # Khởi tạo SQLAlchemy engine, SessionLocal, Base
+│   ├── dependencies.py              # Xác thực Token, RBAC, require_admin, require_roles
+│   ├── main.py                      # Điểm nối kết 16 Router API & Middleware
+│   ├── core/                        # Security, Scope, Redis, Celery, Export
+│   ├── models/                      # 14 SQLAlchemy ORM Models
+│   ├── repositories/                # 10 Repositories xử lý tầng dữ liệu
+│   ├── routers/                     # 16 Routers API RESTful
+│   ├── schemas/                     # 14 Schemas Pydantic v2
+│   └── services/                    # 11 Services xử lý nghiệp vụ & logic
+├── Subtask Backend/                 # [CÁC MODULE SUBTASK SCRUM CỦA NHÓM]
+│   ├── scrum_58/                    # Quản lý khách hàng, liên hệ, chuyển giao liên hệ
+│   ├── scrum_71/                    # Gửi email khôi phục mật khẩu khi quên
+│   ├── scrum_72/                    # Đặt lại mật khẩu mới qua token xác nhận
+│   ├── scrum_74/                    # Mục tiêu nhóm, báo cáo hiệu suất, nhân viên
+│   ├── scrum_75/                    # Báo cáo tài chính, quản lý dự án
+│   ├── scrum_80/                    # Hồ sơ cá nhân và quản lý báo giá
+│   └── scrum_85/                    # Cây sơ đồ tổ chức, vùng miền & phạm vi dữ liệu
+├── tests/                           # [BỘ KIỂM THỬ TỰ ĐỘNG - 69 TESTS PASSED]
+├── init_db.sql                      # Script tạo cơ sở dữ liệu MySQL
+├── requirements.txt                 # Danh sách gói phụ thuộc Python
+├── run.py                           # File khởi chạy Uvicorn server
+├── seed.py                          # Script nạp dữ liệu mẫu
+├── start-server.bat                 # Script chạy nhanh trên Windows
+├── pytest.ini                       # Cấu hình chạy kiểm thử tự động
+└── README.md
+```
+
+---
+
 ## 🧪 Kiểm thử tự động (Unit & Integration Tests)
-Chạy bộ kiểm thử tự động gồm 63 test cases:
+Chạy bộ kiểm thử tự động gồm 69 test cases:
 ```bash
 pytest
 ```
@@ -84,3 +119,5 @@ Bộ test bao gồm:
 - `tests/test_forgot_password.py` (4 tests quên mật khẩu và đặt lại mật khẩu)
 - `tests/test_change_password.py` (4 tests đổi mật khẩu trong phiên)
 - `tests/test_sprint2_features.py` (11 tests nhập Excel, nhật ký kiểm toán, danh mục, sản phẩm, phễu)
+- `tests/test_scrum79_excel_import.py` (6 tests chi tiết xử lý tải template, preview & batch import)
+

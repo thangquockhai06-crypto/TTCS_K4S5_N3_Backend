@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Nhân Sự & Ràng Buộc Nhóm{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="header-intro">
+            <div class="badge-role">👥 Tiêu chí 2: Mỗi nhân viên thuộc đúng một nhóm tại một thời điểm</div>
+            <h1 class="page-title">Quản Lý Nhân Sự & Điều Chuyển Nhóm</h1>
+            <p class="page-subtitle">
+                Đảm bảo tính toàn vẹn dữ liệu: Tại bất kỳ thời điểm nào, <strong>mỗi nhân viên chỉ thuộc duy nhất một nhóm kinh doanh</strong>. Khi thực hiện điều chuyển, hệ thống tự động gỡ nhân viên khỏi nhóm cũ và chuyển sang nhóm mới.
+            </p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="openTransferModal()">
+                <span>🔄</span> Điều Chuyển Nhóm
+            </button>
+            <button class="btn btn-primary" onclick="openAddEmployeeModal()">
+                <span>➕</span> Thêm Nhân Sự Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- RULE HIGHLIGHT ALERT -->
+    <div class="rule-banner">
+        <div class="rule-icon">🛡️</div>
+        <div class="rule-content">
+            <h4>Quy Tắc Toàn Vẹn Của Hệ Thống (Strict Integrity Rule):</h4>
+            <p>Không có bất kỳ trường hợp nhân viên nào có thể thuộc từ 2 nhóm trở lên hoặc lơ lửng ngoài tổ chức. Phạm vi dữ liệu và báo cáo doanh số của nhân sự được tính toán chính xác tuyệt đối theo nhóm duy nhất này.</p>
+        </div>
+    </div>
+
+    <!-- DANH SÁCH NHÂN SỰ -->
+    <div class="content-card mt-4">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">📋 Danh Sách Nhân Viên Doanh Nghiệp ({{ employees|length }} Nhân Sự)</h2>
+                <p class="card-desc">Hiển thị nhóm trực thuộc duy nhất và vai trò lãnh đạo (nếu có) của từng nhân sự.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Họ Và Tên</th>
+                        <th>Chức Danh</th>
+                        <th>Nhóm Hiện Tại (Duy Nhất)</th>
+                        <th>Vai Trò Trưởng Nhóm</th>
+                        <th>Email & Điện Thoại</th>
+                        <th class="text-center">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                        <tr>
+                            <td><code>{{ emp.id }}</code></td>
+                            <td>
+                                <div class="employee-cell">
+                                    <span class="emp-avatar">{{ emp.avatar }}</span>
+                                    <div>
+                                        <strong>{{ emp.name }}</strong>
+                                        {% if emp.is_director %}
+                                            <span class="badge-director-pill">👑 GĐKD Toàn Quốc</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ emp.role_title }}</td>
+                            <td>
+                                <span class="single-team-badge">
+                                    🏢 {{ emp.team_name }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if emp.is_leader %}
+                                    <span class="leader-badge-pill">
+                                        ⭐ Trưởng: {{ emp.led_teams|join(', ') }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">Thành viên đội</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="contact-sub">{{ emp.email }}</div>
+                                <div class="contact-sub font-mono">{{ emp.phone }}</div>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-sm btn-outline" 
+                                        onclick="openTransferForEmp('{{ emp.id }}', '{{ emp.name|escape }}', '{{ emp.team_id }}', '{{ emp.team_name|escape }}')">
+                                    🔄 Chuyển Nhóm
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===========================================================================
+     MODAL: ĐIỀU CHUYỂN NHÂN VIÊN SANG NHÓM MỚI (TIÊU CHÍ 2)
+     =========================================================================== -->
+<div class="modal-overlay" id="transferModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">🔄 Điều Chuyển Nhân Sự Sang Nhóm Mới</h3>
+            <button class="modal-close" onclick="closeModal('transferModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('transfer_employee_action') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Chọn Nhân Viên Cần Điều Chuyển <span class="required">*</span></label>
+                    <select name="emp_id" id="transfer_emp_id" class="form-control" onchange="onSelectTransferEmp(this)" required>
+                        <option value="">-- Chọn Nhân Viên --</option>
+                        {% for emp in employees %}
+                            <option value="{{ emp.id }}" data-current-team="{{ emp.team_name }}" data-team-id="{{ emp.team_id }}">
+                                {{ emp.avatar }} {{ emp.name }} (Đang ở: {{ emp.team_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="current-team-notice" id="transferNoticeBox" style="display:none;">
+                    <span>Nhóm hiện tại:</span> <strong id="noticeOldTeamName">...</strong>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Chọn Nhóm Mới Cần Tiếp Nhận <span class="required">*</span></label>
+                    <select name="new_team_id" id="transfer_new_team_id" class="form-control" required>
+                        <option value="">-- Chọn Nhóm Kinh Doanh Đích --</option>
+                        {% for t in teams %}
+                            <option value="{{ t.id }}">🏢 {{ t.name }} (Trưởng nhóm: {{ t.leader_name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="alert alert-info mt-3" style="font-size: 0.85rem;">
+                    💡 <strong>Cơ chế tự động:</strong> Khi bấm xác nhận, nhân sự này sẽ ngay lập tức được <strong>rời khỏi nhóm cũ</strong> và chỉ thuộc duy nhất về nhóm mới được chọn.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('transferModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Xác Nhận Điều Chuyển</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===========================================================================
+     MODAL: THÊM MỚI NHÂN SỰ
+     =========================================================================== -->
+<div class="modal-overlay" id="addEmployeeModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">➕ Thêm Mới Nhân Sự Kinh Doanh</h3>
+            <button class="modal-close" onclick="closeModal('addEmployeeModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('add_employee_action') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Mã Nhân Viên <span class="required">*</span></label>
+                    <input type="text" name="emp_id" class="form-control" placeholder="Ví dụ: EMP011, EMP012..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Họ Và Tên <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Hoàng Gia Bảo" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chức Danh / Vị Trí</label>
+                    <input type="text" name="role_title" class="form-control" placeholder="Ví dụ: Chuyên Viên Bán Hàng Dự Án">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gán Vào Nhóm Kinh Doanh (Đúng 1 nhóm) <span class="required">*</span></label>
+                    <select name="team_id" class="form-control" required>
+                        <option value="">-- Chọn Nhóm Trực Thuộc Duy Nhất --</option>
+                        {% for t in teams %}
+                            <option value="{{ t.id }}">{{ t.name }} ({{ t.id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label class="form-label">Email Công Ty</label>
+                        <input type="email" name="email" class="form-control" placeholder="bao.hoang@corp.vn">
+                    </div>
+                    <div class="form-group col-6">
+                        <label class="form-label">Số Điện Thoại</label>
+                        <input type="text" name="phone" class="form-control" placeholder="0988 123 456">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addEmployeeModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Thêm Nhân Sự</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

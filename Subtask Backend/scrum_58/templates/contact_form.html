@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}Chỉnh Sửa Người Liên Hệ: {{ contact.full_name }}{% else %}Thêm Mới Người Liên Hệ{% endif %} | SCRUM-58
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('index') }}">Người Liên Hệ</a> &rsaquo;
+    <span>{% if is_edit %}Chỉnh Sửa: {{ contact.full_name }}{% else %}Thêm Mới Người Liên Hệ{% endif %}</span>
+</div>
+
+<div class="form-card-container">
+    <div class="form-card">
+        <div class="form-card-header">
+            <span class="header-icon">{% if is_edit %}✏️{% else %}👤{% endif %}</span>
+            <div>
+                <h1 class="form-heading">
+                    {% if is_edit %}Chỉnh Sửa Thông Tin Người Liên Hệ{% else %}Khai Báo Người Liên Hệ Mới{% endif %}
+                </h1>
+                <p class="form-subheading">
+                    Tuân thủ <strong>Tiêu chí 1</strong> (chức danh, email, SĐT), <strong>Tiêu chí 2</strong> (vai trò quyết định mua) và <strong>Tiêu chí 3</strong> (đầu mối chính).
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" action="{% if is_edit %}{{ url_for('contact_edit', contact_id=contact.id) }}{% else %}{{ url_for('contact_create') }}{% endif %}" class="standard-form">
+            <!-- 1. Chọn khách hàng doanh nghiệp -->
+            <div class="form-group">
+                <label for="customer_id" class="form-label required">
+                    🏢 Khách Hàng Doanh Nghiệp (Công Ty):
+                </label>
+                {% if is_edit %}
+                    <input type="text" class="form-control" value="{{ contact.customer_name }}" readonly disabled>
+                    <input type="hidden" name="customer_id" value="{{ contact.customer_id }}">
+                    <small class="form-hint text-info">💡 Để chuyển nhân sự này sang doanh nghiệp khác, vui lòng sử dụng chức năng <strong>"Chuyển công tác"</strong> để bảo lưu lịch sử.</small>
+                {% else %}
+                    <select id="customer_id" name="customer_id" class="form-control" required>
+                        <option value="">-- Vui lòng chọn khách hàng doanh nghiệp --</option>
+                        {% for cust in global_customers %}
+                            <option value="{{ cust.id }}" {% if preset_customer_id == cust.id or form_data.customer_id == cust.id %}selected{% endif %}>
+                                {{ cust.name }} ({{ cust.code }} - {{ cust.industry }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </div>
+
+            <!-- 2. Họ và tên -->
+            <div class="form-group">
+                <label for="full_name" class="form-label required">
+                    👤 Họ Và Tên Đầy Đủ:
+                </label>
+                <input 
+                    type="text" 
+                    id="full_name" 
+                    name="full_name" 
+                    class="form-control" 
+                    value="{% if is_edit %}{{ contact.full_name }}{% else %}{{ form_data.full_name or '' }}{% endif %}" 
+                    placeholder="VD: Nguyễn Văn An, Trần Thị Lan..." 
+                    required
+                >
+            </div>
+
+            <!-- 3. Chức danh & Vị trí (Tiêu chí 1) -->
+            <div class="form-group">
+                <label for="job_title" class="form-label required">
+                    💼 Chức Danh & Vị Trí Công Tác (Tiêu chí 1):
+                </label>
+                <input 
+                    type="text" 
+                    id="job_title" 
+                    name="job_title" 
+                    class="form-control" 
+                    value="{% if is_edit %}{{ contact.job_title }}{% else %}{{ form_data.job_title or '' }}{% endif %}" 
+                    placeholder="VD: Giám Đốc Công Nghệ (CTO), Trưởng Phòng Mua Hàng, Kỹ Sư Trưởng..." 
+                    required
+                >
+            </div>
+
+            <div class="form-row">
+                <!-- 4. Email (Tiêu chí 1) -->
+                <div class="form-group flex-1">
+                    <label for="email" class="form-label required">
+                        ✉️ Email Doanh Nghiệp (Tiêu chí 1):
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-control" 
+                        value="{% if is_edit %}{{ contact.email }}{% else %}{{ form_data.email or '' }}{% endif %}" 
+                        placeholder="VD: an.nguyen@company.com" 
+                        required
+                    >
+                    <small class="form-hint">Email nhận thông báo và gửi báo giá.</small>
+                </div>
+
+                <!-- 5. Số điện thoại (Tiêu chí 1) -->
+                <div class="form-group flex-1">
+                    <label for="phone" class="form-label required">
+                        📞 Số Điện Thoại (Tiêu chí 1):
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        class="form-control" 
+                        value="{% if is_edit %}{{ contact.phone }}{% else %}{{ form_data.phone or '' }}{% endif %}" 
+                        placeholder="VD: 0912345678" 
+                        pattern="^(?:\+?84|0)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$" 
+                        title="Số điện thoại di động Việt Nam 10 chữ số (VD: 0912345678)"
+                        required
+                    >
+                    <small class="form-hint">Chuẩn số di động Việt Nam 10 số.</small>
+                </div>
+            </div>
+
+            <!-- 6. Vai trò trong quyết định mua (Tiêu chí 2) -->
+            <div class="form-group">
+                <label class="form-label required">
+                    🎭 Vai Trò Trong Quyết Định Mua (Tiêu chí 2):
+                </label>
+                <div class="role-selector-grid">
+                    {% for r_key, r in buying_roles.items() %}
+                    {% set current_selected_role = contact.buying_role if is_edit else (form_data.buying_role or 'influencer') %}
+                    <label class="role-radio-card {% if current_selected_role == r_key %}selected{% endif %}">
+                        <input type="radio" name="buying_role" value="{{ r_key }}" {% if current_selected_role == r_key %}checked{% endif %} required>
+                        <div class="role-card-inner">
+                            <span class="role-card-icon">{{ r.icon }}</span>
+                            <div class="role-card-text">
+                                <strong>{{ r.name }}</strong>
+                                <small>{{ r.description }}</small>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <!-- 7. Đánh dấu đầu mối chính (Tiêu chí 3) -->
+                <div class="form-group flex-1">
+                    <label class="checkbox-container">
+                        <input 
+                            type="checkbox" 
+                            name="is_primary" 
+                            id="is_primary" 
+                            {% if (is_edit and contact.is_primary) or (not is_edit and form_data.is_primary) %}checked{% endif %}
+                        >
+                        <span class="checkbox-label">
+                            ⭐ <strong>Đánh dấu là Đầu Mối Chính (Tiêu chí 3)</strong>
+                            <div class="text-xs text-muted">Mỗi khách hàng có duy nhất 1 đầu mối chính. Nếu chọn, hệ thống tự động gỡ cờ của người cũ.</div>
+                        </span>
+                    </label>
+                </div>
+
+                <!-- 8. Mức độ ủng hộ -->
+                <div class="form-group flex-1">
+                    <label for="support_level" class="form-label">
+                        📊 Mức Độ Ủng Hộ Giải Pháp:
+                    </label>
+                    <select id="support_level" name="support_level" class="form-control">
+                        {% set cur_sup = contact.support_level if is_edit else (form_data.support_level or 'Ủng hộ') %}
+                        <option value="Rất ủng hộ" {% if cur_sup == 'Rất ủng hộ' %}selected{% endif %}>🟢 Rất ủng hộ (Champion / Ally)</option>
+                        <option value="Ủng hộ" {% if cur_sup == 'Ủng hộ' %}selected{% endif %}>🟢 Ủng hộ (Supporter)</option>
+                        <option value="Trung lập" {% if cur_sup == 'Trung lập' %}selected{% endif %}>🟡 Trung lập (Neutral / Observer)</option>
+                        <option value="Nghi ngờ" {% if cur_sup == 'Nghi ngờ' %}selected{% endif %}>🟠 Nghi ngờ (Skeptic)</option>
+                        <option value="Phản đối" {% if cur_sup == 'Phản đối' %}selected{% endif %}>🔴 Phản đối (Strong Opponent)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 9. Ghi chú chiến lược -->
+            <div class="form-group">
+                <label for="notes" class="form-label">
+                    📝 Ghi Chú Chiến Lược Của Nhân Viên Kinh Doanh:
+                </label>
+                <textarea 
+                    id="notes" 
+                    name="notes" 
+                    class="form-control" 
+                    rows="3" 
+                    placeholder="Ghi chú sở thích, tính cách, yếu tố cần lưu tâm khi đàm phán thương vụ..."
+                >{% if is_edit %}{{ contact.notes }}{% else %}{{ form_data.notes or '' }}{% endif %}</textarea>
+            </div>
+
+            <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    💾 {% if is_edit %}Lưu Thay Đổi{% else %}Tạo Người Liên Hệ{% endif %}
+                </button>
+                <a href="{% if is_edit %}{{ url_for('contact_detail', contact_id=contact.id) }}{% else %}{{ url_for('index') }}{% endif %}" class="btn btn-outline">
+                    ✕ Hủy Bỏ
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

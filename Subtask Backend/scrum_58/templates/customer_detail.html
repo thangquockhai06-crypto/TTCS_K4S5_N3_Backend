@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Ma Trận Quyết Định Mua: {{ customer.name }} | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('customers_list') }}">Khách Hàng</a> &rsaquo;
+    <span>{{ customer.name }}</span>
+</div>
+
+<!-- Header chi tiết Khách hàng -->
+<div class="customer-hero-card">
+    <div class="hero-left">
+        <div class="hero-tags">
+            <span class="cust-code-badge">{{ customer.code }}</span>
+            <span class="cust-status-badge">{{ customer.status }}</span>
+        </div>
+        <h1 class="hero-title">{{ customer.name }}</h1>
+        <div class="hero-meta-grid">
+            <div class="meta-cell">
+                <span class="meta-label">Ngành nghề:</span>
+                <span class="meta-val">🏭 {{ customer.industry }}</span>
+            </div>
+            <div class="meta-cell">
+                <span class="meta-label">Quy mô:</span>
+                <span class="meta-val">👥 {{ customer.scale }}</span>
+            </div>
+            <div class="meta-cell">
+                <span class="meta-label">Website:</span>
+                <a href="{{ customer.website }}" target="_blank" class="meta-val-link">🌐 {{ customer.website }}</a>
+            </div>
+            <div class="meta-cell">
+                <span class="meta-label">Giá trị thương vụ dự kiến:</span>
+                <span class="meta-val text-success">💰 {{ "{:,.0f}".format(customer.estimated_value) }} VNĐ</span>
+            </div>
+        </div>
+        <div class="hero-address">
+            📍 {{ customer.address }}
+        </div>
+    </div>
+    <div class="hero-right">
+        <a href="{{ url_for('contact_create', customer_id=customer.id) }}" class="btn btn-primary btn-lg">
+            <span class="btn-icon">➕</span> Thêm Người Liên Hệ Mới
+        </a>
+        <a href="{{ url_for('index', customer_id=customer.id) }}" class="btn btn-outline btn-block mt-2">
+            📋 Xem Bảng Dữ Liệu Chi Tiết
+        </a>
+    </div>
+</div>
+
+<!-- Khối Phân Tích Sức Khỏe Thương Vụ (Deal Health & Buying Influence Analysis) -->
+<div class="deal-health-card {{ matrix_data.health_class }}">
+    <div class="health-header">
+        <div class="health-title-group">
+            <span class="health-icon">🩺</span>
+            <div>
+                <h3 class="health-status-title">Đánh Giá Bản Đồ Quyền Lực Mua: {{ matrix_data.health_status }}</h3>
+                <p class="health-advice">{{ matrix_data.advice }}</p>
+            </div>
+        </div>
+        <div class="health-stats">
+            <span class="stat-bubble">Tổng cộng: <strong>{{ matrix_data.total_contacts }}</strong> người liên hệ</span>
+        </div>
+    </div>
+</div>
+
+<!-- BẢN ĐỒ MA TRẬN 4 VAI TRÒ TRONG QUYẾT ĐỊNH MUA (BUYING DECISION MATRIX - 4 COLUMNS) -->
+<div class="matrix-section">
+    <div class="matrix-section-header">
+        <div>
+            <h2 class="section-title">Sơ Đồ Ma Trận Quyết Định Mua (Buying Center Power Map)</h2>
+            <p class="section-subtitle">
+                Phân loại theo 4 vai trò chuẩn B2B Sales: Nhận diện người có thẩm quyền phê duyệt, người ủng hộ kỹ thuật và người có nguy cơ cản trở thương vụ.
+            </p>
+        </div>
+    </div>
+
+    <div class="matrix-grid-4">
+        <!-- ============================================================== -->
+        <!-- CỘT 1: NGƯỜI QUYẾT ĐỊNH (DECISION MAKERS) -->
+        <!-- ============================================================== -->
+        <div class="matrix-col col-decision">
+            <div class="col-header">
+                <div class="col-title-flex">
+                    <span class="col-icon">🎯</span>
+                    <div>
+                        <h3 class="col-name">Người Quyết Định</h3>
+                        <span class="col-count">{{ matrix_data.matrix.decision_makers|length }} người</span>
+                    </div>
+                </div>
+                <div class="col-strategy-tooltip">
+                    <strong>Chiến lược tiếp cận:</strong> Thuyết phục bằng tỷ suất lợi nhuận (ROI), thời gian thu hồi vốn, bài toán chi phí & giá trị chiến lược.
+                </div>
+            </div>
+
+            <div class="col-cards-list">
+                {% if matrix_data.matrix.decision_makers %}
+                    {% for contact in matrix_data.matrix.decision_makers %}
+                        {% include 'components/matrix_contact_card.html' %}
+                    {% endfor %}
+                {% else %}
+                    <div class="col-empty">
+                        <span class="empty-icon">⚠️</span>
+                        <p><strong>Chưa có Người Quyết Định!</strong></p>
+                        <small>Cần khẩn trương tìm kiếm Economic Buyer để tránh lãng phí thời gian.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- CỘT 2: NGƯỜI ẢNH HƯỞNG (INFLUENCERS) -->
+        <!-- ============================================================== -->
+        <div class="matrix-col col-influencer">
+            <div class="col-header">
+                <div class="col-title-flex">
+                    <span class="col-icon">💡</span>
+                    <div>
+                        <h3 class="col-name">Người Ảnh Hưởng</h3>
+                        <span class="col-count">{{ matrix_data.matrix.influencers|length }} người</span>
+                    </div>
+                </div>
+                <div class="col-strategy-tooltip">
+                    <strong>Chiến lược tiếp cận:</strong> Cung cấp tài liệu kỹ thuật chuyên sâu, chạy thử nghiệm PoC, tiêu chuẩn bảo mật & so sánh tính năng.
+                </div>
+            </div>
+
+            <div class="col-cards-list">
+                {% if matrix_data.matrix.influencers %}
+                    {% for contact in matrix_data.matrix.influencers %}
+                        {% include 'components/matrix_contact_card.html' %}
+                    {% endfor %}
+                {% else %}
+                    <div class="col-empty">
+                        <span class="empty-icon">💡</span>
+                        <p>Chưa có Người Ảnh Hưởng</p>
+                        <small>Nên tiếp cận các chuyên gia kỹ thuật hoặc cố vấn chuyên môn.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- CỘT 3: NGƯỜI DÙNG CUỐI (END USERS) -->
+        <!-- ============================================================== -->
+        <div class="matrix-col col-user">
+            <div class="col-header">
+                <div class="col-title-flex">
+                    <span class="col-icon">👤</span>
+                    <div>
+                        <h3 class="col-name">Người Dùng Cuối</h3>
+                        <span class="col-count">{{ matrix_data.matrix.end_users|length }} người</span>
+                    </div>
+                </div>
+                <div class="col-strategy-tooltip">
+                    <strong>Chiến lược tiếp cận:</strong> Trình diễn giao diện thân thiện, tính năng tự động hóa, quy trình nhanh gọn và hỗ trợ đào tạo.
+                </div>
+            </div>
+
+            <div class="col-cards-list">
+                {% if matrix_data.matrix.end_users %}
+                    {% for contact in matrix_data.matrix.end_users %}
+                        {% include 'components/matrix_contact_card.html' %}
+                    {% endfor %}
+                {% else %}
+                    <div class="col-empty">
+                        <span class="empty-icon">👤</span>
+                        <p>Chưa có Người Dùng Cuối</p>
+                        <small>Cần khảo sát nhu cầu từ nhân sự vận hành trực tiếp.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- CỘT 4: NGƯỜI CẢN TRỞ (BLOCKERS) -->
+        <!-- ============================================================== -->
+        <div class="matrix-col col-blocker">
+            <div class="col-header">
+                <div class="col-title-flex">
+                    <span class="col-icon">⚠️</span>
+                    <div>
+                        <h3 class="col-name">Người Cản Trở</h3>
+                        <span class="col-count">{{ matrix_data.matrix.blockers|length }} người</span>
+                    </div>
+                </div>
+                <div class="col-strategy-tooltip">
+                    <strong>Chiến lược giải tỏa:</strong> Lắng nghe mối lo sợ thầm kín (bảo lưu hệ thống cũ, sợ rủi ro thất bại), tổ chức họp riêng để tháo gỡ.
+                </div>
+            </div>
+
+            <div class="col-cards-list">
+                {% if matrix_data.matrix.blockers %}
+                    {% for contact in matrix_data.matrix.blockers %}
+                        {% include 'components/matrix_contact_card.html' %}
+                    {% endfor %}
+                {% else %}
+                    <div class="col-empty col-empty-positive">
+                        <span class="empty-icon">🛡️</span>
+                        <p><strong>Không có người cản trở!</strong></p>
+                        <small>Thương vụ đang diễn ra vô cùng thuận lợi không vướng rào cản.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Lỗi Hệ Thống (500){% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="content-card text-center" style="max-width: 600px; margin: 40px auto; padding: 40px 20px;">
+        <div style="font-size: 4rem; margin-bottom: 10px;">⚠️</div>
+        <h2 style="font-size: 1.8rem; color: #1e293b; margin-bottom: 10px;">Sự Cố Xử Lý Máy Chủ (500)</h2>
+        <p style="color: #64748b; margin-bottom: 25px;">Đã xảy ra lỗi trong quá trình xử lý yêu cầu. Vui lòng thử lại hoặc khôi phục dữ liệu mẫu ban đầu.</p>
+        <div>
+            <a href="{{ url_for('org_tree_view') }}" class="btn btn-primary">🏢 Về Sơ Đồ Cây Tổ Chức</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

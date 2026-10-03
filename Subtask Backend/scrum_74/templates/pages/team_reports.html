@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Báo Cáo Doanh Số Nhóm{% endblock %}
+{% block page_title %}Báo Cáo Doanh Số Nhóm Kinh Doanh{% endblock %}
+
+{% block content %}
+<div class="card" style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color: white; border: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">Khu Vực Báo Cáo Cấp Nhóm & Quản Lý</h3>
+            <p style="font-size: 0.85rem; color: #bfdbfe;">
+                Chức năng dành cho: <strong>Trưởng nhóm kinh doanh</strong> và <strong>Giám đốc kinh doanh</strong>
+            </p>
+        </div>
+        <span class="menu-badge badge-success" style="font-size: 0.8rem; padding: 6px 12px;">
+            Nhóm: {{ current_user.business_group }}
+        </span>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-box">
+        <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="20" x2="12" y2="10"></line>
+                <line x1="18" y1="20" x2="18" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">14,2 Tỷ ₫</div>
+            <div class="stat-label">Tổng doanh thu Q3/2026</div>
+        </div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-icon" style="background: #dcfce7; color: #16a34a;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">+18,4%</div>
+            <div class="stat-label">Tăng trưởng so với cùng kỳ</div>
+        </div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-icon" style="background: #fef3c7; color: #d97706;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 12l-4-4-4 4"></path>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">86,5%</div>
+            <div class="stat-label">Tỷ lệ chốt hợp đồng thành công</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

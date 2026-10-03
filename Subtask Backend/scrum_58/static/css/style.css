@@ -1,0 +1,1712 @@
+/* ==============================================================================
+   HỆ THỐNG GIAO DIỆN QUẢN LÝ NGƯỜI LIÊN HỆ & VAI TRÒ MUA HÀNG (SCRUM-58)
+   ============================================================================== */
+
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --accent: #8b5cf6;
+    --accent-hover: #7c3aed;
+    
+    /* 4 Vai trò mua hàng */
+    --role-decision: #1e40af;
+    --role-decision-bg: #dbeafe;
+    --role-influencer: #6b21a8;
+    --role-influencer-bg: #f3e8ff;
+    --role-user: #065f46;
+    --role-user-bg: #d1fae5;
+    --role-blocker: #991b1b;
+    --role-blocker-bg: #fee2e2;
+
+    /* Đầu mối chính */
+    --gold-primary: #b45309;
+    --gold-primary-bg: #fef3c7;
+    --gold-primary-border: #f59e0b;
+
+    /* Khung nền & chữ */
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.09), 0 4px 6px -4px rgba(0,0,0,0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+h1, h2, h3, h4, .brand-logo, .page-heading {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+a:hover {
+    color: var(--primary-hover);
+}
+
+/* ==============================================================================
+   HEADER & NAVBAR
+   ============================================================================== */
+.app-header {
+    background: #0f172a;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.brand-section .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ffffff;
+}
+
+.logo-icon {
+    font-size: 28px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    padding: 6px 10px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-title {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.ticket-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #93c5fd;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Header Role Metric Pills */
+.header-metrics {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.metric-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.metric-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.pill-decision { background: rgba(30, 64, 175, 0.4); color: #93c5fd; border-color: #3b82f6; }
+.pill-influencer { background: rgba(107, 33, 168, 0.4); color: #d8b4fe; border-color: #a855f7; }
+.pill-user { background: rgba(6, 95, 70, 0.4); color: #6ee7b7; border-color: #10b981; }
+.pill-blocker { background: rgba(153, 27, 27, 0.4); color: #fca5a5; border-color: #ef4444; }
+
+.metric-pill .count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 1px 6px;
+    border-radius: 9999px;
+    font-weight: 700;
+}
+
+/* Sales Rep Profile Badge */
+.sales-rep-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #1e293b;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid #334155;
+}
+
+.rep-avatar {
+    font-size: 20px;
+}
+
+.rep-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.rep-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.rep-title {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Main Navbar */
+.main-navbar {
+    background: #1e293b;
+    border-top: 1px solid #334155;
+}
+
+.nav-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 4px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
+}
+
+.nav-item:hover, .nav-item.active {
+    color: #ffffff;
+    background: #334155;
+}
+
+.nav-item.active {
+    font-weight: 600;
+    border-bottom: 2px solid var(--primary);
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==============================================================================
+   BUTTONS & BADGES
+   ============================================================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    line-height: 1.2;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.btn-accent {
+    background: var(--accent);
+    color: #ffffff;
+}
+.btn-accent:hover {
+    background: var(--accent-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+}
+
+.btn-outline {
+    background: transparent;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+.btn-outline:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.btn-outline-warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+}
+.btn-outline-warning:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #94a3b8;
+}
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.btn-xs {
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+}
+
+.btn-lg {
+    padding: 12px 22px;
+    font-size: 15px;
+    border-radius: var(--radius-md);
+}
+
+.btn-block {
+    display: flex;
+    width: 100%;
+}
+
+/* Badges 4 Vai trò mua hàng (Tiêu chí 2) */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-decision {
+    background-color: var(--role-decision-bg);
+    color: var(--role-decision);
+    border: 1px solid #bfdbfe;
+}
+
+.badge-influencer {
+    background-color: var(--role-influencer-bg);
+    color: var(--role-influencer);
+    border: 1px solid #e9d5ff;
+}
+
+.badge-user {
+    background-color: var(--role-user-bg);
+    color: var(--role-user);
+    border: 1px solid #a7f3d0;
+}
+
+.badge-blocker {
+    background-color: var(--role-blocker-bg);
+    color: var(--role-blocker);
+    border: 1px solid #fecaca;
+    font-weight: 700;
+}
+
+/* Huy hiệu Đầu mối chính (Tiêu chí 3) */
+.badge-primary-contact, .badge-primary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--gold-primary-bg);
+    color: var(--gold-primary);
+    border: 1px solid var(--gold-primary-border);
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 3px rgba(217, 119, 6, 0.15);
+}
+
+.badge-history {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge-history:hover {
+    background: #c7d2fe;
+}
+
+/* ==============================================================================
+   CONTENT LAYOUT & PAGE HEADERS
+   ============================================================================== */
+.app-content {
+    flex: 1;
+    padding: 24px 0 48px;
+}
+
+.content-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.breadcrumb {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.page-heading {
+    font-size: 26px;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.page-subheading {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* Alerts */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+}
+
+.alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.alert-danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+.alert-close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.6;
+}
+.alert-close:hover { opacity: 1; }
+
+/* ==============================================================================
+   CẨM NANG NHANH 4 VAI TRÒ MUA HÀNG (STRATEGY STRIP)
+   ============================================================================== */
+.role-guide-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.guide-item {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid #cbd5e1;
+    transition: transform 0.15s ease;
+}
+.guide-item:hover { transform: translateY(-2px); }
+
+.guide-decision { border-left-color: var(--role-decision); background: #f8faff; }
+.guide-influencer { border-left-color: var(--role-influencer); background: #faf5ff; }
+.guide-user { border-left-color: var(--role-user); background: #f0fdf4; }
+.guide-blocker { border-left-color: var(--role-blocker); background: #fef2f2; }
+
+.guide-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.guide-desc {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.4;
+}
+
+/* ==============================================================================
+   FILTER CARD & TABLE
+   ============================================================================== */
+.filter-card {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.flex-grow { flex: 2; min-width: 260px; }
+.flex-1 { flex: 1; min-width: 180px; }
+.flex-2 { flex: 2; min-width: 240px; }
+
+.form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #ef4444;
+}
+
+.form-control {
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: #0f172a;
+    background: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-hint {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.form-actions-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Customer Banner */
+.customer-banner {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: #ffffff;
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+}
+
+.banner-title {
+    font-size: 20px;
+    color: #ffffff;
+}
+
+.banner-badge {
+    font-size: 11px;
+    color: #93c5fd;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.banner-meta {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Data Table */
+.data-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.card-header-flex {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.card-title {
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.badge-count {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-family: 'Inter', sans-serif;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.data-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.data-table tr:hover td {
+    background-color: #f8faff;
+}
+
+.row-primary td {
+    background-color: #fffefb;
+}
+
+.contact-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar-initial {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #ffffff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.contact-name-link {
+    color: #0f172a;
+    font-size: 14px;
+}
+.contact-name-link:hover { color: var(--primary); }
+
+.job-title-badge {
+    font-weight: 500;
+    color: #334155;
+}
+
+.contact-comm {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comm-item {
+    font-size: 12px;
+    color: #475569;
+}
+.comm-item:hover { color: var(--primary); }
+
+.blocker-alert-text {
+    font-size: 10px;
+    color: #b91c1c;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.table-actions {
+    white-space: nowrap;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: 4px;
+}
+
+.action-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: var(--primary);
+}
+
+.action-btn.text-danger:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.btn-transfer-icon:hover {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+    color: var(--accent);
+}
+
+/* ==============================================================================
+   MA TRẬN QUYẾT ĐỊNH MUA HÀNG (BUYING CENTER MATRIX - 4 COLUMNS)
+   ============================================================================== */
+.customer-hero-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.hero-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.cust-code-badge {
+    background: #e2e8f0;
+    color: #334155;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cust-status-badge {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.hero-title {
+    font-size: 26px;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.hero-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 24px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.meta-label { color: #64748b; margin-right: 6px; }
+.meta-val { font-weight: 600; color: #1e293b; }
+.hero-address { font-size: 13px; color: #64748b; }
+
+/* Deal Health Card */
+.deal-health-card {
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    border: 1px solid transparent;
+}
+
+.health-positive { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.health-warning { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.health-danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.health-info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+.health-neutral { background: #f8fafc; border-color: #e2e8f0; color: #334155; }
+
+.health-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.health-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.health-icon { font-size: 24px; }
+.health-status-title { font-size: 16px; font-weight: 700; }
+.health-advice { font-size: 13px; margin-top: 2px; }
+
+/* 4 Columns Matrix Grid */
+.matrix-section-header {
+    margin-bottom: 16px;
+}
+
+.section-title { font-size: 20px; }
+.section-subtitle { font-size: 13px; color: var(--text-muted); }
+
+.matrix-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.matrix-col {
+    background: #f8fafc;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.col-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: #ffffff;
+}
+
+.col-title-flex {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.col-icon { font-size: 22px; }
+.col-name { font-size: 15px; font-weight: 700; color: #0f172a; }
+.col-count { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+.col-strategy-tooltip {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    line-height: 1.35;
+}
+
+.col-decision .col-header { border-top: 4px solid var(--role-decision); }
+.col-influencer .col-header { border-top: 4px solid var(--role-influencer); }
+.col-user .col-header { border-top: 4px solid var(--role-user); }
+.col-blocker .col-header { border-top: 4px solid var(--role-blocker); }
+
+.col-cards-list {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.col-empty {
+    text-align: center;
+    padding: 30px 16px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.col-empty .empty-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+.col-empty-positive { color: #059669; }
+
+/* Matrix Card Component */
+.matrix-card {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.matrix-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.matrix-card.is-primary-card {
+    border-color: var(--gold-primary-border);
+    box-shadow: 0 0 0 1px var(--gold-primary-border), var(--shadow-sm);
+}
+
+.card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.card-avatar {
+    width: 32px;
+    height: 32px;
+    background: #e2e8f0;
+    color: #334155;
+    font-weight: 700;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.card-person-info {
+    overflow: hidden;
+}
+
+.card-name-link {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-job-title {
+    font-size: 12px;
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-primary-indicator {
+    margin-bottom: 8px;
+}
+
+.card-comm-box {
+    background: #f8fafc;
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+
+.comm-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.comm-text { color: #475569; }
+
+.card-notes-box {
+    margin-bottom: 10px;
+    font-size: 11px;
+}
+
+.support-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.support-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.history-pill {
+    font-size: 10px;
+    background: #ede9fe;
+    color: #6d28d9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.card-note-text {
+    font-style: italic;
+    color: #64748b;
+    line-height: 1.3;
+}
+
+.card-bottom-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 8px;
+}
+
+/* ==============================================================================
+   PROFILE & TIMELINE (TIÊU CHÍ 4: LỊCH SỬ CÔNG TÁC)
+   ============================================================================== */
+.contact-profile-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.profile-main-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.profile-avatar-large {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 800;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    flex-shrink: 0;
+}
+
+.profile-info-group {
+    flex: 1;
+}
+
+.profile-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.profile-name {
+    font-size: 28px;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.profile-title {
+    font-size: 15px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.profile-company {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.profile-comm-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.comm-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comm-label { font-size: 11px; color: #64748b; font-weight: 600; }
+.comm-value { font-size: 13px; font-weight: 600; color: #0f172a; }
+
+.profile-strategy-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.strategy-advice {
+    font-size: 13px;
+    color: #1e40af;
+    margin-top: 4px;
+}
+
+.contact-notes-display {
+    margin-top: 12px;
+    border-top: 1px dashed #bfdbfe;
+    padding-top: 10px;
+}
+
+.notes-label { font-size: 11px; font-weight: 700; color: #1e3a8a; }
+.notes-content { font-size: 13px; color: #1e293b; font-style: italic; margin-top: 2px; }
+
+/* Timeline Section (Tiêu chí 4) */
+.timeline-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+}
+
+.timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.timeline-title { font-size: 20px; }
+.timeline-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.timeline-wrapper {
+    position: relative;
+    padding-left: 36px;
+}
+
+.timeline-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 17px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 28px;
+}
+
+.timeline-badge-icon {
+    position: absolute;
+    left: -36px;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 2px solid var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.timeline-item.timeline-current .timeline-badge-icon {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.timeline-content {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+}
+
+.timeline-current .timeline-content {
+    background: #ffffff;
+    border-color: #a7f3d0;
+    box-shadow: 0 0 0 1px #a7f3d0, var(--shadow-sm);
+}
+
+.timeline-time-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.current-badge { background: #d1fae5; color: #065f46; }
+.past-badge { background: #e2e8f0; color: #475569; }
+
+.timeline-company-title {
+    font-size: 17px;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.timeline-role-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.job-pill {
+    font-size: 12px;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: #334155;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.timeline-meta-box {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.transfer-reason-box {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+    font-size: 12px;
+}
+
+.reason-line { color: #334155; margin-bottom: 4px; }
+.impact-line { color: #065f46; background: #ecfdf5; padding: 6px 10px; border-radius: 4px; }
+
+.timeline-no-history {
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+/* ==============================================================================
+   TRANSFER MODAL / PAGE (TIÊU CHÍ 4)
+   ============================================================================== */
+.transfer-container {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.transfer-old-box, .transfer-new-box {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+}
+
+.transfer-box-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+}
+
+.box-icon { font-size: 26px; }
+
+.old-contact-card {
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.person-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.old-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 6px;
+}
+
+.info-label { color: #64748b; font-weight: 500; }
+.info-val { color: #0f172a; text-align: right; }
+
+/* Role Selector Grid */
+.role-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.role-radio-card {
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    cursor: pointer;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    display: block;
+}
+
+.role-radio-card input { display: none; }
+
+.role-radio-card:has(input:checked) {
+    border-color: var(--primary);
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.role-card-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.role-card-icon { font-size: 22px; }
+
+.role-card-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.role-card-text strong { font-size: 13px; color: #0f172a; }
+.role-card-text small { font-size: 11px; color: #64748b; line-height: 1.3; }
+
+/* Checkbox */
+.checkbox-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+}
+
+.checkbox-label {
+    font-size: 13px;
+    color: #92400e;
+}
+
+/* Standard Form Card */
+.form-card-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 32px;
+}
+
+.form-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 18px;
+}
+
+.header-icon { font-size: 32px; }
+.form-heading { font-size: 22px; color: #0f172a; }
+.form-subheading { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.standard-form .form-group {
+    margin-bottom: 16px;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ==============================================================================
+   CUSTOMERS GRID VIEW
+   ============================================================================== */
+.customers-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.customer-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+}
+
+.cust-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.cust-name { font-size: 18px; margin-top: 4px; }
+.cust-name a { color: #0f172a; }
+.cust-name a:hover { color: var(--primary); }
+
+.cust-meta-row {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.cust-address-row {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 14px;
+}
+
+.cust-primary-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 14px;
+}
+
+.primary-box-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #b45309;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.primary-contact-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.primary-avatar {
+    width: 32px;
+    height: 32px;
+    background: #f59e0b;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.primary-name { font-size: 13px; color: #0f172a; }
+.primary-title { font-size: 11px; color: #475569; }
+.primary-comm { font-size: 11px; color: #64748b; display: flex; gap: 8px; margin-top: 2px; }
+
+.cust-roles-distribution {
+    margin-bottom: 16px;
+    flex: 1;
+}
+
+.dist-header { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+
+.role-pills-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mini-pill {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.pill-blocker-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+    font-weight: 700;
+    animation: pulseAlert 2s infinite ease-in-out;
+}
+
+@keyframes pulseAlert {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+}
+
+.cust-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 14px;
+}
+
+.action-sub-row {
+    display: flex;
+    gap: 8px;
+}
+
+/* ==============================================================================
+   EMPTY STATES & FOOTER
+   ============================================================================== */
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+.app-footer {
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 24px 0;
+    border-top: 1px solid #1e293b;
+    font-size: 12px;
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ac-badge {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+/* ==============================================================================
+   RESPONSIVE (MOBILE OPTIMIZATIONS)
+   ============================================================================== */
+@media (max-width: 1024px) {
+    .matrix-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .role-guide-strip {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .transfer-container {
+        grid-template-columns: 1fr;
+    }
+    .customers-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-comm-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .matrix-grid-4 {
+        grid-template-columns: 1fr;
+    }
+    .role-guide-strip {
+        grid-template-columns: 1fr;
+    }
+    .form-row {
+        flex-direction: column;
+    }
+    .profile-comm-grid {
+        grid-template-columns: 1fr;
+    }
+    .role-selector-grid {
+        grid-template-columns: 1fr;
+    }
+}

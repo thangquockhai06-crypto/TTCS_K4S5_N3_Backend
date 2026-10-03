@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}403 - Không Đủ Quyền Truy Cập{% endblock %}
+{% block page_title %}Lỗi 403 - Giới Hạn Quyền Hạn{% endblock %}
+
+{% block content %}
+<div class="error-page-wrapper">
+  <div class="error-card error-403-card">
+    
+    <!-- Huy hiệu & Minh họa trực quan bảo mật -->
+    <div class="error-visual-badge">
+      <div class="error-icon-circle pulse-403">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <div class="error-code-chip badge-chip-danger">Mã lỗi: 403 Forbidden</div>
+    </div>
+
+    <!-- Tiêu đề & Thông báo rõ ràng (User Story) -->
+    <h1 class="error-main-heading">Bạn Không Đủ Quyền Truy Cập!</h1>
+    <p class="error-lead-message">
+      Khu vực hoặc thao tác này được giới hạn bảo mật và yêu cầu vai trò cao hơn.
+      Hệ thống đã nhận diện tài khoản của bạn và hiển thị thông tin hướng dẫn chi tiết thay vì để trang trắng.
+    </p>
+
+    <!-- Khối ngữ cảnh chi tiết (Account & Permission Diagnostics) -->
+    <div class="error-meta-box meta-box-danger">
+      <div class="meta-row">
+        <span class="meta-label">Tài khoản đang đăng nhập:</span>
+        <span class="meta-value font-medium">{{ current_user.name }} (<code>{{ current_user.username }}</code>)</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Vai trò hiện tại:</span>
+        <span class="meta-value">
+          <span class="user-role-tag {{ current_user.role_badge_class }}">{{ current_user.role_name }}</span>
+        </span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Phòng ban:</span>
+        <span class="meta-value">{{ current_user.department }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Quyền hạn cần có:</span>
+        <span class="meta-value text-danger-highlight">
+          <strong>{{ missing_permission_title }}</strong> (<code>{{ missing_permission_code }}</code>)
+        </span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Đường dẫn bị giới hạn:</span>
+        <span class="meta-value"><code>{{ target_url }}</code></span>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         HÀNH ĐỘNG GỢI Ý ĐỂ QUAY LẠI LUỒNG LÀM VIỆC (ACCEPTANCE CRITERIA)
+         ======================================================== -->
+    <div class="action-suggestions-container">
+      <div class="suggestions-header header-warning">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>BẠN NÊN LÀM GÌ TIẾP THEO ĐỂ TIẾP TỤC CÔNG VIỆC:</span>
+      </div>
+
+      <ul class="suggestions-list">
+        <li><strong>Dành cho quá trình chấm bài & kiểm thử:</strong> Bấm nút <strong>"Đổi sang tài khoản Giám Đốc"</strong> bên dưới để có ngay toàn quyền truy cập chức năng này.</li>
+        <li><strong>Trong luồng làm việc thực tế:</strong> Nếu công việc thực sự cần truy cập trang này, hãy bấm nút <strong>"Gửi yêu cầu xin cấp quyền"</strong> gửi tới Giám đốc phê duyệt.</li>
+        <li>Bấm <strong>"Về Bảng điều khiển"</strong> để tiếp tục các công việc phù hợp với vai trò của bạn.</li>
+      </ul>
+
+      <!-- Bộ nút hành động khôi phục luồng làm việc -->
+      <div class="action-buttons-group">
+        
+        <!-- Nút hành động tiện ích số 1: Đổi ngay sang tài khoản Admin để tiếp tục luồng -->
+        <a href="{{ url_for('switch_role', username='admin') }}" class="btn-recovery-primary btn-special-admin" id="btn-switch-admin">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <polyline points="17 11 19 13 23 9"></polyline>
+          </svg>
+          <span>Đổi sang tài khoản Giám Đốc (Có Đủ Quyền)</span>
+        </a>
+
+        <!-- Nút hành động tiện ích số 2: Gửi form xin cấp quyền -->
+        <button type="button" onclick="openAccessModal('{{ target_url }}')" class="btn-recovery-action" id="btn-request-access">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <span>Gửi yêu cầu xin cấp quyền</span>
+        </button>
+
+        <!-- Nút hành động tiện ích số 3: Quay về Dashboard -->
+        <a href="{{ url_for('dashboard') }}" class="btn-recovery-secondary" id="btn-back-dashboard-403">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span>Về Bảng điều khiển</span>
+        </a>
+
+        <!-- Nút hành động tiện ích số 4: Quay lại trang trước -->
+        <button type="button" onclick="window.history.back()" class="btn-recovery-secondary" id="btn-go-back-403">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Quay lại trang trước</span>
+        </button>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Chuyển Công Tác: {{ contact.full_name }} | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('index') }}">Người Liên Hệ</a> &rsaquo;
+    <a href="{{ url_for('contact_detail', contact_id=contact.id) }}">{{ contact.full_name }}</a> &rsaquo;
+    <span>Chuyển Công Tác</span>
+</div>
+
+<div class="page-header">
+    <div class="page-title-group">
+        <h1 class="page-heading">Gắn Người Liên Hệ Sang Khách Hàng Mới & Giữ Nguyên Lịch Sử</h1>
+        <p class="page-subheading">
+            Thực hiện <strong>Tiêu chí 4 (Acceptance Criteria)</strong>: Khi một người liên hệ chuyển sang công ty khác, hệ thống cho phép gắn sang khách hàng mới, đồng thời bảo lưu trọn vẹn toàn bộ lịch sử công tác, vai trò mua cũ và các ghi chú thương vụ trước đây.
+        </p>
+    </div>
+</div>
+
+<div class="transfer-container">
+    <!-- Cột bên trái: Thông tin nơi công tác cũ sẽ được đóng băng và lưu vào lịch sử -->
+    <div class="transfer-old-box">
+        <div class="transfer-box-header">
+            <span class="box-icon">📦</span>
+            <div>
+                <h3>Thông Tin Đang Công Tác (Sẽ Được Lưu Trữ Vào Lịch Sử)</h3>
+                <small class="text-muted">Dữ liệu này sẽ được bảo lưu nguyên vẹn vào Dòng thời gian của người liên hệ.</small>
+            </div>
+        </div>
+
+        <div class="old-contact-card">
+            <div class="person-title-row">
+                <span class="avatar-sm">{{ contact.full_name[0] }}</span>
+                <div>
+                    <strong>{{ contact.full_name }}</strong>
+                    <div class="text-xs text-muted">Mã: {{ contact.id }}</div>
+                </div>
+            </div>
+
+            <div class="old-info-list">
+                <div class="info-row">
+                    <span class="info-label">🏢 Công ty hiện tại:</span>
+                    <span class="info-val"><strong>{{ current_customer.name }}</strong></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💼 Chức danh:</span>
+                    <span class="info-val">{{ contact.job_title }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">🎭 Vai trò mua hàng:</span>
+                    <span class="badge {{ contact.role_meta.badge_class }}">
+                        {{ contact.role_meta.icon }} {{ contact.role_meta.name }}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">✉️ Email:</span>
+                    <span class="info-val">{{ contact.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📞 Điện thoại:</span>
+                    <span class="info-val">{{ contact.phone }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⭐ Đầu mối chính:</span>
+                    <span class="info-val">
+                        {% if contact.is_primary %}
+                            <strong class="text-warning">Đang là đầu mối chính</strong> (Sẽ chuyển giao người kế nhiệm tại công ty này)
+                        {% else %}
+                            Không
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 text-xs">
+                💡 <em>Sau khi chuyển đi, nếu nhân sự này từng là đầu mối chính tại {{ current_customer.name }}, hệ thống sẽ tự động gán nhân sự kế tiếp của công ty này làm đầu mối chính mới để không bị gián đoạn luồng thông báo.</em>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cột bên phải: Form nhập thông tin tại Công ty Mới -->
+    <div class="transfer-new-box">
+        <div class="transfer-box-header">
+            <span class="box-icon">🚀</span>
+            <div>
+                <h3>Thông Tin Tại Khách Hàng (Công Ty) Mới Tiếp Nhận</h3>
+                <small class="text-muted">Nhập vị trí, vai trò mua hàng và thông tin liên hệ mới.</small>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('contact_transfer', contact_id=contact.id) }}" class="transfer-form">
+            <!-- 1. Chọn công ty mới -->
+            <div class="form-group">
+                <label for="new_customer_id" class="form-label required">
+                    🏢 Chọn Khách Hàng Mới Tiếp Nhận:
+                </label>
+                <select id="new_customer_id" name="new_customer_id" class="form-control" required>
+                    <option value="">-- Vui lòng chọn khách hàng mới --</option>
+                    {% for cust in available_customers %}
+                        <option value="{{ cust.id }}">
+                            {{ cust.name }} ({{ cust.code }} - {{ cust.industry }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="form-hint">Chọn doanh nghiệp mà người liên hệ vừa chuyển sang làm việc.</small>
+            </div>
+
+            <!-- 2. Chức danh mới -->
+            <div class="form-group">
+                <label for="new_job_title" class="form-label required">
+                    💼 Chức Danh / Vị Trí Mới:
+                </label>
+                <input 
+                    type="text" 
+                    id="new_job_title" 
+                    name="new_job_title" 
+                    class="form-control" 
+                    placeholder="VD: Giám Đốc Chuyển Đổi Số (CDO), Phó Tổng Giám Đốc..." 
+                    required
+                >
+            </div>
+
+            <div class="form-row">
+                <!-- 3. Email mới -->
+                <div class="form-group flex-1">
+                    <label for="new_email" class="form-label">
+                        ✉️ Email Mới Tại Công Ty Mới:
+                    </label>
+                    <input 
+                        type="email" 
+                        id="new_email" 
+                        name="new_email" 
+                        class="form-control" 
+                        placeholder="VD: name@newcompany.vn"
+                    >
+                    <small class="form-hint">Để trống nếu vẫn sử dụng email cũ.</small>
+                </div>
+
+                <!-- 4. Số điện thoại mới -->
+                <div class="form-group flex-1">
+                    <label for="new_phone" class="form-label">
+                        📞 Số Điện Thoại Mới:
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="new_phone" 
+                        name="new_phone" 
+                        value="{{ contact.phone }}" 
+                        class="form-control" 
+                        placeholder="VD: 0912345678"
+                    >
+                    <small class="form-hint">Số di động 10 chữ số chuẩn Việt Nam.</small>
+                </div>
+            </div>
+
+            <!-- 5. Vai trò quyết định mua tại công ty mới (Tiêu chí 2) -->
+            <div class="form-group">
+                <label class="form-label required">
+                    🎭 Vai Trò Quyết Định Mua Tại Công Ty Mới:
+                </label>
+                <div class="role-selector-grid">
+                    {% for r_key, r in buying_roles.items() %}
+                    <label class="role-radio-card">
+                        <input type="radio" name="new_buying_role" value="{{ r_key }}" {% if r_key == 'decision_maker' %}checked{% endif %}>
+                        <div class="role-card-inner">
+                            <span class="role-card-icon">{{ r.icon }}</span>
+                            <div class="role-card-text">
+                                <strong>{{ r.name }}</strong>
+                                <small>{{ r.description }}</small>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 6. Đánh dấu làm đầu mối chính tại công ty mới (Tiêu chí 3) -->
+            <div class="form-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="is_primary_at_new" id="is_primary_at_new">
+                    <span class="checkbox-label">
+                        ⭐ <strong>Đánh dấu người này là Đầu Mối Chính tại công ty mới</strong>
+                        <div class="text-xs text-muted">Nếu chọn, người này sẽ là người tiếp nhận báo giá và liên hệ ưu tiên tại công ty mới.</div>
+                    </span>
+                </label>
+            </div>
+
+            <!-- 7. Lý do chuyển công tác & Ghi chú thương vụ (Tiêu chí 4) -->
+            <div class="form-group">
+                <label for="transfer_reason" class="form-label">
+                    📝 Lý Do Chuyển Công Tác:
+                </label>
+                <input 
+                    type="text" 
+                    id="transfer_reason" 
+                    name="transfer_reason" 
+                    class="form-control" 
+                    placeholder="VD: Được bổ nhiệm vị trí cấp cao hơn / Chuyển ngành sang công ty mới..."
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="sales_impact_note" class="form-label">
+                    💡 Đánh Giá Tác Động Thương Vụ B2B (Sales Impact):
+                </label>
+                <textarea 
+                    id="sales_impact_note" 
+                    name="sales_impact_note" 
+                    class="form-control" 
+                    rows="3" 
+                    placeholder="Ghi chú về cơ hội: VD: Mối quan hệ thân thiết từ công ty cũ, nay làm sếp lớn tại công ty mới, mở ra cơ hội chốt hợp đồng Enterprise mới!"
+                ></textarea>
+            </div>
+
+            <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-accent btn-lg">
+                    ✅ Xác Nhận Chuyển Sang Công Ty Mới (Lưu Lịch Sử)
+                </button>
+                <a href="{{ url_for('contact_detail', contact_id=contact.id) }}" class="btn btn-outline">
+                    ✕ Hủy Bỏ
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

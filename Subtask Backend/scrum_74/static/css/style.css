@@ -1,0 +1,917 @@
+/* ==============================================================================
+   HỆ THỐNG MENU ĐIỀU HƯỚNG PHÂN QUYỀN RBAC - STYLE SHEET
+   Ticket: SCRUM-69 / SCRUM-74
+   Tối ưu chuyên biệt cho trải nghiệm màn hình 360px, chuẩn Mobile-First
+   ============================================================================== */
+
+:root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #e0e7ff;
+    --primary-dark: #3730a3;
+    
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+
+    --director-color: #7c3aed;
+    --director-bg: #ede9fe;
+    --team-lead-color: #2563eb;
+    --team-lead-bg: #dbeafe;
+    --sales-rep-color: #059669;
+    --sales-rep-bg: #d1fae5;
+    --intern-color: #d97706;
+    --intern-bg: #fef3c7;
+
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #0284c7;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset & Nền tảng */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: var(--slate-800);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* ==============================================================================
+   KHUNG BỐ CỤC CHÍNH (LAYOUT WRAPPER)
+   ============================================================================== */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    background-color: #f1f5f9;
+}
+
+/* Thanh điều khiển thử nghiệm trên cùng (Testing & Simulator Bar) */
+.testing-topbar {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #ffffff;
+    padding: 8px 16px;
+    font-size: 0.825rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.testing-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.ticket-tag {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #e0e7ff;
+}
+
+.testing-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-sim {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.775rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-sim:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.btn-sim.active {
+    background: #f59e0b;
+}
+
+/* ==============================================================================
+   SIDEBAR & DRAWER ĐIỀU HƯỚNG (NAVIGATION BAR)
+   ============================================================================== */
+.app-sidebar {
+    width: 290px;
+    background: #ffffff;
+    border-right: 1px solid var(--slate-200);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.03);
+}
+
+/* Logo & Đầu Sidebar */
+.sidebar-header {
+    padding: 20px 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+.brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.brand-icon {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+}
+
+.brand-text h2 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--slate-900);
+    line-height: 1.2;
+}
+
+.brand-text span {
+    font-size: 0.725rem;
+    color: var(--slate-500);
+    font-weight: 500;
+}
+
+.drawer-close-btn {
+    display: none; /* Chỉ hiện trên mobile */
+    background: var(--slate-100);
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate-600);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.drawer-close-btn:hover {
+    background: var(--slate-200);
+    color: var(--slate-900);
+}
+
+/* ==============================================================================
+   TIÊU CHÍ 2: THẺ PROFILE NGƯỜI DÙNG (TÊN, VAI TRÒ, NHÓM KINH DOANH)
+   ============================================================================== */
+.user-profile-card {
+    padding: 18px 20px;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--slate-200);
+    margin: 0;
+}
+
+.user-card-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.05rem;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.user-details {
+    flex: 1;
+    min-width: 0; /* Giúp text-overflow ellipsis hoạt động */
+}
+
+/* Họ và tên người dùng */
+.user-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Nhãn vai trò với màu sắc nhận diện đặc trưng */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.725rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin-bottom: 6px;
+}
+
+.badge-director {
+    background-color: var(--director-bg);
+    color: var(--director-color);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.badge-team-lead {
+    background-color: var(--team-lead-bg);
+    color: var(--team-lead-color);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.badge-sales-rep {
+    background-color: var(--sales-rep-bg);
+    color: var(--sales-rep-color);
+    border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.badge-intern {
+    background-color: var(--intern-bg);
+    color: var(--intern-color);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+/* Nhóm kinh doanh đang thuộc về */
+.business-group-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--slate-600);
+    background: #ffffff;
+    border: 1px solid var(--slate-200);
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+.business-group-badge svg {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+/* ==============================================================================
+   TIÊU CHÍ 1: DANH SÁCH MENU ĐIỀU HƯỚNG PHÂN QUYỀN (LỌC SẠCH KHỎI DOM)
+   ============================================================================== */
+.sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+    overflow-y: auto;
+}
+
+.nav-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--slate-400);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 8px 12px 6px;
+    margin-top: 4px;
+}
+
+.menu-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menu-item {
+    position: relative;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    min-height: 48px; /* Chuẩn touch target >= 44px */
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--slate-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.menu-link:hover {
+    background-color: var(--slate-100);
+    color: var(--slate-900);
+}
+
+.menu-link.active {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    font-weight: 700;
+    border-left: 3px solid var(--primary);
+}
+
+.menu-link-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.menu-link-content svg {
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.menu-link:hover .menu-link-content svg {
+    transform: scale(1.1);
+}
+
+.menu-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: var(--slate-200);
+    color: var(--slate-700);
+}
+
+.menu-badge.badge-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.menu-badge.badge-success {
+    background: var(--success);
+    color: white;
+}
+
+.menu-badge.badge-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.menu-badge.badge-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.menu-badge.badge-info {
+    background: var(--info);
+    color: white;
+}
+
+/* Thống kê số lượng menu đang mở */
+.menu-counter-banner {
+    margin: 8px 12px;
+    padding: 10px 12px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ==============================================================================
+   KHỐI CHUYỂN ĐỔI VAI TRÒ NHANH (ROLE SWITCHER TẠI CHÂN SIDEBAR)
+   ============================================================================== */
+.sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--slate-200);
+    background: var(--slate-50);
+}
+
+.role-switcher-title {
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.role-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.role-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    min-height: 48px; /* Chuẩn touch target */
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--slate-200);
+    background: #ffffff;
+    color: var(--slate-700);
+    font-size: 0.725rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s;
+    line-height: 1.2;
+}
+
+.role-btn:hover {
+    background: var(--slate-100);
+    border-color: var(--slate-300);
+    transform: translateY(-1px);
+}
+
+.role-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary-dark);
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+.role-btn .role-count {
+    font-size: 0.65rem;
+    opacity: 0.85;
+    margin-top: 2px;
+}
+
+/* ==============================================================================
+   KHU VỰC NỘI DUNG CHÍNH (MAIN WRAPPER & TOPBAR)
+   ============================================================================== */
+.main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100vh;
+}
+
+/* Topbar cho màn hình chuẩn */
+.app-topbar {
+    height: 64px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--slate-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    gap: 16px;
+}
+
+/* Nút Hamburger cho Mobile (360px) */
+.hamburger-btn {
+    display: none; /* Mặc định ẩn trên màn hình lớn */
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    background: #ffffff;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    align-items: center;
+    justify-content: center;
+    color: var(--slate-800);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.hamburger-btn:hover {
+    background: var(--slate-100);
+    color: var(--primary);
+}
+
+.page-header-info h1 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--slate-900);
+}
+
+.topbar-right-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.current-role-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--slate-100);
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Nội dung trang */
+.page-content {
+    flex: 1;
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ==============================================================================
+   TIÊU CHÍ 3: TỐI ƯU GIAO DIỆN CHO MÀN HÌNH 360PX (MOBILE-FIRST)
+   ============================================================================== */
+/* Lớp phủ mờ backdrop khi mở Drawer trên mobile */
+.drawer-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 40;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-backdrop.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Thông báo Flash Alert */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.alert-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.alert-danger {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* Thẻ tổng quan (Cards) */
+.card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--slate-200);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--slate-100);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Lưới thẻ số liệu KPI */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    border: 1px solid var(--slate-200);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-info .stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--slate-900);
+    line-height: 1.1;
+}
+
+.stat-info .stat-label {
+    font-size: 0.775rem;
+    color: var(--slate-500);
+    margin-top: 4px;
+}
+
+/* Bảng ma trận đối chiếu phân quyền RBAC */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--slate-200);
+}
+
+.rbac-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.825rem;
+    background: #ffffff;
+    text-align: left;
+}
+
+.rbac-table th, .rbac-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--slate-200);
+}
+
+.rbac-table th {
+    background: var(--slate-100);
+    font-weight: 700;
+    color: var(--slate-700);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 0.725rem;
+    font-weight: 700;
+}
+
+.status-allowed {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status-denied {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* ==============================================================================
+   RESPONSIVE DESIGN CHO MÀN HÌNH TABLET VÀ MOBILE
+   ============================================================================== */
+@media (max-width: 992px) {
+    /* Chuyển Sidebar thành Drawer ẩn sang trái */
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 300px;
+        max-width: 85vw;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .app-sidebar.drawer-open {
+        transform: translateX(0);
+    }
+
+    .drawer-close-btn {
+        display: flex;
+    }
+
+    .hamburger-btn {
+        display: inline-flex;
+    }
+
+    .app-topbar {
+        padding: 0 16px;
+    }
+
+    .page-content {
+        padding: 16px;
+    }
+}
+
+/* ==============================================================================
+   TIÊU CHÍ 3: ĐẶC BIỆT TỐI ƯU CHO MÀN HÌNH 360PX (VÍ DỤ SAMSUNG S / IPHONE SE)
+   ============================================================================== */
+@media (max-width: 480px) {
+    .page-content {
+        padding: 12px;
+    }
+
+    .page-header-info h1 {
+        font-size: 1.05rem;
+    }
+
+    .topbar-right-info .current-role-indicator span:last-child {
+        display: none; /* Rút gọn tên trên thanh topbar mobile nhỏ */
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .user-profile-card {
+        padding: 14px 14px;
+    }
+
+    .user-avatar {
+        width: 42px;
+        height: 42px;
+        font-size: 0.95rem;
+    }
+
+    .user-name {
+        font-size: 0.875rem;
+    }
+
+    .business-group-badge {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+
+    .role-buttons-grid {
+        grid-template-columns: 1fr; /* Xếp 1 cột ở màn hình rất nhỏ */
+    }
+
+    .card {
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+}
+
+/* Kiểm tra nghiêm ngặt dưới 360px: Tuyệt đối không tràn ngang */
+@media (max-width: 360px) {
+    body {
+        font-size: 13px;
+    }
+
+    .app-sidebar {
+        width: 280px;
+    }
+
+    .menu-link {
+        padding: 10px 10px;
+        font-size: 0.8125rem;
+    }
+
+    .role-btn {
+        padding: 7px 4px;
+        font-size: 0.7rem;
+    }
+}
+
+/* ==============================================================================
+   CHẾ ĐỘ GIẢ LẬP KHUNG ĐIỆN THOẠI 360PX (360PX DEVICE SIMULATOR)
+   Cho phép người dùng bấm nút "Giả lập 360px" để xem khung iPhone/Android
+   chính xác 360px ngay trên màn hình máy tính bàn lớn.
+   ============================================================================== */
+body.simulator-mode {
+    background: #0f172a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 40px;
+}
+
+body.simulator-mode .testing-topbar {
+    width: 100%;
+}
+
+.simulator-device-frame {
+    display: none;
+}
+
+body.simulator-mode .simulator-device-frame {
+    display: block;
+    width: 360px; /* ĐÚNG 360PX THEO YÊU CẦU */
+    height: 740px;
+    background: #ffffff;
+    border-radius: 36px;
+    box-shadow: 0 0 0 12px #334155, 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    margin: 30px auto;
+    overflow: hidden;
+    position: relative;
+    border: 3px solid #1e293b;
+}
+
+/* Notch giả lập loa & camera điện thoại */
+.simulator-notch {
+    width: 120px;
+    height: 20px;
+    background: #1e293b;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+.simulator-viewport {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: 15px;
+    background: #f1f5f9;
+}

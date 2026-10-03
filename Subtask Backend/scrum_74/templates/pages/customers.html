@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Khách Hàng Của Tôi{% endblock %}
+{% block page_title %}Quản Lý Khách Hàng (CRM){% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+            </svg>
+            Danh Sách Khách Hàng Được Phân Công Phụ Trách
+        </div>
+        <span class="menu-badge badge-primary">{{ customers|length }} Khách hàng</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="rbac-table">
+            <thead>
+                <tr>
+                    <th>Mã KH</th>
+                    <th>Tên Doanh Nghiệp</th>
+                    <th>Người Đại Diện</th>
+                    <th>Điện Thoại</th>
+                    <th>Doanh Thu Dự Kiến</th>
+                    <th>Chuyên Viên Phụ Trách</th>
+                    <th>Phân Loại</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customers %}
+                <tr>
+                    <td><strong>{{ c.code }}</strong></td>
+                    <td>{{ c.name }}</td>
+                    <td>{{ c.contact }}</td>
+                    <td><code>{{ c.phone }}</code></td>
+                    <td style="color: #059669; font-weight: 700;">{{ c.revenue }}</td>
+                    <td>{{ c.assigned_to }}</td>
+                    <td><span class="status-badge status-allowed">{{ c.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

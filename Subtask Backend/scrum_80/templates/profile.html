@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Hồ Sơ Cá Nhân & Chữ Ký Email{% endblock %}
+{% block breadcrumb %}Hồ sơ cá nhân & Chữ ký{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+
+  <!-- ========================================================
+       BANNER GIỚI THIỆU USER STORY & TIÊU CHÍ CHẤP NHẬN
+       ======================================================== -->
+  <div class="user-story-banner">
+    <div class="banner-badge-wrapper">
+      <span class="badge-scrum-task">SCRUM-69 / SCRUM-80</span>
+      <span class="badge-status-tag">In Progress</span>
+    </div>
+    <h1 class="user-story-title">
+      Là người dùng của hệ thống, tôi muốn xem và cập nhật hồ sơ cá nhân, để chữ ký email của tôi luôn đúng khi gửi báo giá cho khách.
+    </h1>
+    <div class="acceptance-criteria-summary">
+      <div class="ac-item">
+        <span class="ac-icon check">✓</span>
+        <span class="ac-text"><strong>Tiêu chí 1:</strong> Sửa được họ tên, số điện thoại, chữ ký email</span>
+      </div>
+      <div class="ac-item">
+        <span class="ac-icon check">✓</span>
+        <span class="ac-text"><strong>Tiêu chí 2:</strong> Không tự đổi được email, nhóm và vai trò</span>
+      </div>
+      <div class="ac-item">
+        <span class="ac-icon check">✓</span>
+        <span class="ac-text"><strong>Tiêu chí 3:</strong> Kiểm tra định dạng số điện thoại Việt Nam</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       BỐ CỤC 2 CỘT: FORM CẬP NHẬT (TRÁI) & XEM TRƯỚC CHỮ KÝ (PHẢI)
+       ======================================================== -->
+  <div class="profile-grid">
+    
+    <!-- CỘT 1: FORM CẬP NHẬT HỒ SƠ CÁ NHÂN -->
+    <div class="profile-card form-section-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-icon-bubble">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </div>
+          <div>
+            <h2 class="card-title">Cập Nhật Hồ Sơ Người Dùng</h2>
+            <p class="card-subtitle">Chỉnh sửa thông tin liên hệ và mẫu chữ ký email hiển thị trên báo giá</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('profile') }}" id="profileForm" novalidate>
+          
+          <!-- PHẦN 1: CÁC TRƯỜNG CHO PHÉP CHỈNH SỬA (TIÊU CHÍ 1) -->
+          <div class="form-section-title">
+            <span class="section-badge edit-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Được phép chỉnh sửa (Tiêu chí 1)
+            </span>
+          </div>
+
+          <!-- 1. Họ và tên -->
+          <div class="form-group">
+            <label for="full_name" class="form-label required">
+              Họ và tên người dùng
+              <span class="field-hint">Hiển thị trong danh bạ và thư báo giá</span>
+            </label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </span>
+              <input 
+                type="text" 
+                id="full_name" 
+                name="full_name" 
+                class="form-control" 
+                value="{{ form_preview.full_name if form_preview else user.full_name }}" 
+                placeholder="Nhập họ và tên đầy đủ..." 
+                required 
+                maxlength="100"
+              >
+            </div>
+            <div class="field-feedback" id="nameFeedback"></div>
+          </div>
+
+          <!-- 2. Số điện thoại (Tiêu chí 3 - Kiểm tra định dạng Việt Nam) -->
+          <div class="form-group">
+            <label for="phone" class="form-label required">
+              Số điện thoại di động (Việt Nam)
+              <span class="field-hint">Đầu số hợp lệ: 03x, 05x, 07x, 08x, 09x hoặc (+84)</span>
+            </label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              </span>
+              <input 
+                type="text" 
+                id="phone" 
+                name="phone" 
+                class="form-control" 
+                value="{{ form_preview.phone if form_preview else user.phone }}" 
+                placeholder="Ví dụ: 0912 345 678 hoặc +84987654321" 
+                required
+              >
+              <div class="phone-validation-badge" id="phoneStatusBadge">
+                <span class="badge-dot"></span>
+                <span class="badge-text">Đang kiểm tra...</span>
+              </div>
+            </div>
+            <div class="field-feedback" id="phoneFeedback">
+              Định dạng 10 chữ số nhà mạng Việt Nam (Viettel, Vina, Mobi, Vietnamobile, Wintel, Gmobile).
+            </div>
+          </div>
+
+          <!-- 3. Chữ ký Email (Tiêu chí 1) -->
+          <div class="form-group">
+            <div class="signature-label-row">
+              <label for="email_signature" class="form-label required">
+                Chữ ký Email doanh nghiệp
+                <span class="field-hint">Tự động đính kèm ở chân mọi báo giá gửi cho khách hàng</span>
+              </label>
+              <button type="button" class="btn-text-action" id="btnAutoGenerateSignature" title="Tạo tự động mẫu chữ ký từ thông tin hiện tại">
+                ✨ Tự động tạo mẫu chuẩn
+              </button>
+            </div>
+            <textarea 
+              id="email_signature" 
+              name="email_signature" 
+              rows="5" 
+              class="form-control signature-textarea" 
+              placeholder="Nhập lời chào, họ tên, chức danh, hotline, tên công ty..." 
+              required
+            >{{ form_preview.email_signature if form_preview else user.email_signature }}</textarea>
+            <div class="textarea-footer">
+              <span class="char-count" id="signatureCharCount">0 ký tự</span>
+              <span class="preview-hint">Chữ ký sẽ tự động cập nhật sang khung xem trước bên cạnh</span>
+            </div>
+          </div>
+
+          <!-- PHẦN 2: CÁC TRƯỜNG BỊ KHÓA, CẤM TỰ ĐỔI (TIÊU CHÍ 2) -->
+          <div class="form-section-title locked-title">
+            <span class="section-badge lock-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Trường cố định - Không tự đổi được (Tiêu chí 2)
+            </span>
+          </div>
+
+          <div class="locked-fields-grid">
+            
+            <!-- Email (Readonly) -->
+            <div class="form-group locked-group">
+              <label for="email" class="form-label locked-label">
+                <span>Địa chỉ Email định danh</span>
+                <span class="lock-indicator" title="Không tự đổi được email theo Tiêu chí 2">🔒 Cố định</span>
+              </label>
+              <div class="input-wrapper locked-wrapper">
+                <input 
+                  type="email" 
+                  id="email" 
+                  name="email" 
+                  class="form-control locked-input" 
+                  value="{{ user.email }}" 
+                  readonly 
+                  tabindex="-1"
+                >
+              </div>
+              <small class="locked-note">Email doanh nghiệp gắn liền với tài khoản SSO và hợp đồng nhân sự.</small>
+            </div>
+
+            <!-- Nhóm kinh doanh (Readonly) -->
+            <div class="form-group locked-group">
+              <label for="business_group" class="form-label locked-label">
+                <span>Nhóm kinh doanh trực thuộc</span>
+                <span class="lock-indicator" title="Không tự đổi được nhóm kinh doanh theo Tiêu chí 2">🔒 Cố định</span>
+              </label>
+              <div class="input-wrapper locked-wrapper">
+                <input 
+                  type="text" 
+                  id="business_group" 
+                  name="business_group" 
+                  class="form-control locked-input" 
+                  value="{{ user.business_group }}" 
+                  readonly 
+                  tabindex="-1"
+                >
+              </div>
+              <small class="locked-note">Do Trưởng phòng hoặc Quản trị viên phân bổ theo sơ đồ tổ chức.</small>
+            </div>
+
+            <!-- Vai trò hệ thống (Readonly) -->
+            <div class="form-group locked-group">
+              <label for="role_name" class="form-label locked-label">
+                <span>Vai trò / Phân quyền trong hệ thống</span>
+                <span class="lock-indicator" title="Không tự đổi được vai trò theo Tiêu chí 2">🔒 Cố định</span>
+              </label>
+              <div class="input-wrapper locked-wrapper">
+                <input 
+                  type="text" 
+                  id="role_name" 
+                  name="role_name" 
+                  class="form-control locked-input" 
+                  value="{{ user.role_name }}" 
+                  readonly 
+                  tabindex="-1"
+                >
+              </div>
+              <small class="locked-note">Quyền hạn hệ thống được cấp phép bởi Ban Giám Đốc.</small>
+            </div>
+
+          </div>
+
+          <!-- NÚT LƯU THAY ĐỔI -->
+          <div class="form-action-row">
+            <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>Lưu Cập Nhật Hồ Sơ</span>
+            </button>
+            <a href="{{ url_for('profile') }}" class="btn btn-secondary">
+              <span>Hủy thay đổi</span>
+            </a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- CỘT 2: XEM TRƯỚC CHỮ KÝ EMAIL THỰC TẾ & MINH CHỨNG GỬI BÁO GIÁ -->
+    <div class="profile-card preview-section-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-icon-bubble preview-bubble">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </div>
+          <div>
+            <h2 class="card-title">Xem Trước Chữ Ký Email Thực Tế</h2>
+            <p class="card-subtitle">Hiển thị thời gian thực theo nội dung bạn đang gõ</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        
+        <!-- Khung mô phỏng Email Client (Outlook / Gmail) -->
+        <div class="email-mockup-window">
+          <div class="mockup-header">
+            <div class="mockup-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="mockup-title">Email Soạn Báo Giá Gửi Khách Hàng</div>
+          </div>
+
+          <div class="mockup-body">
+            <div class="email-meta-line">
+              <span class="email-label">Người gửi:</span>
+              <span class="email-val" id="previewSender"><strong>{{ user.full_name }}</strong> &lt;{{ user.email }}&gt;</span>
+            </div>
+            <div class="email-meta-line">
+              <span class="email-label">Người nhận:</span>
+              <span class="email-val">contact@khachhang.com</span>
+            </div>
+            <div class="email-meta-line">
+              <span class="email-label">Tiêu đề:</span>
+              <span class="email-val"><strong>[Báo Giá] Đề xuất giải pháp triển khai phần mềm</strong></span>
+            </div>
+
+            <div class="email-content-sample">
+              <p>Kính gửi Quý khách hàng,</p>
+              <p>Em xin gửi tới Quý công ty bảng báo giá chi tiết các hạng mục triển khai theo trao đổi hôm qua. Bảng báo giá đã được đính kèm bên dưới.</p>
+              <p>Rất mong sớm nhận được phản hồi từ Quý đối tác!</p>
+            </div>
+
+            <!-- VÙNG CHỮ KÝ EMAIL THỜI GIAN THỰC -->
+            <div class="email-signature-live-box">
+              <div class="signature-divider">
+                <span>-- Chữ ký thư cá nhân --</span>
+              </div>
+              <div class="signature-content-display" id="signatureLivePreview">
+                {{ user.email_signature }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối thẻ giá trị User Story -->
+        <div class="story-proof-box">
+          <div class="proof-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <div class="proof-content">
+            <div class="proof-title">Chữ ký email của bạn đã sẵn sàng!</div>
+            <p class="proof-text">
+              Khi bạn gửi báo giá cho khách hàng, hệ thống sẽ sử dụng chính xác chữ ký này kèm theo tên và số điện thoại mới nhất.
+            </p>
+            <a href="{{ url_for('quotes') }}" class="btn btn-outline-primary btn-sm">
+              <span>Đến trang Báo giá & Chữ ký &rarr;</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Chạy script khởi tạo tương tác
+  document.addEventListener("DOMContentLoaded", function() {
+    initProfilePage();
+  });
+</script>
+{% endblock %}

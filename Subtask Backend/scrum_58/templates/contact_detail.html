@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Hồ Sơ: {{ contact.full_name }} | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('index') }}">Người Liên Hệ</a> &rsaquo;
+    <a href="{{ url_for('customer_detail', customer_id=contact.customer_id) }}">{{ contact.customer_name }}</a> &rsaquo;
+    <span>{{ contact.full_name }}</span>
+</div>
+
+<!-- Hồ sơ Người liên hệ Hero Header -->
+<div class="contact-profile-card">
+    <div class="profile-main-row">
+        <div class="profile-avatar-large">
+            {{ contact.full_name[0] }}
+        </div>
+        <div class="profile-info-group">
+            <div class="profile-badges-row">
+                <span class="badge {{ contact.role_meta.badge_class }}">
+                    {{ contact.role_meta.icon }} {{ contact.role_meta.name }}
+                </span>
+                {% if contact.is_primary %}
+                    <span class="badge-primary-contact">⭐ ĐẦU MỐI CHÍNH</span>
+                {% endif %}
+                <span class="support-badge support-{{ contact.support_level|replace(' ', '-') }}">
+                    Thái độ: {{ contact.support_level }}
+                </span>
+            </div>
+
+            <h1 class="profile-name">{{ contact.full_name }}</h1>
+            <div class="profile-title">💼 {{ contact.job_title }}</div>
+            <div class="profile-company">
+                🏢 Đang làm việc tại: 
+                <a href="{{ url_for('customer_detail', customer_id=contact.customer_id) }}" class="company-link">
+                    <strong>{{ contact.customer_name }}</strong>
+                </a>
+            </div>
+        </div>
+
+        <div class="profile-actions-group">
+            <!-- Nút Chuyển công tác (Tiêu chí 4) -->
+            <a href="{{ url_for('contact_transfer', contact_id=contact.id) }}" class="btn btn-accent btn-lg">
+                🔄 Chuyển Công Tác Sang Công Ty Mới
+            </a>
+            <div class="mt-2 text-right">
+                <a href="{{ url_for('contact_edit', contact_id=contact.id) }}" class="btn btn-outline btn-sm">
+                    ✏️ Sửa Thông Tin
+                </a>
+                {% if not contact.is_primary %}
+                    <form method="POST" action="{{ url_for('set_primary', customer_id=contact.customer_id, contact_id=contact.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            ⭐ Đặt làm Đầu Mối Chính
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Thông tin liên lạc chi tiết (Tiêu chí 1) -->
+    <div class="profile-comm-grid">
+        <div class="comm-card">
+            <span class="comm-label">✉️ Email Doanh Nghiệp:</span>
+            <a href="mailto:{{ contact.email }}" class="comm-value">{{ contact.email }}</a>
+        </div>
+        <div class="comm-card">
+            <span class="comm-label">📞 Số Điện Thoại Di Động:</span>
+            <a href="tel:{{ contact.phone }}" class="comm-value">{{ contact.phone }}</a>
+        </div>
+        <div class="comm-card">
+            <span class="comm-label">🎭 Vai Trò Quyết Định Mua:</span>
+            <span class="comm-value font-weight-bold">{{ contact.role_meta.name }} ({{ contact.role_meta.icon }})</span>
+        </div>
+        <div class="comm-card">
+            <span class="comm-label">🕒 Ngày Tạo Hồ Sơ:</span>
+            <span class="comm-value text-muted">{{ contact.created_at }}</span>
+        </div>
+    </div>
+
+    <!-- Cẩm nang chiến lược & Ghi chú tiếp cận -->
+    <div class="profile-strategy-box">
+        <div class="strategy-header">
+            <strong>🎯 Cẩm Nang Tiếp Cận Cho Vai Trò "{{ contact.role_meta.name }}":</strong>
+        </div>
+        <p class="strategy-advice">{{ contact.role_meta.sales_strategy }}</p>
+        {% if contact.notes %}
+            <div class="contact-notes-display">
+                <span class="notes-label">📝 Ghi Chú Riêng Của Nhân Viên Kinh Doanh:</span>
+                <p class="notes-content">"{{ contact.notes }}"</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- TIÊU CHÍ 4: DÒNG THỜI GIAN LỊCH SỬ CÔNG TÁC (CAREER & ENGAGEMENT TIMELINE) -->
+<!-- ======================================================================= -->
+<div class="timeline-card" id="career-history">
+    <div class="timeline-header">
+        <div class="timeline-title-group">
+            <h2 class="timeline-title">🕒 Lịch Sử Công Tác & Dấu Vết Thương Vụ (Career History)</h2>
+            <p class="timeline-subtitle">
+                Đáp ứng trọn vẹn <strong>Tiêu chí 4</strong>: Khi chuyển sang công ty khác, người liên hệ được gắn sang khách hàng mới nhưng vẫn giữ nguyên toàn bộ lịch sử công tác, vai trò mua cũ và các ghi chú thương vụ trước đó.
+            </p>
+        </div>
+        <a href="{{ url_for('contact_transfer', contact_id=contact.id) }}" class="btn btn-accent btn-sm">
+            ➕ Ghi Nhận Chuyển Công Tác
+        </a>
+    </div>
+
+    <div class="timeline-wrapper">
+        <!-- Mốc 1: Công việc hiện tại -->
+        <div class="timeline-item timeline-current">
+            <div class="timeline-badge-icon">📍</div>
+            <div class="timeline-content">
+                <div class="timeline-time-badge current-badge">HIỆN TẠI (Đang công tác)</div>
+                <h3 class="timeline-company-title">
+                    🏢 {{ contact.customer_name }}
+                </h3>
+                <div class="timeline-role-info">
+                    <span class="job-pill">💼 {{ contact.job_title }}</span>
+                    <span class="badge {{ contact.role_meta.badge_class }}">
+                        {{ contact.role_meta.icon }} {{ contact.role_meta.name }}
+                    </span>
+                    {% if contact.is_primary %}
+                        <span class="badge-primary-pill">⭐ Đầu mối chính</span>
+                    {% endif %}
+                </div>
+                <div class="timeline-meta-box">
+                    <span>✉️ {{ contact.email }}</span>
+                    <span>📞 {{ contact.phone }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Các mốc lịch sử công tác cũ (nếu có) -->
+        {% if contact.history and contact.history|length > 0 %}
+            {% for hist in contact.history %}
+            <div class="timeline-item timeline-past">
+                <div class="timeline-badge-icon past-icon">🏢</div>
+                <div class="timeline-content past-content">
+                    <div class="timeline-time-badge past-badge">
+                        ĐÃ KẾT THÚC: {{ hist.transferred_at }}
+                    </div>
+                    <h3 class="timeline-company-title">
+                        🏢 {{ hist.previous_customer_name }}
+                    </h3>
+                    <div class="timeline-role-info">
+                        <span class="job-pill">💼 {{ hist.previous_job_title }}</span>
+                        {% set old_role = buying_roles.get(hist.previous_buying_role) %}
+                        {% if old_role %}
+                            <span class="badge {{ old_role.badge_class }}">
+                                {{ old_role.icon }} {{ old_role.name }}
+                            </span>
+                        {% endif %}
+                        {% if hist.was_primary %}
+                            <span class="badge-secondary-pill">Từng là Đầu mối chính</span>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-meta-box">
+                        <span>✉️ Email cũ: {{ hist.previous_email }}</span>
+                        <span>📞 SĐT cũ: {{ hist.previous_phone }}</span>
+                    </div>
+                    <div class="transfer-reason-box">
+                        <div class="reason-line">
+                            <strong>Lý do chuyển công tác:</strong> {{ hist.transfer_reason }}
+                        </div>
+                        {% if hist.sales_impact_note %}
+                            <div class="impact-line">
+                                <strong>💡 Giá trị thương vụ (Sales Impact):</strong> {{ hist.sales_impact_note }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Nếu chưa từng chuyển công ty -->
+            <div class="timeline-no-history">
+                <p>👤 <em>Người liên hệ này chưa từng ghi nhận chuyển công tác từ doanh nghiệp khác sang.</em></p>
+                <p class="text-xs text-muted">Khi người này chuyển sang công ty mới, bấm nút <strong>"Chuyển Công Tác Sang Công Ty Mới"</strong> để hệ thống tự động lưu trữ công ty hiện tại vào dòng thời gian này.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

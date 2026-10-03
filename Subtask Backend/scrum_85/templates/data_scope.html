@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Phạm Vi Dữ Liệu Theo Cây Tổ Chức{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="header-intro">
+            <div class="badge-role">🎯 Tiêu chí 3: Cây tổ chức quyết định phạm vi dữ liệu mà Trưởng nhóm nhìn thấy</div>
+            <h1 class="page-title">Khám Phá Phạm Vi Dữ Liệu (Data Scope Explorer)</h1>
+            <p class="page-subtitle">
+                Hệ thống áp dụng thuật toán duyệt cây phân cấp <strong>(Subtree Traversal)</strong>: Trưởng nhóm được toàn quyền xem dữ liệu của nhóm mình và tất cả các nhóm con cấp dưới. Tuyệt đối không nhìn thấy dữ liệu của các nhóm ngang hàng hoặc cấp trên.
+            </p>
+        </div>
+    </div>
+
+    <!-- CURRENT ACTOR SCOPE CARD -->
+    <div class="scope-perspective-card">
+        <div class="perspective-header">
+            <div class="perspective-user">
+                <span class="perspective-avatar">{{ current_user.avatar }}</span>
+                <div>
+                    <div class="perspective-role-pill">Góc nhìn kiểm thử hiện tại</div>
+                    <h2 class="perspective-name">{{ current_user.name }}</h2>
+                    <div class="perspective-title">{{ current_user.role_title }} • Nhóm: <strong>{{ current_user.team_name }}</strong></div>
+                </div>
+            </div>
+            <div class="perspective-metrics">
+                <div class="p-metric-item">
+                    <span class="p-metric-val">{{ scope_meta.accessible_team_count }}</span>
+                    <span class="p-metric-lbl">Nhóm Trong Tầm Nhìn</span>
+                </div>
+                <div class="p-metric-item">
+                    <span class="p-metric-val">{{ deals|length }}</span>
+                    <span class="p-metric-lbl">Hợp Đồng Nhìn Thấy</span>
+                </div>
+                <div class="p-metric-item highlight">
+                    <span class="p-metric-val">{{ "{:,.0f}".format(visible_revenue) }} ₫</span>
+                    <span class="p-metric-lbl">Tổng Doanh Số Nhìn Thấy</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="perspective-body">
+            <div class="scope-explanation-alert">
+                <span class="scope-icon">ℹ️</span>
+                <div class="scope-text">
+                    <strong>{{ scope_meta.scope_label }}:</strong>
+                    {{ scope_meta.description }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MA TRẬN PHẠM VI TRUY CẬP CÁC NHÓM TRONG CÂY -->
+    <div class="content-card mt-4">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">🗺️ Ma Trận Phân Quyền Theo Nhóm Trong Cây Tổ Chức</h2>
+                <p class="card-desc">Đối chiếu trạng thái truy cập của tài khoản hiện tại đối với từng nhóm trong doanh nghiệp.</p>
+            </div>
+        </div>
+
+        <div class="team-scope-grid">
+            {% for t in all_teams %}
+                {% set is_in_scope = (t.id in in_scope_team_ids) %}
+                <div class="scope-team-item {% if is_in_scope %}in-scope{% else %}out-of-scope{% endif %}">
+                    <div class="scope-team-header">
+                        <span class="scope-status-badge {% if is_in_scope %}badge-allowed{% else %}badge-denied{% endif %}">
+                            {% if is_in_scope %}✅ TRONG PHẠM VI (In-Scope){% else %}🔒 NGOÀI PHẠM VI (Bảo Mật){% endif %}
+                        </span>
+                        <span class="scope-region-tag" style="color: {{ t.region_badge_color }};">
+                            📍 {{ t.region_code }}
+                        </span>
+                    </div>
+                    <h4 class="scope-team-title">{{ t.name }}</h4>
+                    <div class="scope-team-meta">
+                        <span>Trưởng nhóm: <strong>{{ t.leader_name }}</strong></span>
+                        <span>Nhóm cha: <em>{{ t.parent_name }}</em></span>
+                    </div>
+                    <div class="scope-team-footer">
+                        {% if is_in_scope %}
+                            <span class="text-success-bold">✓ Dữ liệu được hiển thị bên dưới</span>
+                        {% else %}
+                            <span class="text-muted-italic">✕ Bị ẩn hoàn toàn theo cây tổ chức</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU CÁC HỢP ĐỒNG / DEALS NHÌN THẤY ĐƯỢC -->
+    <div class="content-card mt-4">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">💼 Danh Sách Cơ Hội Bán Hàng & Hợp Đồng Nhìn Thấy Được ({{ deals|length }})</h2>
+                <p class="card-desc">Chỉ những deal thuộc các nhóm trong phạm vi cây tổ chức (hoặc do chính bạn phụ trách) mới xuất hiện tại đây.</p>
+            </div>
+        </div>
+
+        {% if deals %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã Hợp Đồng</th>
+                            <th>Khách Hàng / Doanh Nghiệp</th>
+                            <th>Nhóm Kinh Doanh Sở Hữu</th>
+                            <th>Nhân Viên Phụ Trách</th>
+                            <th>Khu Vực Địa Lý</th>
+                            <th class="text-right">Giá Trị (VNĐ)</th>
+                            <th>Trạng Thái</th>
+                            <th>Lý Do Nhìn Thấy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in deals %}
+                            <tr>
+                                <td><code>{{ d.id }}</code></td>
+                                <td>
+                                    <strong>{{ d.customer_name }}</strong>
+                                    <div class="table-subtext">Cập nhật: {{ d.updated_at }}</div>
+                                </td>
+                                <td>
+                                    <span class="team-label-tag">{{ d.team_name }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ d.assignee_name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="region-pill" style="background-color: {{ d.region_badge_color }}20; color: {{ d.region_badge_color }};">
+                                        📍 {{ d.region_name }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <strong class="deal-value">{{ "{:,.0f}".format(d.value_vnd) }} ₫</strong>
+                                </td>
+                                <td>
+                                    <span class="deal-status-badge status-{{ d.status|replace(' ', '-')|lower }}">
+                                        {{ d.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if current_user.is_director %}
+                                        <span class="reason-pill director">👑 Toàn quyền Giám Đốc</span>
+                                    {% elif d.assignee_id == current_user.id %}
+                                        <span class="reason-pill self">👤 Trực tiếp phụ trách</span>
+                                    {% else %}
+                                        <span class="reason-pill subtree">🌿 Thuộc nhóm con cấp dưới</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3>Không có dữ liệu trong phạm vi hiện tại</h3>
+                <p>Nhân sự này hiện chưa được phân công quản lý nhóm hoặc chưa có hợp đồng nào được giao trực tiếp.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -45,3 +45,20 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Workspace & root leftovers (tracked in Frontend repo)
+node_modules/
+dist/
+.vite/
+server/
+models/
+routers/
+schemas/
+services/
+repositories/
+app.py
+database.py
+start-all.bat
+start-crm.bat
+tests/test_audit_logs.py
+

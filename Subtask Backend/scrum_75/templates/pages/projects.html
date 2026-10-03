@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Dự Án & Tiến Độ{% endblock %}
+{% block page_title %}Quản Lý Dự Án & Tiến Độ{% endblock %}
+
+{% block content %}
+<div class="content-panel">
+  <div class="panel-header">
+    <div>
+      <h2 class="panel-title">Danh Sách Các Dự Án Trọng Điểm</h2>
+      <p class="panel-sub">Khu vực dành cho Nhân viên (Staff), Trưởng phòng (Manager) và Giám đốc (Admin).</p>
+    </div>
+    <div class="panel-badge-info">
+      <span>Quyền hạn kích hoạt: <code>view_projects</code></span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Mã Dự Án</th>
+          <th>Tên Dự Án</th>
+          <th>Người Phụ Trách</th>
+          <th>Hạn Chót</th>
+          <th>Tiến Độ Hoàn Thành</th>
+          <th>Trạng Thái</th>
+          <th>Thao Tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in projects %}
+          <tr>
+            <td><span class="badge-code">{{ p.id }}</span></td>
+            <td class="font-medium">{{ p.name }}</td>
+            <td>{{ p.leader }}</td>
+            <td>{{ p.deadline }}</td>
+            <td>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {{ p.progress }}%;"></div>
+                <span class="progress-text">{{ p.progress }}%</span>
+              </div>
+            </td>
+            <td><span class="status-pill {{ p.status_class }}">{{ p.status }}</span></td>
+            <td>
+              <button class="btn-table-action" onclick="alert('Xem chi tiết dự án {{ p.id }}')">Chi tiết</button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

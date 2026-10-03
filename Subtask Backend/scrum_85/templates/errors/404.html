@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Trang Không Tồn Tại (404){% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="content-card text-center" style="max-width: 600px; margin: 40px auto; padding: 40px 20px;">
+        <div style="font-size: 4rem; margin-bottom: 10px;">🔍</div>
+        <h2 style="font-size: 1.8rem; color: #1e293b; margin-bottom: 10px;">Không Tìm Thấy Trang (404)</h2>
+        <p style="color: #64748b; margin-bottom: 25px;">Đường dẫn bạn yêu cầu không tồn tại hoặc đã được thay đổi trong hệ thống.</p>
+        <div>
+            <a href="{{ url_for('org_tree_view') }}" class="btn btn-primary">🏢 Về Sơ Đồ Cây Tổ Chức</a>
+            <a href="{{ url_for('data_scope_view') }}" class="btn btn-secondary">🎯 Về Phạm Vi Dữ Liệu</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

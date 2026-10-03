@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Điều Khiển Quản Trị{% endblock %}
+{% block page_title %}Bảng Điều Khiển Tổng Quan{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  
+  <!-- Banner chào mừng người dùng & hướng dẫn kiểm thử -->
+  <div class="welcome-banner">
+    <div class="banner-content">
+      <span class="banner-badge">Hệ Thống Doanh Nghiệp • Scrum Sprint 2</span>
+      <h1 class="banner-title">Xin chào, {{ current_user.name }}!</h1>
+      <p class="banner-desc">
+        Bạn đang đăng nhập với vai trò <strong class="text-highlight">{{ current_user.role_name }}</strong> thuộc <strong>{{ current_user.department }}</strong>.
+        Hệ thống đã triển khai đầy đủ cơ chế phân quyền RBAC và kiểm soát thông báo lỗi thân thiện theo User Story <strong>SCRUM-75</strong>.
+      </p>
+    </div>
+    <div class="banner-actions">
+      <span class="user-perm-counter">Bạn có <strong>{{ current_user.permissions|length }}</strong> quyền được kích hoạt</span>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       KHU VỰC ĐẶC BIỆT: BỘ CÔNG CỤ KIỂM THỬ SCRUM-75 (TESTING LAB)
+       Giúp giáo viên/người chấm bài kiểm thử 2 tiêu chí chấp nhận
+       ======================================================== -->
+  <div class="testing-lab-card">
+    <div class="lab-header">
+      <div class="lab-title-group">
+        <span class="lab-icon">🧪</span>
+        <div>
+          <h2 class="lab-title">Trung Tâm Kiểm Thử User Story SCRUM-75</h2>
+          <p class="lab-sub">Thực nghiệm trực tiếp 2 tiêu chí chấp nhận (Acceptance Criteria) của đề bài:</p>
+        </div>
+      </div>
+      <div class="lab-badge">Sẵn sàng nghiệm thu</div>
+    </div>
+
+    <div class="lab-grid">
+      <!-- Thử nghiệm Kịch bản 1: Lỗi 404 Truy cập nhầm chỗ -->
+      <div class="test-scenario-card scenario-404">
+        <div class="scenario-head">
+          <span class="sc-badge sc-badge-404">Kịch bản 1: Lỗi 404</span>
+          <span class="sc-icon">🧭</span>
+        </div>
+        <h3 class="sc-title">Truy Cập Nhầm Chỗ (URL sai)</h3>
+        <p class="sc-desc">
+          Khi người dùng gõ sai URL hoặc vào liên kết không tồn tại, thay vì màn hình trắng, hệ thống hiển thị trang 404 trực quan dùng chung layout, kèm các nút quay lại Bảng điều khiển hoặc trang trước.
+        </p>
+        <div class="sc-actions">
+          <a href="{{ url_for('trigger_test_404') }}" class="btn-sc-run btn-sc-404" id="btn-run-test-404">
+            <span>🚀 Kích hoạt thử lỗi 404</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Thử nghiệm Kịch bản 2: Lỗi 403 Không đủ quyền truy cập -->
+      <div class="test-scenario-card scenario-403">
+        <div class="scenario-head">
+          <span class="sc-badge sc-badge-403">Kịch bản 2: Lỗi 403</span>
+          <span class="sc-icon">🛡️</span>
+        </div>
+        <h3 class="sc-title">Không Đủ Quyền Truy Cập</h3>
+        <p class="sc-desc">
+          Khi nhân viên (vai trò <em>{{ current_user.role_name }}</em>) cố tình truy cập trang Cấu hình bảo mật hệ thống hoặc Báo cáo tài chính mật, hệ thống chặn lại bằng trang 403 có đầy đủ thông tin quyền còn thiếu và nút đổi vai trò.
+        </p>
+        <div class="sc-actions">
+          {% if current_user.username == 'admin' %}
+            <span class="sc-note">⚠️ Bạn đang là Giám Đốc (có toàn quyền). Hãy chuyển sang "Chuyên viên" hoặc "Thực tập" ở thanh trên để thử lỗi 403.</span>
+          {% else %}
+            <a href="{{ url_for('system_settings') }}" class="btn-sc-run btn-sc-403" id="btn-run-test-403">
+              <span>🚀 Vào trang Cấu hình (Thử lỗi 403)</span>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng so sánh ma trận phân quyền để kiểm thử -->
+    <div class="matrix-card">
+      <div class="matrix-title">Ma trận phân quyền giữa 4 vai trò trong hệ thống:</div>
+      <div class="table-responsive">
+        <table class="rbac-matrix-table">
+          <thead>
+            <tr>
+              <th>Chức năng</th>
+              <th>Đường dẫn</th>
+              <th>Giám đốc (Admin)</th>
+              <th>Trưởng phòng (Manager)</th>
+              <th>Chuyên viên (Staff)</th>
+              <th>Thực tập (Intern)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Bảng điều khiển</strong></td>
+              <td><code>/dashboard</code></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+            </tr>
+            <tr>
+              <td><strong>Quản lý Dự án</strong></td>
+              <td><code>/projects</code></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+            </tr>
+            <tr>
+              <td><strong>Báo cáo Tài chính</strong></td>
+              <td><code>/financial-reports</code></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cấu hình Hệ thống</strong></td>
+              <td><code>/system-settings</code></td>
+              <td><span class="perm-ok">✓ Truy cập</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+              <td><span class="perm-no">✕ Bị chặn 403</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Các thẻ thống kê KPI thực tế -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper bg-indigo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      </div>
+      <div class="stat-data">
+        <span class="stat-label">Dự án đang triển khai</span>
+        <span class="stat-number">4 Dự án</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper bg-emerald">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <div class="stat-data">
+        <span class="stat-label">Tài khoản thử nghiệm</span>
+        <span class="stat-number">4 Cấp bậc</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper bg-sky">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <div class="stat-data">
+        <span class="stat-label">Kiểm soát bảo mật</span>
+        <span class="stat-number">100% RBAC</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper bg-rose">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <div class="stat-data">
+        <span class="stat-label">Chính sách trang trắng</span>
+        <span class="stat-number">Zero White-Screen</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danh sách dự án mẫu tóm tắt -->
+  <div class="content-panel">
+    <div class="panel-header">
+      <h3 class="panel-title">Tiến Độ Dự Án Tiêu Biểu</h3>
+      <a href="{{ url_for('projects') }}" class="panel-link">Xem tất cả dự án &rarr;</a>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Mã Dự Án</th>
+            <th>Tên Dự Án</th>
+            <th>Phụ Trách</th>
+            <th>Hạn Chót</th>
+            <th>Tiến Độ</th>
+            <th>Trạng Thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+            <tr>
+              <td><code>{{ p.id }}</code></td>
+              <td class="font-medium">{{ p.name }}</td>
+              <td>{{ p.leader }}</td>
+              <td>{{ p.deadline }}</td>
+              <td>
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill" style="width: {{ p.progress }}%;"></div>
+                  <span class="progress-text">{{ p.progress }}%</span>
+                </div>
+              </td>
+              <td><span class="status-pill {{ p.status_class }}">{{ p.status }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

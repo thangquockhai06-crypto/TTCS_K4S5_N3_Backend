@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Không Tìm Thấy Trang{% endblock %}
+{% block page_title %}Truy Cập Nhầm Chỗ (404 Not Found){% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 650px; margin: 30px auto; text-align: center; padding: 36px 24px; border-top: 4px solid var(--warning);">
+    <div style="width: 72px; height: 72px; background: #fef3c7; color: #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+        </svg>
+    </div>
+
+    <span class="menu-badge badge-warning" style="font-size: 0.85rem; padding: 4px 12px; margin-bottom: 12px; display: inline-block;">
+        Mã Lỗi: 404 Not Found
+    </span>
+
+    <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--slate-900); margin-bottom: 10px;">
+        Đường Dẫn Không Tồn Tại!
+    </h2>
+
+    <p style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 24px;">
+        Địa chỉ <code>{{ attempted_url }}</code> bạn vừa truy cập không có trên hệ thống hoặc đã được di dời.
+    </p>
+
+    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('dashboard') }}" class="btn-sim" style="background: var(--primary); padding: 10px 24px; font-size: 0.875rem;">
+            Quay Về Bảng Điều Khiển
+        </a>
+        <a href="javascript:history.back()" class="btn-sim" style="background: var(--slate-700); padding: 10px 20px; font-size: 0.875rem;">
+            Quay Lại Trang Trước
+        </a>
+    </div>
+</div>
+{% endblock %}

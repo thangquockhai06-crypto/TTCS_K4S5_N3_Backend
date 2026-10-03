@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Khai Báo Khu Vực Địa Lý{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="header-intro">
+            <div class="badge-role">🗺️ Tiêu chí 4: Khai báo khu vực địa lý và gán khu vực cho nhóm</div>
+            <h1 class="page-title">Quản Lý Danh Mục Khu Vực Địa Lý</h1>
+            <p class="page-subtitle">
+                Khai báo các vùng thị trường, tỉnh thành trọng điểm. Mỗi nhóm kinh doanh trong cây tổ chức sẽ được gán với một khu vực địa lý cụ thể để phân định rõ thị trường khai thác.
+            </p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openCreateRegionModal()">
+                <span>➕</span> Khai Báo Khu Vực Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- DANH SÁCH KHU VỰC DẠNG THẺ (CARD GRID) -->
+    <div class="regions-grid">
+        {% for r in regions %}
+            <div class="region-card" style="border-top: 4px solid {{ r.badge_color }};">
+                <div class="region-card-header">
+                    <div>
+                        <span class="region-code-badge" style="background-color: {{ r.badge_color }}20; color: {{ r.badge_color }};">
+                            {{ r.code }}
+                        </span>
+                        <h3 class="region-name">{{ r.name }}</h3>
+                        <span class="meta-tag">Mã: <code>{{ r.id }}</code></span>
+                    </div>
+                </div>
+
+                <div class="region-card-body">
+                    <div class="region-info-block">
+                        <span class="info-lbl">🏙️ Tỉnh / Thành phố bao phủ:</span>
+                        <p class="info-provinces">{{ r.provinces }}</p>
+                    </div>
+
+                    {% if r.description %}
+                        <div class="region-info-block">
+                            <span class="info-lbl">📝 Mô tả vùng:</span>
+                            <p class="info-desc">{{ r.description }}</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Danh sách các nhóm kinh doanh đang gán khu vực này -->
+                    <div class="assigned-teams-box">
+                        <span class="info-lbl">🏢 Các nhóm kinh doanh phụ trách ({{ r.team_count }}):</span>
+                        {% if r.assigned_teams %}
+                            <div class="team-tags-list">
+                                {% for team in r.assigned_teams %}
+                                    <a href="{{ url_for('org_tree_view') }}#node-{{ team.id }}" class="team-tag-pill" title="Trưởng nhóm: {{ team.leader_name }}">
+                                        🏢 {{ team.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-muted-italic">Chưa có nhóm nào gán khu vực này.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="region-card-footer">
+                    <div class="region-revenue">
+                        <span class="rev-lbl">Doanh số vùng:</span>
+                        <strong class="rev-val">{{ "{:,.0f}".format(r.total_revenue) }} ₫</strong>
+                    </div>
+                    <div class="region-actions">
+                        <button class="btn-sm btn-outline" 
+                                onclick="openEditRegionModal('{{ r.id }}', '{{ r.name|escape }}', '{{ r.code }}', '{{ r.provinces|escape }}', '{{ r.description|escape }}', '{{ r.badge_color }}')">
+                            ✏️ Sửa
+                        </button>
+                        {% if r.team_count == 0 %}
+                            <form action="{{ url_for('delete_region_action', region_id=r.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Xóa khu vực địa lý này?');">
+                                <button type="submit" class="btn-sm btn-danger" title="Xóa khu vực">
+                                    🗑️ Xóa
+                                </button>
+                            </form>
+                        {% else %}
+                            <button class="btn-sm btn-disabled" title="Không thể xóa vì đang có {{ r.team_count }} nhóm kinh doanh phụ trách" disabled>
+                                🔒 Đang dùng
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ===========================================================================
+     MODAL: KHAI BÁO KHU VỰC ĐỊA LÝ MỚI
+     =========================================================================== -->
+<div class="modal-overlay" id="createRegionModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">➕ Khai Báo Khu Vực Địa Lý Mới</h3>
+            <button class="modal-close" onclick="closeModal('createRegionModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('create_region_action') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Mã Khu Vực <span class="required">*</span></label>
+                    <input type="text" name="region_id" class="form-control" placeholder="Ví dụ: REG_TAY_BAC, REG_DBSCL..." required>
+                    <small class="form-help">Mã định danh duy nhất (in hoa, viết liền, gạch dưới).</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên Khu Vực Địa Lý <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Khu vực Đồng Bằng Sông Cửu Long" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label class="form-label">Mã Viết Tắt</label>
+                        <input type="text" name="code" class="form-control" placeholder="Ví dụ: MK, TB, DH...">
+                    </div>
+                    <div class="form-group col-6">
+                        <label class="form-label">Màu Nhận Diện Badge</label>
+                        <input type="color" name="badge_color" class="form-control" value="#2563eb" style="height: 42px; padding: 2px;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Các Tỉnh / Thành Phố Trực Thuộc</label>
+                    <textarea name="provinces" class="form-control" rows="2" placeholder="Ví dụ: Cần Thơ, Tiền Giang, Bến Tre, Đồng Tháp, An Giang..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mô Tả Tiềm Năng & Đặc Điểm Thị Trường</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Vùng trọng điểm xuất khẩu nông thủy sản..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createRegionModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Xác Nhận Khai Báo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===========================================================================
+     MODAL: CHỈNH SỬA KHU VỰC ĐỊA LÝ
+     =========================================================================== -->
+<div class="modal-overlay" id="editRegionModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">✏️ Chỉnh Sửa Khu Vực Địa Lý</h3>
+            <button class="modal-close" onclick="closeModal('editRegionModal')">&times;</button>
+        </div>
+        <form id="editRegionForm" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Mã Khu Vực (Cố định)</label>
+                    <input type="text" id="edit_reg_id_display" class="form-control" readonly disabled>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên Khu Vực Địa Lý <span class="required">*</span></label>
+                    <input type="text" name="name" id="edit_reg_name" class="form-control" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label class="form-label">Mã Viết Tắt</label>
+                        <input type="text" name="code" id="edit_reg_code" class="form-control">
+                    </div>
+                    <div class="form-group col-6">
+                        <label class="form-label">Màu Nhận Diện Badge</label>
+                        <input type="color" name="badge_color" id="edit_reg_badge_color" class="form-control" style="height: 42px; padding: 2px;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Các Tỉnh / Thành Phố Trực Thuộc</label>
+                    <textarea name="provinces" id="edit_reg_provinces" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mô Tả</label>
+                    <textarea name="description" id="edit_reg_description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editRegionModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu Thay Đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

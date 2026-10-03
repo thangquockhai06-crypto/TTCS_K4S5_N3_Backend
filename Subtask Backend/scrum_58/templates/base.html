@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quản Lý Người Liên Hệ & Vai Trò Mua Hàng | SCRUM-58{% endblock %}</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Topbar: Thông tin Người dùng & Task Context -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand-section">
+                <a href="{{ url_for('index') }}" class="brand-logo">
+                    <span class="logo-icon">💼</span>
+                    <div class="logo-text">
+                        <span class="logo-title">B2B Sales CRM</span>
+                        <span class="ticket-tag">⚡ SCRUM-50 / ☑ SCRUM-58</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Role Summary Pills -->
+            <div class="header-metrics">
+                <a href="{{ url_for('index', buying_role='decision_maker') }}" class="metric-pill pill-decision" title="Lọc Người quyết định">
+                    <span class="icon">🎯</span>
+                    <span class="count">{{ total_decision_makers }}</span>
+                    <span class="label">Quyết định</span>
+                </a>
+                <a href="{{ url_for('index', buying_role='influencer') }}" class="metric-pill pill-influencer" title="Lọc Người ảnh hưởng">
+                    <span class="icon">💡</span>
+                    <span class="count">{{ total_influencers }}</span>
+                    <span class="label">Ảnh hưởng</span>
+                </a>
+                <a href="{{ url_for('index', buying_role='end_user') }}" class="metric-pill pill-user" title="Lọc Người dùng cuối">
+                    <span class="icon">👤</span>
+                    <span class="count">{{ total_end_users }}</span>
+                    <span class="label">Người dùng cuối</span>
+                </a>
+                <a href="{{ url_for('index', buying_role='blocker') }}" class="metric-pill pill-blocker" title="Lọc Người cản trở">
+                    <span class="icon">⚠️</span>
+                    <span class="count">{{ total_blockers }}</span>
+                    <span class="label">Cản trở</span>
+                </a>
+            </div>
+
+            <!-- Sales Rep Profile Info -->
+            <div class="sales-rep-badge">
+                <div class="rep-avatar">👨‍💼</div>
+                <div class="rep-info">
+                    <span class="rep-name">{{ current_sales_rep.name }}</span>
+                    <span class="rep-title">{{ current_sales_rep.title }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <nav class="main-navbar">
+            <div class="nav-container">
+                <div class="nav-links">
+                    <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                        <span class="nav-icon">👥</span> Tất Cả Người Liên Hệ ({{ total_contacts_count }})
+                    </a>
+                    <a href="{{ url_for('customers_list') }}" class="nav-item {% if 'customer' in request.endpoint and request.endpoint != 'customer_create' %}active{% endif %}">
+                        <span class="nav-icon">🏢</span> Khách Hàng & Ma Trận Mua ({{ total_customers_count }})
+                    </a>
+                </div>
+                <div class="nav-actions">
+                    <a href="{{ url_for('contact_create') }}" class="btn btn-primary btn-sm">
+                        <span class="btn-icon">➕</span> Thêm Người Liên Hệ
+                    </a>
+                    <a href="{{ url_for('customer_create') }}" class="btn btn-outline btn-sm">
+                        <span class="btn-icon">🏛️</span> Thêm Khách Hàng
+                    </a>
+                    <a href="{{ url_for('reset_demo') }}" class="btn btn-ghost btn-sm" title="Khôi phục trạng thái chuẩn ban đầu">
+                        <span class="btn-icon">🔄</span> Khôi Phục Mẫu
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Flash Messages Container -->
+    <main class="app-content">
+        <div class="content-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span class="alert-icon">
+                                    {% if category == 'success' %}✅
+                                    {% elif category == 'danger' %}⛔
+                                    {% elif category == 'warning' %}⚠️
+                                    {% else %}ℹ️{% endif %}
+                                </span>
+                                <span class="alert-text">{{ message }}</span>
+                                <button class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <strong>Hệ Thống Quản Lý Người Liên Hệ & Ma Trận Quyết Định Mua (SCRUM-58)</strong>
+                <p>Giải pháp xây dựng cho Nhân viên kinh doanh B2B nhằm nhận diện người quyết định và giải tỏa người cản trở.</p>
+            </div>
+            <div class="footer-right">
+                <span class="ac-badge">✓ Tiêu chí 1: Đủ chức danh, email, SĐT</span>
+                <span class="ac-badge">✓ Tiêu chí 2: Đánh dấu 4 vai trò mua</span>
+                <span class="ac-badge">✓ Tiêu chí 3: Đánh dấu Đầu mối chính</span>
+                <span class="ac-badge">✓ Tiêu chí 4: Chuyển công ty giữ nguyên lịch sử</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

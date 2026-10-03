@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Khách Hàng Doanh Nghiệp | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title-group">
+        <h1 class="page-heading">Danh Sách Khách Hàng & Bản Đồ Quyền Lực Mua</h1>
+        <p class="page-subheading">
+            Quản lý các tài khoản doanh nghiệp (Accounts), nắm bắt cơ cấu người liên hệ và vai trò quyết định mua của từng công ty.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('customer_create') }}" class="btn btn-primary">
+            <span class="btn-icon">🏛️</span> Tạo Khách Hàng Mới
+        </a>
+    </div>
+</div>
+
+<!-- Lưới danh sách khách hàng doanh nghiệp -->
+<div class="customers-grid">
+    {% for cust in customers %}
+    <div class="customer-card">
+        <div class="cust-card-header">
+            <div>
+                <span class="cust-code-badge">{{ cust.code }}</span>
+                <h3 class="cust-name">
+                    <a href="{{ url_for('customer_detail', customer_id=cust.id) }}">{{ cust.name }}</a>
+                </h3>
+            </div>
+            <div class="cust-status-badge">{{ cust.status }}</div>
+        </div>
+
+        <div class="cust-meta-row">
+            <span class="meta-item">🏭 {{ cust.industry }}</span>
+            <span class="meta-item">👥 {{ cust.scale }}</span>
+        </div>
+
+        <div class="cust-address-row">
+            📍 {{ cust.address }}
+        </div>
+
+        <!-- Khối Đầu mối chính (Tiêu chí 3) -->
+        <div class="cust-primary-box">
+            <div class="primary-box-label">
+                <span>⭐ Đầu Mối Chính Của Công Ty:</span>
+            </div>
+            {% if cust.primary_contact %}
+            <div class="primary-contact-info">
+                <div class="primary-avatar">{{ cust.primary_contact.full_name[0] }}</div>
+                <div class="primary-details">
+                    <a href="{{ url_for('contact_detail', contact_id=cust.primary_contact.id) }}" class="primary-name">
+                        <strong>{{ cust.primary_contact.full_name }}</strong>
+                    </a>
+                    <div class="primary-title">💼 {{ cust.primary_contact.job_title }}</div>
+                    <div class="primary-comm">
+                        <span>✉️ {{ cust.primary_contact.email }}</span>
+                        <span>📞 {{ cust.primary_contact.phone }}</span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-warning text-xs">
+                ⚠️ Khách hàng này chưa có người liên hệ nào làm đầu mối chính!
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Phân bổ 4 Vai trò mua hàng (Tiêu chí 2) -->
+        <div class="cust-roles-distribution">
+            <div class="dist-header">
+                <span>Ma trận 4 vai trò mua ({{ cust.contact_count }} người liên hệ):</span>
+            </div>
+            <div class="role-pills-row">
+                <span class="mini-pill pill-decision" title="Người quyết định">
+                    🎯 {{ cust.role_counts.decision_maker }} Quyết định
+                </span>
+                <span class="mini-pill pill-influencer" title="Người ảnh hưởng">
+                    💡 {{ cust.role_counts.influencer }} Ảnh hưởng
+                </span>
+                <span class="mini-pill pill-user" title="Người dùng cuối">
+                    👤 {{ cust.role_counts.end_user }} Dùng cuối
+                </span>
+                <span class="mini-pill {% if cust.role_counts.blocker > 0 %}pill-blocker-danger{% else %}pill-blocker{% endif %}" title="Người cản trở">
+                    ⚠️ {{ cust.role_counts.blocker }} Cản trở
+                </span>
+            </div>
+        </div>
+
+        <!-- Các nút hành động -->
+        <div class="cust-card-actions">
+            <a href="{{ url_for('customer_detail', customer_id=cust.id) }}" class="btn btn-accent btn-block">
+                📊 Xem Sơ Đồ Ma Trận Quyết Định Mua
+            </a>
+            <div class="action-sub-row">
+                <a href="{{ url_for('index', customer_id=cust.id) }}" class="btn btn-outline btn-sm">
+                    👥 Xem {{ cust.contact_count }} liên hệ
+                </a>
+                <a href="{{ url_for('contact_create', customer_id=cust.id) }}" class="btn btn-ghost btn-sm">
+                    ➕ Thêm liên hệ
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

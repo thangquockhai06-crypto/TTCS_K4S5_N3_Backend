@@ -1,0 +1,69 @@
+<!-- Component: Thẻ người liên hệ trong Ma trận Quyết định Mua (Matrix Contact Card) -->
+<div class="matrix-card {% if contact.is_primary %}is-primary-card{% endif %}">
+    <div class="card-top">
+        <div class="card-avatar">{{ contact.full_name[0] }}</div>
+        <div class="card-person-info">
+            <a href="{{ url_for('contact_detail', contact_id=contact.id) }}" class="card-name-link">
+                {{ contact.full_name }}
+            </a>
+            <div class="card-job-title">💼 {{ contact.job_title }}</div>
+        </div>
+    </div>
+
+    <!-- Huy hiệu Đầu mối chính (Tiêu chí 3) -->
+    <div class="card-primary-indicator">
+        {% if contact.is_primary %}
+            <span class="badge-primary-pill" title="Đầu mối giao tiếp chính thức">
+                ⭐ ĐẦU MỐI CHÍNH
+            </span>
+        {% else %}
+            <form method="POST" action="{{ url_for('set_primary', customer_id=contact.customer_id, contact_id=contact.id) }}">
+                <button type="submit" class="btn btn-xs btn-outline-warning" title="Đặt người này làm đầu mối chính của công ty">
+                    ☆ Đặt làm đầu mối chính
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- Thông tin liên lạc (Tiêu chí 1) -->
+    <div class="card-comm-box">
+        <div class="comm-line">
+            <span class="comm-icon">✉️</span>
+            <a href="mailto:{{ contact.email }}" class="comm-text">{{ contact.email }}</a>
+        </div>
+        <div class="comm-line">
+            <span class="comm-icon">📞</span>
+            <a href="tel:{{ contact.phone }}" class="comm-text">{{ contact.phone }}</a>
+        </div>
+    </div>
+
+    <!-- Ghi chú thái độ & Chiến lược -->
+    <div class="card-notes-box">
+        <div class="support-badge-row">
+            <span class="support-badge support-{{ contact.support_level|replace(' ', '-') }}">
+                Mức độ: {{ contact.support_level }}
+            </span>
+            {% if contact.history and contact.history|length > 0 %}
+                <span class="history-pill" title="Người này đã từng làm việc tại công ty khác trước đây">
+                    🕒 Đã chuyển {{ contact.history|length }} nơi
+                </span>
+            {% endif %}
+        </div>
+        {% if contact.notes %}
+            <p class="card-note-text">"{{ contact.notes }}"</p>
+        {% endif %}
+    </div>
+
+    <!-- Thao tác nhanh (Tiêu chí 4: Chuyển công tác) -->
+    <div class="card-bottom-actions">
+        <a href="{{ url_for('contact_detail', contact_id=contact.id) }}" class="btn btn-xs btn-outline" title="Xem đầy đủ hồ sơ & dòng thời gian lịch sử công tác">
+            🔍 Hồ sơ
+        </a>
+        <a href="{{ url_for('contact_edit', contact_id=contact.id) }}" class="btn btn-xs btn-outline" title="Chỉnh sửa thông tin">
+            ✏️ Sửa
+        </a>
+        <a href="{{ url_for('contact_transfer', contact_id=contact.id) }}" class="btn btn-xs btn-accent" title="Chuyển người này sang công ty mới (Giữ nguyên lịch sử)">
+            🔄 Chuyển công ty
+        </a>
+    </div>
+</div>

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Lỗi Máy Chủ Nội Bộ | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <div class="empty-icon">⚠️</div>
+    <h2>500 - Lỗi Máy Chủ Nội Bộ</h2>
+    <p>Đã xảy ra sự cố không mong muốn trong quá trình xử lý yêu cầu. Vui lòng thử lại sau.</p>
+    <div class="mt-3">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Quay Về Bảng Điều Khiển</a>
+    </div>
+</div>
+{% endblock %}

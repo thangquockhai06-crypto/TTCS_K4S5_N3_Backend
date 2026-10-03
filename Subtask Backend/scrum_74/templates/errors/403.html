@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}403 - Không Đủ Quyền Truy Cập{% endblock %}
+{% block page_title %}Thông Báo Bảo Mật (403 Forbidden){% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 720px; margin: 30px auto; text-align: center; padding: 36px 24px; border-top: 4px solid var(--danger);">
+    <div style="width: 72px; height: 72px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+    </div>
+
+    <span class="menu-badge badge-danger" style="font-size: 0.85rem; padding: 4px 12px; margin-bottom: 12px; display: inline-block;">
+        Mã Lỗi: HTTP 403 Forbidden
+    </span>
+
+    <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--slate-900); margin-bottom: 10px;">
+        Bạn Không Có Quyền Truy Cập Chức Năng Này!
+    </h2>
+
+    <p style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 24px; max-width: 540px; margin-left: auto; margin-right: auto;">
+        Theo chính sách phân quyền RBAC của hệ thống, tài khoản của bạn không được phân quyền để thao tác tại đường dẫn này.
+    </p>
+
+    <!-- Hộp Chẩn Đoán Chi Tiết -->
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 18px; text-align: left; margin-bottom: 28px;">
+        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 8px; font-size: 0.85rem;">
+            <span style="color: var(--slate-500);">Người dùng:</span>
+            <strong>{{ current_user.name }} ({{ current_user.username }})</strong>
+
+            <span style="color: var(--slate-500);">Vai trò hiện tại:</span>
+            <span><strong style="color: var(--primary);">{{ current_user.role_name }}</strong></span>
+
+            <span style="color: var(--slate-500);">Nhóm kinh doanh:</span>
+            <span>{{ current_user.business_group }}</span>
+
+            <span style="color: var(--slate-500);">Quyền còn thiếu:</span>
+            <code><strong style="color: var(--danger);">{{ missing_permission }}</strong> ({{ missing_permission_label }})</code>
+
+            <span style="color: var(--slate-500);">Đường dẫn bị chặn:</span>
+            <code>{{ attempted_url }}</code>
+        </div>
+    </div>
+
+    <!-- Nút Hành Động Gợi Ý -->
+    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <!-- Nút chuyển sang Giám đốc để kiểm thử ngay -->
+        <a href="{{ url_for('switch_user', username='director', next=attempted_url) }}" 
+           class="btn-sim" style="background: #7c3aed; padding: 10px 20px; font-size: 0.875rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+            Đổi sang tài khoản Giám Đốc (Có Đủ Quyền)
+        </a>
+
+        <a href="{{ url_for('dashboard') }}" class="btn-sim" style="background: var(--slate-800); padding: 10px 20px; font-size: 0.875rem;">
+            Quay Về Bảng Điều Khiển
+        </a>
+    </div>
+</div>
+{% endblock %}

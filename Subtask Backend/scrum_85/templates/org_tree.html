@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Cơ Cấu Cây Tổ Chức Kinh Doanh{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    <!-- HERO HEADER & STATS -->
+    <div class="page-header">
+        <div class="header-intro">
+            <div class="badge-role">👔 Dành cho: Giám Đốc Kinh Doanh (Sales Director)</div>
+            <h1 class="page-title">Sơ Đồ Cơ Cấu Cây Tổ Chức Kinh Doanh</h1>
+            <p class="page-subtitle">
+                Khai báo và quản lý cấu trúc phân cấp các nhóm kinh doanh. Cây tổ chức này sẽ trực tiếp quyết định 
+                <strong>phạm vi dữ liệu (data scope)</strong> mà từng Trưởng nhóm nhìn thấy trong hệ thống.
+            </p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openCreateTeamModal()">
+                <span>➕</span> Khai Báo Nhóm Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI STATS CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon-wrapper blue">🏢</div>
+            <div class="stat-details">
+                <span class="stat-value">{{ flat_teams|length }}</span>
+                <span class="stat-label">Tổng Số Nhóm Kinh Doanh</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper green">👥</div>
+            <div class="stat-details">
+                <span class="stat-value">{{ employees|length }}</span>
+                <span class="stat-label">Tổng Nhân Sự Bán Hàng</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper amber">💰</div>
+            <div class="stat-details">
+                <span class="stat-value">{{ "{:,.0f}".format(total_revenue_nationwide) }} ₫</span>
+                <span class="stat-label">Tổng Doanh Số Toàn Cây</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper purple">🗺️</div>
+            <div class="stat-details">
+                <span class="stat-value">{{ regions|length }}</span>
+                <span class="stat-label">Khu Vực Địa Lý Khai Báo</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CARD: TREE DIAGRAM -->
+    <div class="content-card">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">🌳 Cây Phân Cấp Cơ Cấu Tổ Chức Trực Quan</h2>
+                <p class="card-desc">Mỗi nhóm có một Trưởng nhóm và được gắn với một Khu vực địa lý cụ thể.</p>
+            </div>
+            <div class="tree-legend">
+                <span class="legend-item"><span class="legend-badge root"></span> Node Gốc (HQ)</span>
+                <span class="legend-item"><span class="legend-badge branch"></span> Chi Nhánh Cấp 1</span>
+                <span class="legend-item"><span class="legend-badge leaf"></span> Đội Nhóm Bán Hàng</span>
+            </div>
+        </div>
+
+        <div class="org-tree-wrapper">
+            <!-- Recursive Tree Rendering Macro -->
+            {% macro render_team_node(team, level=0) %}
+                <div class="tree-node level-{{ level }}" id="node-{{ team.id }}">
+                    <div class="node-card {% if level == 0 %}node-root{% elif team.children %}node-branch{% else %}node-leaf{% endif %}">
+                        
+                        <div class="node-header">
+                            <div class="node-type-pill">
+                                {% if level == 0 %}👑 Ban Lãnh Đạo HQ
+                                {% elif team.children %}🏢 Chi Nhánh Cấp {{ level }}
+                                {% else %}🚀 Đội Bán Hàng
+                                {% endif %}
+                            </div>
+                            <span class="region-badge" style="background-color: {{ team.region_badge_color }}20; color: {{ team.region_badge_color }}; border-color: {{ team.region_badge_color }}40;">
+                                📍 {{ team.region_name }}
+                            </span>
+                        </div>
+
+                        <div class="node-body">
+                            <h3 class="node-team-name">{{ team.name }}</h3>
+                            <div class="node-meta">
+                                <span class="meta-tag">Mã: <code>{{ team.id }}</code></span>
+                                {% if team.description %}
+                                    <p class="node-desc">{{ team.description }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Trưởng nhóm (Tiêu chí 1: mỗi nhóm có 1 trưởng nhóm) -->
+                            <div class="node-leader-box">
+                                <div class="leader-avatar">{{ team.leader_avatar }}</div>
+                                <div class="leader-info">
+                                    <span class="leader-title">Trưởng Nhóm:</span>
+                                    <strong class="leader-name">{{ team.leader_name }}</strong>
+                                    {% if team.leader_phone %}
+                                        <span class="leader-contact">📞 {{ team.leader_phone }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Thông tin thành viên & Doanh số -->
+                            <div class="node-footer-stats">
+                                <span class="stat-pill" title="Số lượng nhân viên trực thuộc nhóm">
+                                    👤 {{ team.member_count }} nhân sự
+                                </span>
+                                <span class="stat-pill" title="Số nhóm con trực thuộc">
+                                    🗂️ {{ team.children|length }} nhóm con
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="node-actions">
+                            <button class="btn-node-action btn-add-sub" 
+                                    onclick="openCreateSubteamModal('{{ team.id }}', '{{ team.name }}', '{{ team.region_id }}')" 
+                                    title="Thêm nhóm con trực thuộc nhóm này">
+                                ➕ Thêm con
+                            </button>
+                            <button class="btn-node-action btn-edit" 
+                                    onclick="openEditTeamModal('{{ team.id }}', '{{ team.name|escape }}', '{{ team.parent_id or '' }}', '{{ team.leader_id }}', '{{ team.region_id }}', '{{ team.description|escape }}')"
+                                    title="Chỉnh sửa thông tin nhóm">
+                                ✏️ Sửa
+                            </button>
+                            <a href="{{ url_for('data_scope_view') }}?focus_team={{ team.id }}" 
+                               class="btn-node-action btn-scope" 
+                               title="Xem phạm vi dữ liệu mà nhóm này nhìn thấy">
+                                👁️ Dữ liệu
+                            </a>
+                            {% if level > 0 %}
+                                <form action="{{ url_for('delete_team_action', team_id=team.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa nhóm \'{{ team.name }}\'? (Chỉ xóa được khi không còn nhóm con và nhân viên).');">
+                                    <button type="submit" class="btn-node-action btn-delete" title="Xóa nhóm">
+                                        🗑️
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    <!-- Render nhóm con nếu có -->
+                    {% if team.children %}
+                        <div class="tree-children-container">
+                            {% for child in team.children %}
+                                {{ render_team_node(child, level + 1) }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endmacro %}
+
+            <div class="org-tree-root">
+                {% for root in tree_roots %}
+                    {{ render_team_node(root, 0) }}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG TỔNG HỢP DANH SÁCH NHÓM KINH DOANH -->
+    <div class="content-card mt-4">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">📋 Bảng Danh Mục Nhóm Kinh Doanh (Chi Tiết)</h2>
+                <p class="card-desc">Hiển thị quan hệ cha-con, trưởng nhóm và khu vực địa lý tương ứng.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã Nhóm</th>
+                        <th>Tên Nhóm Kinh Doanh</th>
+                        <th>Cấp Bậc & Nhóm Cha</th>
+                        <th>Trưởng Nhóm (1 người/nhóm)</th>
+                        <th>Khu Vực Địa Lý</th>
+                        <th>Số Nhân Viên</th>
+                        <th class="text-center">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in flat_teams %}
+                        <tr>
+                            <td><code>{{ t.id }}</code></td>
+                            <td>
+                                <strong>{{ t.name }}</strong>
+                                {% if t.description %}
+                                    <div class="table-subtext">{{ t.description }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.parent_id %}
+                                    <span class="hierarchy-pill">↳ {{ t.parent_name }}</span>
+                                {% else %}
+                                    <span class="badge-root">👑 Gốc (HQ)</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="table-leader-cell">
+                                    <span class="avatar-mini">{{ t.leader_avatar }}</span>
+                                    <div>
+                                        <strong>{{ t.leader_name }}</strong>
+                                        <div class="table-subtext">{{ t.leader_phone }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="region-pill" style="background-color: {{ t.region_badge_color }}20; color: {{ t.region_badge_color }};">
+                                    📍 {{ t.region_name }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="member-count-badge">{{ t.member_count }} nhân sự</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="action-btn-group">
+                                    <button class="btn-sm btn-outline" 
+                                            onclick="openEditTeamModal('{{ t.id }}', '{{ t.name|escape }}', '{{ t.parent_id or '' }}', '{{ t.leader_id }}', '{{ t.region_id }}', '{{ t.description|escape }}')">
+                                        ✏️ Sửa
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===========================================================================
+     MODAL: THÊM MỚI NHÓM KINH DOANH
+     =========================================================================== -->
+<div class="modal-overlay" id="createTeamModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">➕ Khai Báo Nhóm Kinh Doanh Mới</h3>
+            <button class="modal-close" onclick="closeModal('createTeamModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('create_team_action') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Mã Nhóm Kinh Doanh <span class="required">*</span></label>
+                    <input type="text" name="team_id" class="form-control" placeholder="Ví dụ: TEAM_HN_VIP, TEAM_DANANG..." required>
+                    <small class="form-help">Mã định danh duy nhất (in hoa, viết liền, gạch dưới).</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên Nhóm Kinh Doanh <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Đội Khách Hàng VIP Đà Nẵng..." required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Thuộc Nhóm Cha (Cấu trúc Cây) <span class="required">*</span></label>
+                    <select name="parent_id" id="create_parent_id" class="form-control" required>
+                        <option value="">-- Chọn Nhóm Cha trong Cây Tổ Chức --</option>
+                        {% for t in flat_teams %}
+                            <option value="{{ t.id }}">{{ t.name }} ({{ t.id }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help">Nhóm kinh doanh được tổ chức phân cấp hình cây, quyết định phạm vi dữ liệu cấp trên - cấp dưới.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bổ Nhiệm Trưởng Nhóm <span class="required">*</span></label>
+                    <select name="leader_id" class="form-control" required>
+                        <option value="">-- Chọn một Nhân sự làm Trưởng nhóm --</option>
+                        {% for emp in employees %}
+                            <option value="{{ emp.id }}">
+                                {{ emp.avatar }} {{ emp.name }} - {{ emp.role_title }} (Hiện thuộc: {{ emp.team_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help">Tiêu chí 1: Mỗi nhóm có đúng 1 Trưởng nhóm. Nhân sự này sẽ tự động chuyển vào nhóm này theo Tiêu chí 2.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Gán Khu Vực Địa Lý <span class="required">*</span></label>
+                    <select name="region_id" id="create_region_id" class="form-control" required>
+                        <option value="">-- Chọn Khu Vực Địa Lý --</option>
+                        {% for r in regions %}
+                            <option value="{{ r.id }}">📍 {{ r.name }} ({{ r.code }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help">Tiêu chí 4: Khai báo khu vực địa lý và gán cho nhóm kinh doanh.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mô Tả Nhiệm Vụ Của Nhóm</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Phụ trách thị trường, phân khúc khách hàng..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createTeamModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Xác Nhận Khai Báo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===========================================================================
+     MODAL: CHỈNH SỬA THÔNG TIN NHÓM KINH DOANH (CÓ KIỂM TRA CHU TRÌNH)
+     =========================================================================== -->
+<div class="modal-overlay" id="editTeamModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">✏️ Chỉnh Sửa Nhóm Kinh Doanh</h3>
+            <button class="modal-close" onclick="closeModal('editTeamModal')">&times;</button>
+        </div>
+        <form id="editTeamForm" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Mã Nhóm (Cố định)</label>
+                    <input type="text" id="edit_team_id_display" class="form-control" readonly disabled>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên Nhóm Kinh Doanh <span class="required">*</span></label>
+                    <input type="text" name="name" id="edit_name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nhóm Cha Trong Cây Tổ Chức</label>
+                    <select name="parent_id" id="edit_parent_id" class="form-control">
+                        <option value="">-- Để trống nếu là Node Gốc (HQ) --</option>
+                        {% for t in flat_teams %}
+                            <option value="{{ t.id }}">{{ t.name }} ({{ t.id }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help text-warning">
+                        ⚠️ <strong>Kiểm tra chống chu trình lặp:</strong> Không được chọn chính nhóm này hoặc con cháu của nó làm cha!
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Trưởng Nhóm <span class="required">*</span></label>
+                    <select name="leader_id" id="edit_leader_id" class="form-control" required>
+                        {% for emp in employees %}
+                            <option value="{{ emp.id }}">
+                                {{ emp.avatar }} {{ emp.name }} - {{ emp.role_title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Khu Vực Địa Lý Gán Cho Nhóm <span class="required">*</span></label>
+                    <select name="region_id" id="edit_region_id" class="form-control" required>
+                        {% for r in regions %}
+                            <option value="{{ r.id }}">📍 {{ r.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mô Tả</label>
+                    <textarea name="description" id="edit_description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editTeamModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Lưu Thay Đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

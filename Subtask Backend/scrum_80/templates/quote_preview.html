@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Xem Trước Báo Giá Kèm Chữ Ký - {{ quote.id }}{% endblock %}
+{% block breadcrumb %}Xem trước Báo giá & Chữ ký email{% endblock %}
+
+{% block content %}
+<div class="quote-preview-container">
+  
+  <div class="preview-actions-bar">
+    <a href="{{ url_for('quotes') }}" class="btn btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      <span>Quay lại danh sách</span>
+    </a>
+
+    <div class="actions-right">
+      <a href="{{ url_for('profile') }}" class="btn btn-outline-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        <span>Chỉnh sửa lại chữ ký</span>
+      </a>
+      
+      <form method="POST" action="{{ url_for('send_quote', quote_id=quote.id) }}" style="display: inline-block;">
+        <button type="submit" class="btn btn-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <span>Xác Nhận & Gửi Cho Khách Hàng</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Khung hiển thị mô phỏng Email Thực Tế gửi khách -->
+  <div class="email-mockup-window full-preview-window">
+    <div class="mockup-header">
+      <div class="mockup-dots">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <div class="mockup-title">Email Gửi Báo Giá #{{ quote.id }} - Giao Diện Khách Hàng Nhận Được</div>
+    </div>
+
+    <div class="mockup-body">
+      <!-- Thông tin Header Email -->
+      <div class="email-meta-card">
+        <div class="email-meta-line">
+          <span class="email-label">Người gửi:</span>
+          <span class="email-val"><strong>{{ user.full_name }}</strong> &lt;{{ user.email }}&gt; (Hotline: {{ user.phone }})</span>
+        </div>
+        <div class="email-meta-line">
+          <span class="email-label">Người nhận:</span>
+          <span class="email-val"><strong>{{ quote.contact_person }}</strong> &lt;{{ quote.customer_email }}&gt; - {{ quote.customer_name }}</span>
+        </div>
+        <div class="email-meta-line">
+          <span class="email-label">Tiêu đề thư:</span>
+          <span class="email-val"><strong>[{{ quote.id }}] {{ quote.project_title }}</strong></span>
+        </div>
+        <div class="email-meta-line">
+          <span class="email-label">Thời gian:</span>
+          <span class="email-val">{{ quote.created_date }} (Gửi trực tiếp từ hệ thống CRM)</span>
+        </div>
+      </div>
+
+      <!-- Thân Email -->
+      <div class="email-letter-body">
+        <p>Kính gửi: <strong>{{ quote.contact_person }}</strong>,</p>
+        <p>Lời đầu tiên, <strong>{{ user.full_name }}</strong> và <strong>{{ user.business_group }}</strong> xin chân thành cảm ơn Quý đối tác <strong>{{ quote.customer_name }}</strong> đã quan tâm và tin tưởng giải pháp của chúng tôi.</p>
+        <p>Chúng tôi xin trân trọng gửi bảng chi tiết báo giá cho dự án <em>"{{ quote.project_title }}"</em> như sau:</p>
+
+        <!-- Bảng chi tiết báo giá -->
+        <div class="quote-items-wrapper">
+          <table class="quote-items-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">STT</th>
+                <th>Hạng mục dịch vụ / giải pháp</th>
+                <th style="width: 100px; text-align: center;">Số lượng</th>
+                <th style="width: 180px; text-align: right;">Đơn giá dự toán</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for itm in quote['items'] %}
+                <tr>
+                  <td style="text-align: center;">{{ loop.index }}</td>
+                  <td><strong>{{ itm.name }}</strong></td>
+                  <td style="text-align: center;">{{ itm.qty }}</td>
+                  <td style="text-align: right;">{{ itm.price }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align: right; font-weight: 700;">TỔNG GIÁ TRỊ DỰ TOÁN:</td>
+                <td style="text-align: right; font-weight: 800; color: #4f46e5; font-size: 1.15rem;">{{ quote.total_amount }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p>Báo giá trên có hiệu lực trong vòng 30 ngày kể từ ngày ban hành. Mọi thắc mắc cần trao đổi kỹ thuật hoặc đàm phán hợp đồng, xin Quý khách vui lòng liên hệ trực tiếp với em theo thông tin chữ ký bên dưới.</p>
+        
+        <p>Kính chúc Quý công ty ngày càng phát triển và thịnh vượng!</p>
+
+        <!-- KHỐI CHỮ KÝ EMAIL ĐƯỢC CHÈN CHUẨN XÁC THEO TIÊU CHÍ ĐỀ BÀI -->
+        <div class="actual-email-signature-card">
+          <div class="sig-header-badge">
+            <span class="badge-icon">✍️</span>
+            <span>Chữ ký email của người gửi (Đã tự động cập nhật)</span>
+          </div>
+          <div class="sig-rendered-text">{{ user.email_signature }}</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Lỗi Máy Chủ Nội Bộ{% endblock %}
+{% block page_title %}Lỗi 500 - Sự Cố Hệ Thống{% endblock %}
+
+{% block content %}
+<div class="error-page-wrapper">
+  <div class="error-card error-500-card">
+    
+    <div class="error-visual-badge">
+      <div class="error-icon-circle pulse-500">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <div class="error-code-chip badge-chip-danger">Mã lỗi: 500 Server Error</div>
+    </div>
+
+    <h1 class="error-main-heading">Hệ Thống Đang Gặp Sự Cố Xử Lý!</h1>
+    <p class="error-lead-message">
+      Máy chủ đã ghi nhận một ngoại lệ trong quá trình xử lý yêu cầu. Giao diện ứng dụng vẫn được bảo toàn nguyên vẹn.
+    </p>
+
+    <div class="error-meta-box">
+      <div class="meta-row">
+        <span class="meta-label">Thời điểm phát sinh:</span>
+        <span class="meta-value">{{ timestamp }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Tài khoản thao tác:</span>
+        <span class="meta-value">{{ current_user.name }} ({{ current_user.role_name }})</span>
+      </div>
+    </div>
+
+    <div class="action-suggestions-container">
+      <div class="suggestions-header">
+        <span>GỢI Ý HÀNH ĐỘNG KHẮC PHỤC:</span>
+      </div>
+      <ul class="suggestions-list">
+        <li>Thử tải lại (Refresh) trang để gửi lại yêu cầu.</li>
+        <li>Quay về Bảng điều khiển để tiếp tục các chức năng khác không bị ảnh hưởng.</li>
+      </ul>
+
+      <div class="action-buttons-group">
+        <button type="button" onclick="window.location.reload()" class="btn-recovery-primary">
+          <span>Tải lại trang</span>
+        </button>
+        <a href="{{ url_for('dashboard') }}" class="btn-recovery-secondary">
+          <span>Về Bảng điều khiển</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

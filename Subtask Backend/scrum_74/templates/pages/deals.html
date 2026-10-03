@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Đơn Hàng & Hợp Đồng{% endblock %}
+{% block page_title %}Quản Lý Đơn Hàng & Hợp Đồng{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+            </svg>
+            Theo Dõi Tiến Độ Hợp Đồng Kinh Doanh
+        </div>
+        <span class="menu-badge badge-warning">{{ deals|length }} Hợp đồng</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="rbac-table">
+            <thead>
+                <tr>
+                    <th>Mã Hợp Đồng</th>
+                    <th>Tên Dự Án / Hạng Mục</th>
+                    <th>Khách Hàng Đối Tác</th>
+                    <th>Giá Trị</th>
+                    <th>Giai Đoạn</th>
+                    <th>Ngày Tạo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deals %}
+                <tr>
+                    <td><strong>{{ d.code }}</strong></td>
+                    <td>{{ d.title }}</td>
+                    <td>{{ d.customer }}</td>
+                    <td style="color: #059669; font-weight: 700;">{{ d.value }}</td>
+                    <td><span class="menu-badge badge-{{ d.stage_color }}">{{ d.stage }}</span></td>
+                    <td><span style="font-size: 0.8rem; color: var(--slate-500);">{{ d.date }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

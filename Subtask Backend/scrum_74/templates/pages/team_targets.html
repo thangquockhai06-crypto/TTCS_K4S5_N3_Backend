@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉ Tiêu & KPI Nhóm{% endblock %}
+{% block page_title %}Thiết Lập Chỉ Tiêu & KPI Nhóm{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+            Bảng Phân Bổ Chỉ Tiêu Tháng 09/2026
+        </div>
+        <span class="menu-badge badge-primary">Quyền: manage_team_targets</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="rbac-table">
+            <thead>
+                <tr>
+                    <th>Thành Viên</th>
+                    <th>Vai Trò</th>
+                    <th>Chỉ Tiêu Doanh Số</th>
+                    <th>Thực Đạt</th>
+                    <th>Tỷ Lệ Hoàn Thành</th>
+                    <th>Đánh Giá</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Trần Thị Mai Phương</strong></td>
+                    <td>Trưởng nhóm</td>
+                    <td>5.000.000.000 ₫</td>
+                    <td>5.400.000.000 ₫</td>
+                    <td><strong style="color: #059669;">108%</strong></td>
+                    <td><span class="status-badge status-allowed">Xuất sắc</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Lê Hoàng Phúc</strong></td>
+                    <td>Chuyên viên</td>
+                    <td>2.500.000.000 ₫</td>
+                    <td>2.450.000.000 ₫</td>
+                    <td><strong style="color: #2563eb;">98%</strong></td>
+                    <td><span class="status-badge status-allowed">Đạt yêu cầu</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phạm Minh Khôi</strong></td>
+                    <td>Thực tập sinh</td>
+                    <td>800.000.000 ₫</td>
+                    <td>736.000.000 ₫</td>
+                    <td><strong style="color: #d97706;">92%</strong></td>
+                    <td><span class="status-badge status-allowed">Khá</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

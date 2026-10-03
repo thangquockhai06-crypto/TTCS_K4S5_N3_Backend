@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo Mới Khách Hàng Doanh Nghiệp | SCRUM-58{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('customers_list') }}">Khách Hàng</a> &rsaquo;
+    <span>Tạo Mới Khách Hàng</span>
+</div>
+
+<div class="form-card-container">
+    <div class="form-card">
+        <div class="form-card-header">
+            <span class="header-icon">🏛️</span>
+            <div>
+                <h1 class="form-heading">Tạo Mới Khách Hàng Doanh Nghiệp</h1>
+                <p class="form-subheading">Khai báo tổ chức khách hàng mới để thiết lập ma trận người liên hệ và vai trò quyết định mua.</p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('customer_create') }}" class="standard-form">
+            <div class="form-row">
+                <div class="form-group flex-2">
+                    <label for="name" class="form-label required">Tên Doanh Nghiệp / Khách Hàng:</label>
+                    <input type="text" id="name" name="name" class="form-control" placeholder="VD: Tập Đoàn Công Nghệ VinaTech" required>
+                </div>
+                <div class="form-group flex-1">
+                    <label for="code" class="form-label required">Mã Khách Hàng:</label>
+                    <input type="text" id="code" name="code" class="form-control" placeholder="VD: VINATECH" required style="text-transform: uppercase;">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label for="industry" class="form-label required">Ngành Nghề Hoạt Động:</label>
+                    <input type="text" id="industry" name="industry" class="form-control" placeholder="VD: Bán lẻ, Sản xuất, Tài chính..." required>
+                </div>
+                <div class="form-group flex-1">
+                    <label for="scale" class="form-label">Quy Mô Nhân Sự:</label>
+                    <input type="text" id="scale" name="scale" class="form-control" placeholder="VD: 500 - 1000 nhân sự" value="100 - 500 nhân sự">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="address" class="form-label required">Địa Chỉ Trụ Sở:</label>
+                <input type="text" id="address" name="address" class="form-control" placeholder="VD: Tòa nhà Bitexco, Quận 1, TP. Hồ Chí Minh" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label for="website" class="form-label">Website Doanh Nghiệp:</label>
+                    <input type="url" id="website" name="website" class="form-control" placeholder="https://example.com" value="https://">
+                </div>
+                <div class="form-group flex-1">
+                    <label for="status" class="form-label">Trạng Thái Thương Vụ:</label>
+                    <select id="status" name="status" class="form-control">
+                        <option value="Tiếp cận ban đầu">Tiếp cận ban đầu</option>
+                        <option value="Đang gửi báo giá & Demo">Đang gửi báo giá & Demo</option>
+                        <option value="Đang đàm phán hợp đồng">Đang đàm phán hợp đồng</option>
+                        <option value="Đang bị tắc do người cản trở">Đang bị tắc do người cản trở</option>
+                        <option value="Đã ký kết thành công">Đã ký kết thành công</option>
+                    </select>
+                </div>
+                <div class="form-group flex-1">
+                    <label for="estimated_value" class="form-label">Giá Trị Dự Kiến (VNĐ):</label>
+                    <input type="number" id="estimated_value" name="estimated_value" class="form-control" placeholder="500000000" value="300000000">
+                </div>
+            </div>
+
+            <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">🏛️ Tạo Khách Hàng</button>
+                <a href="{{ url_for('customers_list') }}" class="btn btn-outline">✕ Hủy Bỏ</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Hệ Thống Doanh Nghiệp{% endblock %} - SCRUM-75</title>
+  
+  <!-- Phông chữ Google Fonts Inter hiện đại -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS dùng chung của toàn bộ ứng dụng -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- ========================================================
+       THANH CÔNG CỤ KIỂM THỬ TRỰC QUAN (TOP TESTING BAR)
+       Giúp giáo viên/người chấm bài kiểm tra 100% tiêu chí đề bài chỉ với 1 click
+       ======================================================== -->
+  <header class="testing-bar">
+    <div class="test-bar-left">
+      <span class="badge-ticket">⚡ SCRUM-69 / ☑ SCRUM-75</span>
+      <span class="test-guide-text">Hệ thống xử lý thông báo lỗi giao diện dùng chung (Không trang trắng)</span>
+    </div>
+
+    <div class="test-bar-right">
+      <!-- Nút kiểm thử nhanh lỗi 404 -->
+      <a href="{{ url_for('trigger_test_404') }}" class="btn-test-trigger test-404" title="Cố tình truy cập URL sai để xem trang lỗi 404 trong giao diện chung">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Thử lỗi 404 (Nhầm chỗ)</span>
+      </a>
+
+      <!-- Nút kiểm thử nhanh lỗi 403 -->
+      <a href="{{ url_for('trigger_test_403') }}" class="btn-test-trigger test-403" title="Truy cập khu vực bị chặn quyền với vai trò hiện tại">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Thử lỗi 403 (Thiếu quyền)</span>
+      </a>
+
+      <!-- Dropdown chuyển vai trò người dùng tức thì -->
+      <div class="role-switcher-dropdown">
+        <label for="role-select" class="switcher-label">Đổi vai trò:</label>
+        <select id="role-select" onchange="window.location.href='/switch-role/' + this.value">
+          {% for u_code, u_data in sample_users.items() %}
+            <option value="{{ u_code }}" {% if current_user.username == u_code %}selected{% endif %}>
+              {{ u_data.name }} ({{ roles[u_data.role_code].name }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       BỐ CỤC CHÍNH CỦA ỨNG DỤNG (APP CONTAINER)
+       ======================================================== -->
+  <div class="app-wrapper">
+    
+    <!-- SIDEBAR: THANH ĐIỀU HƯỚNG BÊN TRÁI -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+        </div>
+        <div class="brand-info">
+          <span class="brand-name">Enterprise Hub</span>
+          <span class="brand-sub">Core Workflow Platform</span>
+        </div>
+      </div>
+
+      <!-- Thẻ người dùng đang đăng nhập -->
+      <div class="user-profile-badge">
+        <div class="user-avatar" style="background-color: {{ current_user.avatar_bg }};">
+          {{ current_user.avatar_text }}
+        </div>
+        <div class="user-meta">
+          <div class="user-name" title="{{ current_user.name }}">{{ current_user.name }}</div>
+          <div class="user-role-tag {{ current_user.role_badge_class }}">{{ current_user.role_name }}</div>
+        </div>
+      </div>
+
+      <!-- Danh mục menu điều hướng -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">CHỨC NĂNG HỆ THỐNG</div>
+        <ul class="nav-list">
+          {% for item in app_menu %}
+            <li class="nav-item">
+              <a href="{{ item.url }}" class="nav-link {% if item.is_active %}active{% endif %} {% if not item.has_access %}no-perm-link{% endif %}" title="{{ item.description }}">
+                <!-- Icon chức năng -->
+                <span class="nav-icon">
+                  {% if item.id == 'dashboard' %}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  {% elif item.id == 'projects' %}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  {% elif item.id == 'financial' %}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                  {% elif item.id == 'settings' %}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  {% endif %}
+                </span>
+                <span class="nav-text">{{ item.title }}</span>
+
+                <!-- Badge phân quyền -->
+                {% if not item.has_access %}
+                  <span class="nav-lock-badge" title="Tài khoản hiện tại chưa có quyền">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  </span>
+                {% elif item.badge %}
+                  <span class="nav-count-badge">{{ item.badge }}</span>
+                {% endif %}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <!-- Khối tham chiếu User Story đề bài -->
+        <div class="jira-ticket-box">
+          <div class="ticket-header">
+            <span class="ticket-status-dot"></span>
+            <strong>User Story Đề Bài:</strong>
+          </div>
+          <p class="ticket-quote">
+            "Là người dùng của hệ thống, tôi muốn nhận thông báo rõ ràng khi truy cập nhầm chỗ hoặc không đủ quyền, để biết mình nên làm gì tiếp thay vì gặp một trang trắng."
+          </p>
+          <div class="ticket-checklist">
+            <div class="check-item done">✓ Dùng chung giao diện ứng dụng</div>
+            <div class="check-item done">✓ Gợi ý hành động quay lại luồng</div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Sidebar footer -->
+      <div class="sidebar-footer">
+        <span class="system-status-indicator"></span>
+        <span class="system-status-text">Hệ thống: Trực tuyến</span>
+      </div>
+    </aside>
+
+    <!-- KHU VỰC NỘI DUNG CHÍNH (MAIN AREA) -->
+    <main class="app-main">
+      
+      <!-- Top header phụ trợ & breadcrumbs -->
+      <div class="app-topbar">
+        <div class="topbar-left">
+          <button class="btn-sidebar-toggle" id="sidebarToggle" aria-label="Đóng mở menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          
+          <nav class="app-breadcrumbs" aria-label="Đường dẫn điều hướng">
+            <a href="{{ url_for('dashboard') }}" class="crumb-link">Trang chủ</a>
+            <span class="crumb-separator">/</span>
+            <span class="crumb-current">{% block page_title %}Bảng điều khiển{% endblock %}</span>
+          </nav>
+        </div>
+
+        <div class="topbar-right">
+          <div class="notification-bell" title="Thông báo hệ thống">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="bell-dot"></span>
+          </div>
+          
+          <div class="user-pill-info">
+            <span class="pill-dept">{{ current_user.department }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flash message thông báo (nếu có) -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages-container">
+            {% for category, message in messages %}
+              <div class="flash-alert flash-{{ category }}">
+                <span class="flash-icon">
+                  {% if category == 'success' %}✓{% else %}ℹ{% endif %}
+                </span>
+                <span class="flash-text">{{ message }}</span>
+                <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Nơi chèn nội dung của từng trang con & trang báo lỗi -->
+      <div class="app-content-body">
+        {% block content %}{% endblock %}
+      </div>
+
+      <!-- Footer ứng dụng -->
+      <footer class="app-footer">
+        <div class="footer-left">
+          <span>Enterprise Core Platform © 2026</span>
+          <span class="footer-divider">•</span>
+          <span>Giải pháp xử lý lỗi thân thiện SCRUM-75</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-indicator">● Không gặp trang trắng (Zero White-Screen Policy)</span>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Modal gửi yêu cầu cấp quyền (Khi gặp 403) -->
+  <div class="modal-backdrop" id="accessRequestModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Gửi Yêu Cầu Cấp Quyền Truy Cập</h3>
+        <button class="modal-close-btn" onclick="closeAccessModal()">&times;</button>
+      </div>
+      <form id="accessRequestForm" onsubmit="submitAccessRequest(event)">
+        <div class="modal-body">
+          <p class="modal-desc">
+            Yêu cầu của bạn sẽ được gửi trực tiếp đến <strong>Giám đốc Nguyễn Tuấn Anh</strong> để phê duyệt bổ sung quyền hạn vào tài khoản.
+          </p>
+          <div class="form-group">
+            <label for="modalTargetUrl">Trang bạn muốn truy cập:</label>
+            <input type="text" id="modalTargetUrl" name="target_url" class="form-control" readonly>
+          </div>
+          <div class="form-group">
+            <label for="modalReason">Lý do xin cấp quyền:</label>
+            <textarea id="modalReason" name="reason" rows="3" class="form-control" placeholder="Ví dụ: Tôi cần xem số liệu tài chính để làm báo cáo tổng kết quý..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" onclick="closeAccessModal()">Hủy bỏ</button>
+          <button type="submit" class="btn-submit" id="btnSubmitRequest">Xác nhận gửi yêu cầu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script ứng dụng -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

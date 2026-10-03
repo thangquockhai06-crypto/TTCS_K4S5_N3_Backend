@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Nhân Sự Kinh Doanh{% endblock %}
+{% block page_title %}Quản Lý Nhân Sự Kinh Doanh Toàn Quốc{% endblock %}
+
+{% block content %}
+<div class="card" style="background: linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%); color: white; border: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">Khu Vực Quản Trị Cấp Cao (Giám Đốc Kinh Doanh)</h3>
+            <p style="font-size: 0.85rem; color: #ddd6fe;">
+                Chức năng được bảo vệ nghiêm ngặt: Chỉ có tài khoản Giám Đốc mới nhìn thấy menu và truy cập được vào đây.
+            </p>
+        </div>
+        <span class="menu-badge badge-danger" style="font-size: 0.8rem; padding: 6px 12px;">
+            Quyền: manage_sales_staff
+        </span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+            Danh Sách Nhân Sự Kinh Doanh
+        </div>
+        <span class="menu-badge badge-primary">{{ staff|length }} Thành viên</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="rbac-table">
+            <thead>
+                <tr>
+                    <th>Mã NV</th>
+                    <th>Họ và Tên</th>
+                    <th>Vai Trò</th>
+                    <th>Nhóm Kinh Doanh</th>
+                    <th>Email Công Vụ</th>
+                    <th>KPI Đạt</th>
+                    <th>Trạng Thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in staff %}
+                <tr>
+                    <td><strong>{{ s.code }}</strong></td>
+                    <td>{{ s.name }}</td>
+                    <td>{{ s.role }}</td>
+                    <td>{{ s.group }}</td>
+                    <td><code>{{ s.email }}</code></td>
+                    <td><strong style="color: #059669;">{{ s.kpi }}</strong></td>
+                    <td><span class="status-badge status-allowed">{{ s.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

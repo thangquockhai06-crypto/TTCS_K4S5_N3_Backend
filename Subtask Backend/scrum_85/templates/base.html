@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cơ Cấu Tổ Chức Kinh Doanh & Phạm Vi Dữ Liệu{% endblock %} - SCRUM-85</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- =======================================================================
+         1. THANH KIỂM THỬ GÓC NHÌN & PHÂN QUYỀN (TESTING LAB BAR)
+         ======================================================================= -->
+    <div class="testing-bar">
+        <div class="testing-container">
+            <div class="testing-left">
+                <span class="pulse-dot"></span>
+                <span class="testing-title">🧪 PHÒNG THỬ NGHIỆM PHẠM VI DỮ LIỆU:</span>
+                <span class="current-actor-badge">
+                    {{ current_user.avatar }} <strong>{{ current_user.name }}</strong> 
+                    <span class="actor-role">({{ current_user.role_title }})</span>
+                </span>
+            </div>
+            <div class="testing-actions">
+                <span class="switch-label">Đổi góc nhìn nhanh:</span>
+                <div class="actor-buttons">
+                    {% for actor in key_actors %}
+                        <a href="{{ url_for('switch_user_action', emp_id=actor.id) }}" 
+                           class="btn-actor {% if current_user.id == actor.id %}active{% endif %}"
+                           title="{{ actor.name }} - {{ actor.role }}">
+                            {{ actor.tag }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         2. THANH ĐIỀU HƯỚNG CHÍNH (MAIN NAVBAR)
+         ======================================================================= -->
+    <header class="main-header">
+        <div class="header-container">
+            <div class="brand-group">
+                <a href="{{ url_for('org_tree_view') }}" class="brand-link">
+                    <div class="brand-icon">🌳</div>
+                    <div class="brand-text">
+                        <span class="brand-title">SALES ORG ARCHITECT</span>
+                        <span class="brand-sub">Quản Lý Cơ Cấu Cây & Phạm Vi Dữ Liệu</span>
+                    </div>
+                </a>
+                <span class="ticket-tag">⚡ SCRUM-83 / ☑ SCRUM-85</span>
+            </div>
+
+            <nav class="main-nav">
+                <a href="{{ url_for('org_tree_view') }}" class="nav-item {% if request.endpoint == 'org_tree_view' %}active{% endif %}">
+                    <span class="nav-icon">🏢</span>
+                    <span class="nav-label">Cây Tổ Chức</span>
+                </a>
+                <a href="{{ url_for('data_scope_view') }}" class="nav-item {% if request.endpoint == 'data_scope_view' %}active{% endif %}">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-label">Phạm Vi Dữ Liệu</span>
+                    <span class="nav-counter">Cây con</span>
+                </a>
+                <a href="{{ url_for('employees_view') }}" class="nav-item {% if request.endpoint == 'employees_view' %}active{% endif %}">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Nhân Sự & Nhóm</span>
+                    <span class="nav-badge-pill">1 NV = 1 Nhóm</span>
+                </a>
+                <a href="{{ url_for('regions_view') }}" class="nav-item {% if request.endpoint == 'regions_view' %}active{% endif %}">
+                    <span class="nav-icon">🗺️</span>
+                    <span class="nav-label">Khu Vực Địa Lý</span>
+                </a>
+            </nav>
+
+            <div class="header-right">
+                <form action="{{ url_for('reset_data_action') }}" method="POST" onsubmit="return confirm('Khôi phục toàn bộ cây tổ chức và dữ liệu về trạng thái mẫu ban đầu?');">
+                    <button type="submit" class="btn-reset" title="Khôi phục trạng thái chuẩn ban đầu">
+                        🔄 Khôi phục dữ liệu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- =======================================================================
+         3. THÔNG BÁO FLASH MESSAGE
+         ======================================================================= -->
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} animate-fade-in">
+                        <span class="alert-icon">
+                            {% if category == 'success' %}✅
+                            {% elif category == 'danger' %}❌
+                            {% elif category == 'info' %}ℹ️
+                            {% else %}⚠️{% endif %}
+                        </span>
+                        <div class="alert-message">{{ message }}</div>
+                        <button class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- =======================================================================
+         4. NỘI DUNG CHÍNH (MAIN BODY)
+         ======================================================================= -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- =======================================================================
+         5. CHÂN TRANG (FOOTER)
+         ======================================================================= -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <strong>Hệ Thống Quản Lý Cơ Cấu Tổ Chức & Phân Quyền Dữ Liệu Kinh Doanh</strong>
+                <p>Nhiệm vụ: SCRUM-83 / SCRUM-85 | Chuẩn mô hình phân cấp Subtree Data Scope</p>
+            </div>
+            <div class="footer-col text-right">
+                <div class="criteria-pills">
+                    <span class="pill-check">✓ Cây tổ chức & Trưởng nhóm</span>
+                    <span class="pill-check">✓ 1 Nhân viên = 1 Nhóm</span>
+                    <span class="pill-check">✓ Phạm vi dữ liệu theo cây</span>
+                    <span class="pill-check">✓ Khu vực địa lý</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
