@@ -487,3 +487,8 @@ if __name__ == "__main__":
 def validate_rejection_reason(reason: str) -> bool:
     """Xác thực lý do từ chối phê duyệt bắt buộc có độ dài tối thiểu 5 ký tự"""
     return bool(reason and len(reason.strip()) >= 5)
+
+
+def format_approval_webhook_payload(quote_data: dict, status: str) -> dict:
+    """Định dạng payload gửi webhook tới kênh thông báo Slack/Telegram nội bộ"""
+    return {'quote_id': quote_data.get('id'), 'status': status, 'timestamp': '2026-10-04'}
