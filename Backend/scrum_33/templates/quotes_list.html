@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Toàn Bộ Báo Giá{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">📑 Danh Sách Báo Giá Doanh Nghiệp</div>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px;">
+                Quản lý trạng thái và thẩm quyền phê duyệt chiết khấu của tất cả các báo giá
+            </div>
+        </div>
+        <a href="{{ url_for('quote_create') }}" class="btn btn-primary btn-sm">
+            ➕ Soạn Báo Giá Mới
+        </a>
+    </div>
+
+    <!-- Status Filter Chips -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
+        <a href="{{ url_for('quotes_list') }}" class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-outline{% endif %}">
+            Tất cả
+        </a>
+        <a href="{{ url_for('quotes_list', status='PENDING_APPROVAL') }}" class="btn btn-sm {% if active_status == 'PENDING_APPROVAL' %}btn-warning{% else %}btn-outline{% endif %}">
+            Chờ duyệt ⏳
+        </a>
+        <a href="{{ url_for('quotes_list', status='APPROVED') }}" class="btn btn-sm {% if active_status == 'APPROVED' %}btn-success{% else %}btn-outline{% endif %}">
+            Đã duyệt ✅
+        </a>
+        <a href="{{ url_for('quotes_list', status='SENT') }}" class="btn btn-sm {% if active_status == 'SENT' %}btn-primary{% else %}btn-outline{% endif %}">
+            Đã gửi khách 📤
+        </a>
+        <a href="{{ url_for('quotes_list', status='CHANGES_REQUESTED') }}" class="btn btn-sm {% if active_status == 'CHANGES_REQUESTED' %}btn-warning{% else %}btn-outline{% endif %}">
+            Trả lại sửa 🔄
+        </a>
+        <a href="{{ url_for('quotes_list', status='REJECTED') }}" class="btn btn-sm {% if active_status == 'REJECTED' %}btn-danger{% else %}btn-outline{% endif %}">
+            Bị từ chối ❌
+        </a>
+        <a href="{{ url_for('quotes_list', status='DRAFT') }}" class="btn btn-sm {% if active_status == 'DRAFT' %}btn-outline{% else %}btn-outline{% endif %}">
+            Bản nháp 📝
+        </a>
+    </div>
+
+    {% if quotes %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tiêu Đề &amp; Doanh Nghiệp</th>
+                    <th>NVKD</th>
+                    <th>Chiết Khấu</th>
+                    <th>Tổng Tiền</th>
+                    <th>Kiểm Tra Giá Sàn</th>
+                    <th>Cấp Phê Duyệt</th>
+                    <th>Trạng Thái</th>
+                    <th>Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in quotes %}
+                <tr>
+                    <td>
+                        <strong style="color: #38bdf8;">{{ q.id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ q.title }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">🏢 {{ q.account_name }}</div>
+                    </td>
+                    <td>{{ q.sales_rep_name }}</td>
+                    <td>
+                        <span style="font-weight: 700; color: {% if q.discount_rate > 20 %}#f87171{% elif q.discount_rate >= 10 %}#fbbf24{% else %}#34d399{% endif %};">
+                            {{ "%.1f"|format(q.discount_rate) }}%
+                        </span>
+                    </td>
+                    <td style="color: #60a5fa; font-weight: 600;">{{ q.total_amount|vi_currency }}</td>
+                    <td>
+                        {% if q.below_floor_price %}
+                        <span class="badge badge-floor-alert">🚨 Dưới sàn</span>
+                        {% else %}
+                        <span class="badge badge-slate">✓ Đạt sàn</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if q.approval_authority == 'AUTO' %}
+                        <span class="badge badge-auto">⚡ Tự động</span>
+                        {% elif q.required_role == 'DIRECTOR' %}
+                        <span class="badge badge-director">👑 Giám đốc</span>
+                        {% else %}
+                        <span class="badge badge-team-lead">👔 Trưởng nhóm</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {{ STATUS_BADGE_CLASSES.get(q.status, 'badge-slate') }}">
+                            {{ STATUS_LABELS.get(q.status, q.status) }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-outline btn-sm">
+                            Chi tiết &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        Không tìm thấy báo giá nào phù hợp với bộ lọc.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

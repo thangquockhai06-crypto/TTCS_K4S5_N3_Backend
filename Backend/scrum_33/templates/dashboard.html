@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Làm Việc Duyệt Báo Giá{% endblock %}
+
+{% block content %}
+<!-- 1. Hero User Story Banner -->
+<div class="hero-banner">
+    <div class="hero-tag">⚡ Jira User Story &bull; {{ PARENT_EPIC }} / {{ TICKET_ID }}</div>
+    <h1 class="hero-title">
+        "Là Trưởng nhóm kinh doanh, tôi muốn duyệt báo giá theo mức chiết khấu, để kiểm soát biên lợi nhuận mà không phải trả lời từng tin nhắn xin giảm giá."
+    </h1>
+    <p class="hero-desc">
+        Hệ thống tự động hóa toàn bộ quy trình phê duyệt chiết khấu B2B: Chiết khấu dưới 10% tự động thông qua; từ 10% - 20% do Trưởng nhóm duyệt; trên 20% hoặc bán dưới giá sàn bắt buộc Giám đốc kinh doanh duyệt.
+    </p>
+</div>
+
+<!-- 2. KPIs Overview Grid -->
+<div class="metrics-grid">
+    <div class="metric-card amber">
+        <div class="metric-label">👔 CHỜ TRƯỞNG NHÓM DUYỆT</div>
+        <div class="metric-value">{{ metrics.pending_team_lead }}</div>
+        <div class="metric-subtitle">Chiết khấu từ 10% đến 20% (Trên giá sàn)</div>
+    </div>
+
+    <div class="metric-card rose">
+        <div class="metric-label">👑 BẮT BUỘC GIÁM ĐỐC DUYỆT</div>
+        <div class="metric-value">{{ metrics.pending_director }}</div>
+        <div class="metric-subtitle">Chiết khấu > 20% hoặc có sản phẩm dưới giá sàn</div>
+    </div>
+
+    <div class="metric-card purple">
+        <div class="metric-label">🚨 CẢNH BÁO DƯỚI GIÁ SÀN</div>
+        <div class="metric-value">{{ metrics.below_floor_count }}</div>
+        <div class="metric-subtitle">Đơn vị vi phạm mức giá bán tối thiểu</div>
+    </div>
+
+    <div class="metric-card emerald">
+        <div class="metric-label">✅ ĐÃ PHÊ DUYỆT</div>
+        <div class="metric-value">{{ metrics.approved_count }}</div>
+        <div class="metric-subtitle">Đã sẵn sàng gửi cho khách hàng</div>
+    </div>
+
+    <div class="metric-card indigo">
+        <div class="metric-label">📤 ĐÃ GỬI KHÁCH HÀNG</div>
+        <div class="metric-value">{{ metrics.sent_count }}</div>
+        <div class="metric-subtitle">Báo giá hợp lệ đã phát hành chính thức</div>
+    </div>
+</div>
+
+<!-- 3. Authority Rules Reference Box -->
+<div class="authority-matrix-box">
+    <div class="matrix-item">
+        <div class="matrix-icon">⚡</div>
+        <div class="matrix-text">
+            <h4 style="color: #6ee7b7;">Dưới ngưỡng 1 (&lt; 10.0%)</h4>
+            <p>Tự động thông qua ngay, không cần duyệt. Đảm bảo biên lợi nhuận an toàn &amp; trên giá sàn.</p>
+        </div>
+    </div>
+    <div class="matrix-item">
+        <div class="matrix-icon">👔</div>
+        <div class="matrix-text">
+            <h4 style="color: #fcd34d;">Vượt ngưỡng 1 (10.0% &ndash; 20.0%)</h4>
+            <p>Trưởng nhóm kinh doanh trực tiếp duyệt, kiểm soát chiết khấu nội bộ.</p>
+        </div>
+    </div>
+    <div class="matrix-item">
+        <div class="matrix-icon">👑</div>
+        <div class="matrix-text">
+            <h4 style="color: #fca5a5;">Vượt ngưỡng 2 (&gt; 20.0%) HOẶC Dưới sàn</h4>
+            <p>Bắt buộc Giám đốc kinh doanh duyệt. Trưởng nhóm không có quyền phê duyệt.</p>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Pending Approval Queue -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>⏳ Báo Giá Chờ Phê Duyệt Khẩn Cấp</span>
+            <span class="badge badge-amber">{{ pending_quotes|length }} yêu cầu</span>
+        </div>
+        <a href="{{ url_for('approval_queue') }}" class="btn btn-outline btn-sm">Xem toàn bộ hàng chờ &rarr;</a>
+    </div>
+
+    {% if pending_quotes %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Báo Giá</th>
+                    <th>Tiêu Đề &amp; Khách Hàng</th>
+                    <th>NVKD Phụ Trách</th>
+                    <th>Chiết Khấu Tổng</th>
+                    <th>Kiểm Tra Giá Sàn</th>
+                    <th>Thẩm Quyền Duyệt</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in pending_quotes %}
+                <tr>
+                    <td>
+                        <strong style="color: #38bdf8;">{{ q.id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ q.title }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">🏢 {{ q.account_name }}</div>
+                    </td>
+                    <td>
+                        <div style="font-size: 0.85rem;">{{ q.sales_rep_name }}</div>
+                    </td>
+                    <td>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: {% if q.discount_rate > 20 %}#f87171{% elif q.discount_rate >= 10 %}#fbbf24{% else %}#34d399{% endif %};">
+                            {{ "%.1f"|format(q.discount_rate) }}%
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            -{{ q.total_discount_amount|vi_currency }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if q.below_floor_price %}
+                        <span class="badge badge-floor-alert">🚨 Có {{ q.items_below_floor_count }} món dưới sàn</span>
+                        {% else %}
+                        <span class="badge badge-slate">✓ Đảm bảo giá sàn</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if q.required_role == 'DIRECTOR' %}
+                        <span class="badge badge-director">👑 Bắt buộc Giám đốc duyệt</span>
+                        {% else %}
+                        <span class="badge badge-team-lead">👔 Trưởng nhóm duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-primary btn-sm">
+                            Xem &amp; Duyệt &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        <div style="font-size: 2.5rem; margin-bottom: 10px;">🎉</div>
+        <div style="font-weight: 600; font-size: 1.1rem;">Tuyệt vời! Không có báo giá nào đang tồn đọng chờ duyệt.</div>
+        <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">Mọi báo giá đều đã được xử lý hoặc tự động thông qua đúng chuẩn SLA.</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 5. Recent Quotes Summary -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📑 Hoạt Động Báo Giá Gần Đây</span>
+        </div>
+        <a href="{{ url_for('quotes_list') }}" class="btn btn-outline btn-sm">Xem tất cả &rarr;</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tiêu Đề</th>
+                    <th>Khách Hàng</th>
+                    <th>Chiết Khấu</th>
+                    <th>Tổng Tiền</th>
+                    <th>Trạng Thái</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in recent_quotes %}
+                <tr>
+                    <td><strong>{{ q.id }}</strong></td>
+                    <td>{{ q.title }}</td>
+                    <td>{{ q.account_name }}</td>
+                    <td><strong>{{ "%.1f"|format(q.discount_rate) }}%</strong></td>
+                    <td style="color: #60a5fa; font-weight: 600;">{{ q.total_amount|vi_currency }}</td>
+                    <td>
+                        <span class="badge {{ STATUS_BADGE_CLASSES.get(q.status, 'badge-slate') }}">
+                            {{ STATUS_LABELS.get(q.status, q.status) }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-outline btn-sm">Chi tiết</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

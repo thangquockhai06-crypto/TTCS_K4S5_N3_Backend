@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ quote.id }} - Chi Tiết Báo Giá & Phê Duyệt{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('dashboard') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.88rem;">
+        &larr; Quay lại Bàn làm việc
+    </a>
+</div>
+
+<!-- Header Card -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <h1 style="font-size: 1.5rem; font-weight: 800; color: #fff;">{{ quote.title }}</h1>
+                <span class="badge {{ STATUS_BADGE_CLASSES.get(quote.status, 'badge-slate') }}" style="font-size: 0.9rem; padding: 6px 14px;">
+                    {{ STATUS_LABELS.get(quote.status, quote.status) }}
+                </span>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; gap: 20px; flex-wrap: wrap;">
+                <span>Mã báo giá: <strong style="color: #38bdf8;">{{ quote.id }}</strong></span>
+                <span>🏢 Khách hàng: <strong>{{ quote.account_name }}</strong></span>
+                <span>👤 Liên hệ: <strong>{{ quote.contact_name }}</strong> ({{ quote.contact_phone }})</span>
+                <span>👨‍💼 NVKD: <strong>{{ quote.sales_rep_name }}</strong></span>
+            </div>
+        </div>
+
+        <!-- Action Buttons Bar -->
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            {% if quote.status == 'DRAFT' %}
+            <form method="POST" action="{{ url_for('submit_quote', quote_id=quote.id) }}">
+                <button type="submit" class="btn btn-primary">
+                    ⚡ Trình Duyệt Báo Giá
+                </button>
+            </form>
+            {% endif %}
+
+            {% if quote.status in ['PENDING_APPROVAL', 'CHANGES_REQUESTED'] %}
+                <!-- Nút 1: DUYỆT (AC3) -->
+                {% if can_approve %}
+                <button type="button" id="btnActionApprove" class="btn btn-success">
+                    ✅ Duyệt Báo Giá
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-success disabled" disabled title="{{ permission_warning }}">
+                    🔒 Duyệt Báo Giá (Bị khóa)
+                </button>
+                {% endif %}
+
+                <!-- Nút 2: TỪ CHỐI (AC3) -->
+                <button type="button" id="btnActionReject" class="btn btn-danger">
+                    ❌ Từ Chối
+                </button>
+
+                <!-- Nút 3: TRẢ LẠI SỬA (AC3) -->
+                <button type="button" id="btnActionRequestChanges" class="btn btn-warning">
+                    🔄 Trả Lại Sửa
+                </button>
+            {% endif %}
+
+            <!-- Nút 4: GỬI CHO KHÁCH HÀNG (AC4 - Chỉ báo giá đã duyệt mới gửi được) -->
+            {% if quote.status == 'APPROVED' %}
+            <form method="POST" action="{{ url_for('send_quote', quote_id=quote.id) }}">
+                <button type="submit" class="btn btn-primary" style="background: #3b82f6;">
+                    📤 Gửi Cho Khách Hàng Ngay
+                </button>
+            </form>
+            {% elif quote.status == 'SENT' %}
+            <button type="button" class="btn btn-outline disabled" disabled style="color: #818cf8; border-color: #818cf8;">
+                ✓ Đã gửi cho khách hàng ({{ quote.sent_at|vi_datetime }})
+            </button>
+            {% else %}
+            <button type="button" class="btn btn-outline disabled" disabled title="Tiêu chí 4: Chỉ báo giá đã được phê duyệt mới được phép gửi cho khách hàng!">
+                🔒 Gửi Cho Khách Hàng (Cần duyệt trước)
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Cảnh báo phân quyền nếu có (AC2) -->
+    {% if permission_warning %}
+    <div style="margin-top: 16px; padding: 12px 16px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: var(--radius-md); color: #fca5a5; font-size: 0.88rem; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.2rem;">🚫</span>
+        <div>{{ permission_warning }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Authority Alert Card (AC1, AC2) -->
+<div class="card" style="border-left: 4px solid {% if quote.below_floor_price or quote.discount_rate > 20 %}#ef4444{% elif quote.discount_rate >= 10 %}#f59e0b{% else %}#10b981{% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 2rem;">
+                {% if quote.below_floor_price %}🚨{% elif quote.discount_rate > 20 %}👑{% elif quote.discount_rate >= 10 %}👔{% else %}⚡{% endif %}
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700;">
+                    Thẩm Quyền Phê Duyệt Chiết Khấu Theo Quy Định
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+                    {{ AUTHORITY_LABELS.get(quote.approval_authority, quote.approval_authority) }}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">
+                    {{ quote.approval_reason }}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {% if quote.approval_authority == 'AUTO' %}
+            <span class="badge badge-auto" style="font-size: 0.88rem; padding: 6px 12px;">⚡ Tiêu chí 1: Tự Động Thông Qua</span>
+            {% elif quote.required_role == 'DIRECTOR' %}
+            <span class="badge badge-director" style="font-size: 0.88rem; padding: 6px 12px;">👑 Tiêu chí 2: Bắt Buộc Giám Đốc Duyệt</span>
+            {% else %}
+            <span class="badge badge-team-lead" style="font-size: 0.88rem; padding: 6px 12px;">👔 Tiêu chí 2: Trưởng Nhóm Duyệt</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Products Table Card -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📦 Danh Mục Sản Phẩm &amp; Chiết Khấu Từng Dòng</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+            Ngưỡng 1: <strong>{{ THRESHOLD_1_PERCENT }}%</strong> &bull; Ngưỡng 2: <strong>{{ THRESHOLD_2_PERCENT }}%</strong>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên Sản Phẩm / Dịch Vụ</th>
+                    <th>Số Lượng</th>
+                    <th>Đơn Vị</th>
+                    <th>Đơn Giá Bán</th>
+                    <th>Chiết Khấu</th>
+                    <th>Thành Tiền Sau Giảm</th>
+                    <th>Đơn Giá Thực Tế</th>
+                    <th>Giá Sàn Quy Định</th>
+                    <th>Kiểm Tra Giá Sàn</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in quote['items'] %}
+                <tr {% if item.is_below_floor %}style="background: rgba(239, 68, 68, 0.08);"{% endif %}>
+                    <td><code>{{ item.product_code }}</code></td>
+                    <td>
+                        <strong>{{ item.product_name }}</strong>
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td>{{ item.unit_price|vi_currency }}</td>
+                    <td>
+                        <strong style="color: {% if item.discount_percent > 20 %}#f87171{% elif item.discount_percent >= 10 %}#fbbf24{% else %}#34d399{% endif %};">
+                            {{ "%.1f"|format(item.discount_percent) }}%
+                        </strong>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">-{{ item.discount_amount|vi_currency }}</div>
+                    </td>
+                    <td style="font-weight: 700; color: #60a5fa;">
+                        {{ item.subtotal_after_discount|vi_currency }}
+                    </td>
+                    <td>
+                        <strong>{{ item.effective_unit_price|vi_currency }}</strong>
+                    </td>
+                    <td style="color: var(--text-secondary);">
+                        {{ item.floor_price|vi_currency }}
+                    </td>
+                    <td>
+                        {% if item.is_below_floor %}
+                        <span class="badge badge-floor-alert">🚨 Dưới sàn (-{{ (item.floor_price - item.effective_unit_price)|vi_currency }})</span>
+                        {% else %}
+                        <span class="badge badge-slate">✓ Đạt sàn</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Financial Summary Box -->
+    <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 24px; min-width: 380px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                <span style="color: var(--text-secondary);">Tổng tiền hàng trước chiết khấu:</span>
+                <strong>{{ quote.total_before_discount|vi_currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                <span style="color: var(--text-secondary);">Tổng tiền chiết khấu giảm giá:</span>
+                <strong style="color: #f87171;">-{{ quote.total_discount_amount|vi_currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding: 6px 0; border-top: 1px dashed var(--border-color); border-bottom: 1px dashed var(--border-color);">
+                <span style="font-weight: 700; color: #fff;">TỶ LỆ CHIẾT KHẤU TỔNG:</span>
+                <span style="font-size: 1.25rem; font-weight: 800; color: {% if quote.discount_rate > 20 %}#f87171{% elif quote.discount_rate >= 10 %}#fbbf24{% else %}#34d399{% endif %};">
+                    {{ "%.1f"|format(quote.discount_rate) }}%
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                <span style="color: var(--text-secondary);">Tiền sau chiết khấu (chưa VAT):</span>
+                <strong>{{ quote.total_after_discount|vi_currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem;">
+                <span style="color: var(--text-secondary);">Thuế VAT ({{ quote.vat_percent }}%):</span>
+                <span>{{ quote.vat_amount|vi_currency }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 1.15rem;">
+                <strong style="color: #fff;">TỔNG CỘNG THANH TOÁN:</strong>
+                <strong style="color: #38bdf8;">{{ quote.total_amount|vi_currency }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Immutable Approval History Timeline (AC5) -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🔒 Lịch Sử Phê Duyệt Bất Biến (Immutable Audit Trail)</span>
+        </div>
+        <div>
+            <span class="badge badge-indigo">🔒 Tiêu chí 5: Nghiêm cấm sửa / xóa</span>
+        </div>
+    </div>
+
+    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+        Mọi quyết định phê duyệt, từ chối hoặc trả lại sửa đều được hệ thống tự động ghi nhận vào sổ cái kiểm toán bất biến. Dữ liệu được mã hóa mã băm toàn vẹn SHA-256 để đảm bảo tính minh bạch pháp lý tuyệt đối.
+    </div>
+
+    {% if quote.approval_history %}
+    <div class="timeline">
+        {% for h in quote.approval_history %}
+        <div class="timeline-item">
+            <div class="timeline-marker">{{ h.action_icon }}</div>
+            <div class="timeline-content">
+                <div class="timeline-header">
+                    <div class="timeline-actor">
+                        <span>{{ h.actor_name }}</span>
+                        <span class="badge badge-slate" style="font-size: 0.72rem;">{{ h.actor_role_name }}</span>
+                        <span class="badge {% if h.action == 'APPROVE' or h.action == 'AUTO_APPROVE' %}badge-emerald{% elif h.action == 'REJECT' %}badge-rose{% elif h.action == 'REQUEST_CHANGES' %}badge-blue{% else %}badge-slate{% endif %}">
+                            {{ h.action_label }}
+                        </span>
+                    </div>
+                    <div class="timeline-time">
+                        🕒 {{ h.formatted_time }}
+                    </div>
+                </div>
+
+                <div class="timeline-comment">
+                    "{{ h.comment }}"
+                </div>
+
+                <div class="timeline-meta">
+                    <span>Mức chiết khấu lúc duyệt: <strong>{{ "%.1f"|format(h.discount_rate) }}%</strong></span>
+                    <span>Dưới giá sàn: <strong>{% if h.below_floor_price %}Có 🚨{% else %}Không ✓{% endif %}</strong></span>
+                    <span>Mã SHA-256: <code class="immutable-hash">{{ h.integrity_hash }}</code></span>
+                    <span style="color: #10b981;">🔒 Bản ghi bất biến</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+        Chưa có lịch sử duyệt nào được ghi nhận cho báo giá này.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
