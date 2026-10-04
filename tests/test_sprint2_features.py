@@ -277,23 +277,95 @@ def test_pipeline_stages_endpoints(client: TestClient, admin_headers: dict):
 
 
 # ==============================================================================
-# S2-10: Win/Loss Reasons & Competitors Tests
+# S2-10: Win/Loss Reasons & Competitors Tests (SCRUM-89)
 # ==============================================================================
 def test_win_loss_reasons_and_competitors(client: TestClient, admin_headers: dict):
-    # 1. Reasons
-    res_reasons = client.get("/api/v1/win-loss-config/reasons?resultType=WON", headers=admin_headers)
-    assert res_reasons.status_code == 200
-    reasons = res_reasons.json()
-    assert all(r["result_type"] == "WON" for r in reasons)
+    # 1. Reasons: GET with filters
+    res_won = client.get("/api/v1/win-loss-config/reasons?resultType=WON", headers=admin_headers)
+    assert res_won.status_code == 200
+    won_reasons = res_won.json()
+    assert len(won_reasons) >= 3
+    assert all(r["result_type"] == "WON" for r in won_reasons)
 
-    # 2. Competitors
+    res_lost = client.get("/api/v1/win-loss-config/reasons?resultType=LOST", headers=admin_headers)
+    assert res_lost.status_code == 200
+    lost_reasons = res_lost.json()
+    assert len(lost_reasons) >= 3
+    assert all(r["result_type"] == "LOST" for r in lost_reasons)
+
+    # 2. Reasons: POST (Create)
+    reason_payload = {
+        "result_type": "WON",
+        "code": "TEST_REASON_CODE",
+        "reason": "Khách hàng chọn vì chính sách bảo hành 24/7",
+        "description": "Thử nghiệm tạo mới lý do thắng",
+    }
+    create_res = client.post("/api/v1/win-loss-config/reasons", json=reason_payload, headers=admin_headers)
+    assert create_res.status_code == 201
+    created_reason = create_res.json()
+    assert created_reason["code"] == "TEST_REASON_CODE"
+    assert created_reason["reason"] == "Khách hàng chọn vì chính sách bảo hành 24/7"
+    assert created_reason["result_type"] == "WON"
+    assert created_reason["is_active"] is True
+    reason_id = created_reason["id"]
+
+    # 3. Reasons: POST Duplicate Code -> 400
+    dup_res = client.post("/api/v1/win-loss-config/reasons", json=reason_payload, headers=admin_headers)
+    assert dup_res.status_code == 400
+
+    # 4. Reasons: PUT (Update)
+    update_res = client.put(
+        f"/api/v1/win-loss-config/reasons/{reason_id}",
+        json={"reason": "Lý do đã cập nhật nội dung mới", "description": "Ghi chú cập nhật"},
+        headers=admin_headers,
+    )
+    assert update_res.status_code == 200
+    assert update_res.json()["reason"] == "Lý do đã cập nhật nội dung mới"
+
+    # 5. Reasons: DELETE
+    del_res = client.delete(f"/api/v1/win-loss-config/reasons/{reason_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+    del_check = client.get("/api/v1/win-loss-config/reasons", headers=admin_headers)
+    assert not any(r["id"] == reason_id for r in del_check.json())
+
+    # 6. Competitors: GET
+    res_comps = client.get("/api/v1/win-loss-config/competitors", headers=admin_headers)
+    assert res_comps.status_code == 200
+    competitors = res_comps.json()
+    assert len(competitors) >= 3
+
+    # 7. Competitors: POST (Create)
     comp_payload = {
-        "name": "Test Global CRM",
+        "name": "Test Global CRM Competitor",
         "pricing_tier": "Cao cấp",
-        "strengths": "Thương hiệu mạnh",
-        "weaknesses": "Giá thành cao",
-        "win_rate": 40,
+        "strengths": "Thương hiệu mạnh toàn cầu",
+        "weaknesses": "Giá thành rất cao",
+        "win_rate": 45.0,
     }
     create_comp = client.post("/api/v1/win-loss-config/competitors", json=comp_payload, headers=admin_headers)
     assert create_comp.status_code == 201
-    assert create_comp.json()["name"] == "Test Global CRM"
+    created_comp = create_comp.json()
+    assert created_comp["name"] == "Test Global CRM Competitor"
+    assert created_comp["pricing_tier"] == "Cao cấp"
+    assert created_comp["win_rate"] == 45.0
+    comp_id = created_comp["id"]
+
+    # 8. Competitors: POST Duplicate Name -> 400
+    dup_comp = client.post("/api/v1/win-loss-config/competitors", json=comp_payload, headers=admin_headers)
+    assert dup_comp.status_code == 400
+
+    # 9. Competitors: PUT (Update)
+    update_comp = client.put(
+        f"/api/v1/win-loss-config/competitors/{comp_id}",
+        json={"pricing_tier": "Trung cấp", "win_rate": 60.0},
+        headers=admin_headers,
+    )
+    assert update_comp.status_code == 200
+    assert update_comp.json()["pricing_tier"] == "Trung cấp"
+    assert update_comp.json()["win_rate"] == 60.0
+
+    # 10. Competitors: DELETE
+    del_comp = client.delete(f"/api/v1/win-loss-config/competitors/{comp_id}", headers=admin_headers)
+    assert del_comp.status_code == 200
+    del_comp_check = client.get("/api/v1/win-loss-config/competitors", headers=admin_headers)
+    assert not any(c["id"] == comp_id for c in del_comp_check.json())

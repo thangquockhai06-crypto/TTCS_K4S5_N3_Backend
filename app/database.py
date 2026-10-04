@@ -47,6 +47,46 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+
+def run_auto_migrations(target_engine=None):
+    """
+    Tự động kiểm tra và thêm các cột mới vào CSDL nếu bảng đã tồn tại từ trước (Auto-migration).
+    Đảm bảo tính tương thích tuyệt đối cho SCRUM-89 mà không làm mất dữ liệu hiện có.
+    Hỗ trợ cả MySQL và SQLite.
+    """
+    eng = target_engine or engine
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(eng)
+        existing_tables = inspector.get_table_names()
+
+        with eng.begin() as conn:
+            # 1. Bảng competitors
+            if "competitors" in existing_tables:
+                comp_cols = [c["name"] for c in inspector.get_columns("competitors")]
+                if "pricing_tier" not in comp_cols:
+                    conn.execute(text("ALTER TABLE competitors ADD COLUMN pricing_tier VARCHAR(100) DEFAULT 'Trung cấp'"))
+                    print("[MIGRATION] Da tu dong bo sung cot 'pricing_tier' vao bang competitors.")
+                if "is_active" not in comp_cols:
+                    conn.execute(text("ALTER TABLE competitors ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+                    print("[MIGRATION] Da tu dong bo sung cot 'is_active' vao bang competitors.")
+                if "updated_at" not in comp_cols:
+                    conn.execute(text("ALTER TABLE competitors ADD COLUMN updated_at DATETIME"))
+                    print("[MIGRATION] Da tu dong bo sung cot 'updated_at' vao bang competitors.")
+
+            # 2. Bảng win_loss_reasons
+            if "win_loss_reasons" in existing_tables:
+                reason_cols = [c["name"] for c in inspector.get_columns("win_loss_reasons")]
+                if "usage_count" not in reason_cols:
+                    conn.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN usage_count INTEGER DEFAULT 0"))
+                    print("[MIGRATION] Da tu dong bo sung cot 'usage_count' vao bang win_loss_reasons.")
+                if "updated_at" not in reason_cols:
+                    conn.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN updated_at DATETIME"))
+                    print("[MIGRATION] Da tu dong bo sung cot 'updated_at' vao bang win_loss_reasons.")
+    except Exception as exc:
+        print(f"[MIGRATION WARNING] Khong the tu dong cap nhat cot CSDL: {exc}")
+
+
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
     db = SessionLocal()

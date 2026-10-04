@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, run_auto_migrations
 from app.routers import (
     auth_router,
     user_import_router,
@@ -31,12 +31,17 @@ from app.routers import (
     win_loss_router,
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Tu dong tao cac bang trong CSDL neu chua ton tai
     try:
         Base.metadata.create_all(bind=engine)
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
+
+        # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-89)
+        run_auto_migrations()
+
         try:
             import seed
             seed.seed_database()
