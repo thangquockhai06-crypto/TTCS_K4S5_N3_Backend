@@ -74,6 +74,19 @@ Response 200:
 ```
 
 Ảnh được xoay theo EXIF, crop chính giữa thành hình vuông, loại bỏ metadata và lưu thumbnail mặc định `128x128`. `DELETE /api/v1/users/me/avatar` xóa avatar và trả về hai trường URL có giá trị `null`. Phản hồi khách hàng chứa `assignedUser.avatarThumbnailUrl`; giá trị là `null` nếu khách hàng chưa có người phụ trách hoặc người phụ trách chưa tải avatar.
+### Tìm kiếm khách hàng và saved filters
+`GET /api/v1/customers` giữ nguyên response dạng danh sách và thêm header `X-Total-Count`. Hỗ trợ:
+
+- `q`: tìm không phân biệt hoa thường/dấu theo tên và công ty; tìm tiền tố mã số thuế; tìm số điện thoại khách hàng hoặc contact, bao gồm định dạng `+84`.
+- `status`, `industry`, `companySize`, `region`, `owner`: lặp query parameter hoặc truyền danh sách phân cách bằng dấu phẩy.
+- `owner=me` lọc người dùng hiện tại; `owner=unassigned` lọc bản ghi chưa gán. Data scope của role vẫn được áp dụng ở tầng truy vấn.
+- `sort=name|created_at|status|owner`, `descending`, `skip`, `limit`.
+- `saved_filter_id`: nạp saved filter của chính người dùng; các tham số gửi trực tiếp ghi đè giá trị đã lưu.
+
+Các bucket `companySize` hợp lệ là `SMB`, `MID_MARKET`, `ENTERPRISE`. CRUD saved filter dùng:
+`GET/POST /api/v1/saved-filters`, `PATCH/DELETE /api/v1/saved-filters/{id}`.
+Saved filter được giới hạn 20 bản ghi mỗi người dùng, không cho trùng tên không phân biệt hoa thường, và definition được kiểm tra trước khi lưu.
+
 ### Catalog và Price Book
 Các endpoint yêu cầu Bearer access token. Chỉ role `Sales Director` được tạo, cập nhật, ngừng bán hoặc xóa catalog item; người dùng khác chỉ được đọc và không nhận trường `costPrice`.
 

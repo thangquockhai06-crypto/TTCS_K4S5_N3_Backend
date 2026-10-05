@@ -107,6 +107,32 @@ def run_auto_migrations(target_engine=None):
                     connection.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN usage_count INTEGER DEFAULT 0"))
                 if "updated_at" not in columns:
                     connection.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN updated_at DATETIME"))
+            if "customers" in existing_tables:
+                customer_columns = {column["name"] for column in inspector.get_columns("customers")}
+                customer_additions = {
+                    "industry": "VARCHAR(50)",
+                    "company_size": "VARCHAR(30)",
+                    "region": "VARCHAR(100)",
+                    "tax_code": "VARCHAR(50)",
+                    "normalized_name": "VARCHAR(255) NOT NULL DEFAULT ''",
+                    "normalized_tax_code": "VARCHAR(50) NOT NULL DEFAULT ''",
+                    "normalized_phone": "VARCHAR(30) NOT NULL DEFAULT ''",
+                }
+                for column_name, definition in customer_additions.items():
+                    if column_name not in customer_columns:
+                        connection.execute(text(f"ALTER TABLE customers ADD COLUMN {column_name} {definition}"))
+                existing_indexes = {index["name"] for index in inspector.get_indexes("customers")}
+                customer_indexes = {
+                    "idx_customer_name": "normalized_name",
+                    "idx_customer_tax_code": "normalized_tax_code",
+                    "idx_customer_phone": "normalized_phone",
+                    "idx_customer_industry": "industry",
+                    "idx_customer_company_size": "company_size",
+                    "idx_customer_region": "region",
+                }
+                for index_name, column_name in customer_indexes.items():
+                    if index_name not in existing_indexes:
+                        connection.execute(text(f"CREATE INDEX {index_name} ON customers ({column_name})"))
             if "products" in existing_tables:
                 product_columns = {column["name"] for column in inspector.get_columns("products")}
                 had_list_price = "list_price" in product_columns
@@ -130,6 +156,27 @@ def run_auto_migrations(target_engine=None):
                 quote_columns = {column["name"] for column in inspector.get_columns("quotations")}
                 if "discount_approval_required" not in quote_columns:
                     connection.execute(text("ALTER TABLE quotations ADD COLUMN discount_approval_required BOOLEAN NOT NULL DEFAULT 0"))
+        if "customers" in existing_tables:
+            from sqlalchemy.orm import sessionmaker
+            from app.models.customer import Customer, Contact
+            from app.core.customer_search import normalize_phone, normalize_tax_code, normalize_text
+
+            MigrationSession = sessionmaker(bind=eng)
+            with MigrationSession() as migration_session:
+                customers = migration_session.query(Customer).all()
+                for customer in customers:
+                    if not customer.normalized_name:
+                        customer.normalized_name = normalize_text(f"{customer.full_name or ''} {customer.company or ''}")
+                    if not customer.normalized_tax_code:
+                        customer.normalized_tax_code = normalize_tax_code(customer.tax_code or "")
+                    if not customer.normalized_phone:
+                        customer.normalized_phone = normalize_phone(customer.phone or "")
+                if "customer_contacts" in existing_tables:
+                    contacts = migration_session.query(Contact).all()
+                    for contact in contacts:
+                        if not contact.normalized_phone:
+                            contact.normalized_phone = normalize_phone(contact.phone or "")
+                migration_session.commit()
     except Exception as exc:
         print(f"[MIGRATION WARNING] Could not apply compatibility migrations: {exc}")
 

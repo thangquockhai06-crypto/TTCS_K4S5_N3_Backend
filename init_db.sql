@@ -56,9 +56,49 @@ CREATE TABLE IF NOT EXISTS customers (
     health_score INT NOT NULL DEFAULT 85,
     assigned_user_id VARCHAR(36) DEFAULT NULL,
     avatar_url TEXT,
+    industry VARCHAR(50) DEFAULT NULL,
+    company_size VARCHAR(30) DEFAULT NULL,
+    region VARCHAR(100) DEFAULT NULL,
+    tax_code VARCHAR(50) DEFAULT NULL,
+    normalized_name VARCHAR(255) NOT NULL DEFAULT '',
+    normalized_tax_code VARCHAR(50) NOT NULL DEFAULT '',
+    normalized_phone VARCHAR(30) NOT NULL DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_customer_name (normalized_name),
+    INDEX idx_customer_tax_code (normalized_tax_code),
+    INDEX idx_customer_phone (normalized_phone),
+    INDEX idx_customer_industry (industry),
+    INDEX idx_customer_company_size (company_size),
+    INDEX idx_customer_region (region),
     FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS customer_contacts (
+    id VARCHAR(36) PRIMARY KEY,
+    customer_id VARCHAR(36) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    normalized_phone VARCHAR(30) NOT NULL,
+    email VARCHAR(120) DEFAULT NULL,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_customer_contact_customer (customer_id),
+    INDEX idx_customer_contact_phone (normalized_phone),
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS saved_filters (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    filter_definition JSON NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_saved_filter_user_name (user_id, name),
+    INDEX idx_saved_filter_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. BẢNG CƠ HỘI BÁN HÀNG (DEALS / KANBAN PIPELINE)

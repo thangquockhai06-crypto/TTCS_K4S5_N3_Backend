@@ -16,10 +16,11 @@ from app.config import settings
 from app.database import engine, Base, ensure_schema_compatibility, run_auto_migrations
 from app.routers import (
     auth_router,
-    catalog_items_router,
     user_import_router,
-    users_router,
+    catalog_items_router,
     customers_router,
+    saved_filters_router,
+    users_router,
     deals_router,
     opportunities_router,
     activities_router,
@@ -88,6 +89,7 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
+app.include_router(saved_filters_router, prefix=settings.API_V1_STR)
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
 app.include_router(activities_router, prefix=settings.API_V1_STR)

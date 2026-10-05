@@ -2,7 +2,7 @@ import uuid
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 
-from app.models.customer import Customer
+from app.models.customer import Customer, Contact
 from app.models.activity import Activity, Note
 from app.models.user import User
 from app.schemas.customer import CreateCustomerDTO
@@ -29,7 +29,7 @@ class CustomerService:
             db=db,
             user=user,
             search=search,
-            status=status,
+            status=[status] if status and status.lower() != "all" else None,
             skip=skip,
             limit=limit,
         )
@@ -82,7 +82,21 @@ class CustomerService:
             health_score=dto.healthScore or 85,
             assigned_user_id=user.id,
             avatar_url=f"https://api.dicebear.com/7.x/initials/svg?seed={dto.fullName}",
+            industry=dto.industry,
+            company_size=dto.companySize,
+            region=dto.region,
+            tax_code=dto.taxCode,
         )
+        for contact_dto in dto.contacts:
+            new_customer.contacts.append(
+                Contact(
+                    id=str(uuid.uuid4()),
+                    full_name=contact_dto.fullName,
+                    phone=contact_dto.phone,
+                    email=contact_dto.email,
+                    is_primary=int(contact_dto.isPrimary),
+                )
+            )
         return CustomerRepository.create(db, new_customer)
 
     @staticmethod

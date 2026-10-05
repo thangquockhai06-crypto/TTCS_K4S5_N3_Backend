@@ -1,11 +1,12 @@
-from typing import Optional, List, Tuple
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from typing import Optional, List, Tuple, Sequence
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import or_, and_, exists, false
 
-from app.models.customer import Customer
+from app.models.customer import Customer, Contact
 from app.models.activity import Activity, Note
 from app.models.user import User
 from app.repositories.base_repository import BaseRepository
+from app.core.customer_search import escape_like, normalize_phone, normalize_text, normalize_tax_code
 
 
 class CustomerRepository(BaseRepository):
@@ -20,38 +21,86 @@ class CustomerRepository(BaseRepository):
         db: Session,
         user: Optional[User] = None,
         search: Optional[str] = None,
-        status: Optional[str] = None,
+        status: Optional[Sequence[str]] = None,
+        industry: Optional[Sequence[str]] = None,
+        company_size: Optional[Sequence[str]] = None,
+        region: Optional[Sequence[str]] = None,
+        owner_ids: Optional[Sequence[str]] = None,
+        include_unassigned: bool = False,
+        sort: str = "created_at",
+        descending: bool = True,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Customer], int]:
-        """
-        Lấy danh sách khách hàng có phân trang, tìm kiếm và lọc trạng thái.
-        LUÔN áp dụng Centralized Data Scope Filter ở mức câu lệnh CSDL.
-        """
-        query = db.query(Customer).options(joinedload(Customer.assigned_user))
-
-        # 1. Áp dụng Data Scope Filter trước tiên
+        query = db.query(Customer)
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Customer)
 
-        # 2. Tìm kiếm từ khóa (Search kết hợp AND với Data Scope)
         if search and search.strip():
-            search_pattern = f"%{search.strip()}%"
-            query = query.filter(
-                or_(
-                    Customer.full_name.ilike(search_pattern),
-                    Customer.email.ilike(search_pattern),
-                    Customer.phone.ilike(search_pattern),
-                    Customer.company.ilike(search_pattern),
-                )
+            normalized_query = normalize_text(search)
+            normalized_tax = normalize_tax_code(search)
+            normalized_phone = normalize_phone(search)
+            predicates = []
+            if normalized_query:
+                predicates.append(Customer.normalized_name.like(f"%{escape_like(normalized_query)}%", escape="\\"))
+            if normalized_tax:
+                predicates.append(Customer.normalized_tax_code.like(f"{escape_like(normalized_tax)}%", escape="\\"))
+            raw_pattern = f"%{escape_like(search.strip())}%"
+            predicates.extend(
+                [
+                    Customer.email.ilike(raw_pattern, escape="\\"),
+                    Customer.phone.ilike(raw_pattern, escape="\\"),
+                    Customer.company.ilike(raw_pattern, escape="\\"),
+                ]
             )
+            if normalized_phone:
+                phone_pattern = f"%{escape_like(normalized_phone)}%"
+                predicates.extend(
+                    [
+                        Customer.normalized_phone.like(phone_pattern, escape="\\"),
+                        exists().where(
+                            and_(
+                                Contact.customer_id == Customer.id,
+                                Contact.normalized_phone.like(phone_pattern, escape="\\"),
+                            )
+                        ),
+                    ]
+                )
+            query = query.filter(or_(*predicates) if predicates else false())
 
-        # 3. Lọc theo trạng thái
-        if status and status.lower() != "all":
-            query = query.filter(Customer.status == status.lower())
+        if status:
+            query = query.filter(Customer.status.in_(list(status)))
+        if industry:
+            query = query.filter(Customer.industry.in_(list(industry)))
+        if company_size:
+            query = query.filter(Customer.company_size.in_(list(company_size)))
+        if region:
+            query = query.filter(Customer.region.in_(list(region)))
+        if owner_ids or include_unassigned:
+            owner_predicates = []
+            if owner_ids:
+                owner_predicates.append(Customer.assigned_user_id.in_(list(owner_ids)))
+            if include_unassigned:
+                owner_predicates.append(Customer.assigned_user_id.is_(None))
+            query = query.filter(or_(*owner_predicates))
 
         total = query.count()
-        customers = query.order_by(Customer.created_at.desc()).offset(skip).limit(limit).all()
+        sort_columns = {
+            "name": Customer.normalized_name,
+            "created_at": Customer.created_at,
+            "status": Customer.status,
+            "owner": Customer.assigned_user_id,
+            "industry": Customer.industry,
+            "company_size": Customer.company_size,
+            "region": Customer.region,
+        }
+        sort_column = sort_columns.get(sort, Customer.created_at)
+        direction = sort_column.desc() if descending else sort_column.asc()
+        query = query.options(
+            joinedload(Customer.assigned_user),
+            selectinload(Customer.contacts),
+        )
+        customers = query.order_by(direction, Customer.id.asc()).offset(skip).limit(limit).all()
         return customers, total
 
     @staticmethod

@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -9,18 +9,20 @@ from app.models.activity import Note, Activity
 from app.schemas.customer import (
     CustomerDTO,
     AssignedUserDTO,
+    ContactDTO,
     CreateCustomerDTO,
     UpdateCustomerStatusDTO,
     CustomerNoteCreateDTO,
     CustomerActivityCreateDTO,
 )
 from app.services.customer_service import CustomerService
+from app.services.customer_search_service import CustomerSearchService
 from app.core.export import export_to_excel
 
 router = APIRouter(prefix="/customers", tags=["Customers Management"])
 
 
-def _to_customer_dto(customer: Customer) -> CustomerDTO:
+def _to_customer_dto(customer: Customer, include_contacts: bool = True) -> CustomerDTO:
     assigned_user = customer.assigned_user
     assigned_user_dto = (
         AssignedUserDTO(
@@ -31,6 +33,17 @@ def _to_customer_dto(customer: Customer) -> CustomerDTO:
         if assigned_user
         else None
     )
+    def contact_dto(contact) -> ContactDTO:
+        return ContactDTO(
+            id=contact.id,
+            fullName=contact.full_name,
+            phone=contact.phone,
+            email=contact.email,
+            isPrimary=bool(contact.is_primary),
+        )
+
+    contacts = [contact_dto(contact) for contact in customer.contacts] if include_contacts else []
+    primary_contact = contact_dto(customer.contacts[0]) if customer.contacts else None
     return CustomerDTO(
         id=customer.id,
         fullName=customer.full_name,
@@ -39,31 +52,62 @@ def _to_customer_dto(customer: Customer) -> CustomerDTO:
         company=customer.company,
         status=customer.status,
         healthScore=customer.health_score,
+        industry=customer.industry,
+        companySize=customer.company_size,
+        region=customer.region,
+        taxCode=customer.tax_code,
         assignedUserId=customer.assigned_user_id,
         assignedUser=assigned_user_dto,
         avatarUrl=customer.avatar_url,
+        contacts=contacts,
+        primaryContact=primary_contact,
         createdAt=customer.created_at.isoformat() if customer.created_at else None,
     )
 
 
 @router.get("", response_model=List[CustomerDTO], summary="Lấy danh sách khách hàng")
 def get_customers(
-    search: Optional[str] = Query(None, description="Tìm theo tên, email, sđt, công ty"),
-    status: Optional[str] = Query(None, description="Lọc theo trạng thái lead/prospect/active/inactive"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=200),
+    q: Optional[str] = Query(None, description="Tìm theo tên, mã số thuế hoặc số điện thoại"),
+    search: Optional[str] = Query(None, description="Tương thích ngược với tham số search"),
+    status_values: Optional[List[str]] = Query(None, alias="status"),
+    industries: Optional[List[str]] = Query(None, alias="industry"),
+    company_sizes: Optional[List[str]] = Query(None, alias="companySize"),
+    regions: Optional[List[str]] = Query(None, alias="region"),
+    owners: Optional[List[str]] = Query(None, alias="owner"),
+    sort: Optional[str] = Query(None),
+    descending: Optional[bool] = Query(None),
+    saved_filter_id: Optional[str] = Query(None, alias="saved_filter_id"),
+    skip: Optional[int] = Query(None, ge=0),
+    limit: Optional[int] = Query(None, ge=1, le=200),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: Optional[int] = Query(None, alias="pageSize", ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    response: Response = None,
 ) -> List[CustomerDTO]:
-    customers, _ = CustomerService.get_customers(
-        db=db,
+    if page is not None:
+        limit = page_size or limit or 50
+        skip = (page - 1) * limit
+    elif page_size is not None:
+        limit = page_size
+
+    customers, total = CustomerSearchService(db).list_customers(
         user=current_user,
-        search=search,
-        status=status,
+        saved_filter_id=saved_filter_id,
+        q=q if q is not None else search,
+        status_values=status_values,
+        industries=industries,
+        company_sizes=company_sizes,
+        regions=regions,
+        owners=owners,
+        sort=sort,
+        descending=descending,
         skip=skip,
         limit=limit,
     )
-    return [_to_customer_dto(c) for c in customers]
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total)
+    return [_to_customer_dto(customer, include_contacts=False) for customer in customers]
 
 
 @router.get("/export", summary="Xuất danh sách khách hàng ra Excel (.xlsx) tuân thủ Data Scope")
