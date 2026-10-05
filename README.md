@@ -57,6 +57,23 @@ python run.py
 - Tài liệu tương tác Swagger UI: **`http://127.0.0.1:8000/docs`**
 - Tài liệu ReDoc: **`http://127.0.0.1:8000/redoc`**
 
+
+### Avatar người dùng
+Các endpoint yêu cầu Bearer access token:
+
+```text
+POST /api/v1/users/me/avatar
+Content-Type: multipart/form-data
+file=<JPG/JPEG hoặc PNG, tối đa 2 MB>
+
+Response 200:
+{
+  "avatarUrl": "/media/avatars/<uuid>.jpg",
+  "avatarThumbnailUrl": "/media/avatars/<uuid>_thumb.jpg"
+}
+```
+
+Ảnh được xoay theo EXIF, crop chính giữa thành hình vuông, loại bỏ metadata và lưu thumbnail mặc định `128x128`. `DELETE /api/v1/users/me/avatar` xóa avatar và trả về hai trường URL có giá trị `null`. Phản hồi khách hàng chứa `assignedUser.avatarThumbnailUrl`; giá trị là `null` nếu khách hàng chưa có người phụ trách hoặc người phụ trách chưa tải avatar.
 ---
 
 ## 🔑 Tài khoản Mặc định Đăng nhập Hệ thống

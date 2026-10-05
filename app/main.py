@@ -7,11 +7,13 @@ if sys.platform == "win32":
         pass
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import engine, Base, run_auto_migrations
+from app.database import engine, Base, run_auto_migrations, ensure_schema_compatibility
 from app.routers import (
     auth_router,
     user_import_router,
@@ -37,6 +39,7 @@ async def lifespan(app: FastAPI):
     # Tu dong tao cac bang trong CSDL neu chua ton tai
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_schema_compatibility()
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
 
         # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-89)
@@ -64,6 +67,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+Path(settings.AVATAR_STORAGE_DIR).mkdir(parents=True, exist_ok=True)
+app.mount(settings.MEDIA_URL, StaticFiles(directory=settings.AVATAR_STORAGE_DIR), name="media")
 
 # Cấu hình CORS (Cho phép Frontend React/Vite tại localhost:5173 truy cập)
 app.add_middleware(
