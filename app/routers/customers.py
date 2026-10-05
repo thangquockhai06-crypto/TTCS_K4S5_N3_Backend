@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_roles
 from app.models.user import User
 from app.models.customer import Customer
 from app.models.activity import Note, Activity
@@ -15,9 +15,18 @@ from app.schemas.customer import (
     CustomerNoteCreateDTO,
     CustomerActivityCreateDTO,
 )
+from app.schemas.customer_merge import (
+    DuplicateCheckRequest,
+    DuplicateMatchItem,
+    CustomerCompareResponse,
+    CustomerMergeRequest,
+    CustomerMergeResponse,
+)
 from app.services.customer_service import CustomerService
 from app.services.customer_search_service import CustomerSearchService
+from app.services.customer_merge_service import CustomerMergeService
 from app.core.export import export_to_excel
+
 
 router = APIRouter(prefix="/customers", tags=["Customers Management"])
 
@@ -56,6 +65,7 @@ def _to_customer_dto(customer: Customer, include_contacts: bool = True) -> Custo
         companySize=customer.company_size,
         region=customer.region,
         taxCode=customer.tax_code,
+        website=customer.website,
         assignedUserId=customer.assigned_user_id,
         assignedUser=assigned_user_dto,
         avatarUrl=customer.avatar_url,
@@ -157,6 +167,68 @@ def create_customer(
 ) -> CustomerDTO:
     c: Customer = CustomerService.create_customer(db=db, dto=dto, user=current_user)
     return _to_customer_dto(c)
+
+
+@router.post(
+    "/duplicates/scan",
+    response_model=List[DuplicateMatchItem],
+    summary="Quét và phát hiện khách hàng trùng lặp đa tiêu chí (SCRUM-62)",
+)
+def scan_customer_duplicates(
+    dto: DuplicateCheckRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[DuplicateMatchItem]:
+    """
+    Phát hiện các khách hàng trùng lặp theo:
+    - Mã số thuế (tax_code)
+    - Website domain
+    - Tên công ty / họ tên (Fuzzy string matching >= 80%)
+    - Số điện thoại liên hệ
+    """
+    return CustomerMergeService.scan_duplicates(db=db, request=dto, current_user=current_user)
+
+
+@router.get(
+    "/compare",
+    response_model=CustomerCompareResponse,
+    summary="So sánh chi tiết hai khách hàng cạnh nhau trước khi gộp (SCRUM-62)",
+)
+def compare_customers(
+    primary_id: str = Query(..., description="ID khách hàng chính (Master/Target)"),
+    duplicate_id: str = Query(..., description="ID khách hàng phụ cần gộp (Duplicate/Source)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CustomerCompareResponse:
+    """
+    Trả về toàn bộ dữ liệu của hai bản ghi song song (hồ sơ, contacts, deals, activities)
+    kèm danh sách các trường có sự khác biệt để người dùng đối chiếu trước khi gộp.
+    """
+    return CustomerMergeService.compare_customers(
+        db=db,
+        primary_id=primary_id,
+        duplicate_id=duplicate_id,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/merge",
+    response_model=CustomerMergeResponse,
+    summary="Thực hiện gộp khách hàng trong một DB Transaction an toàn (SCRUM-62)",
+)
+def merge_customers(
+    dto: CustomerMergeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["TEAM_LEAD", "DIRECTOR"])),
+) -> CustomerMergeResponse:
+    """
+    Chỉ dành cho Trưởng nhóm kinh doanh (TEAM_LEAD) trở lên (DIRECTOR / ADMIN).
+    Bảo toàn toàn bộ người liên hệ, cơ hội bán hàng và lịch sử hoạt động sang bản ghi chính.
+    Bản ghi phụ được đánh dấu là đã gộp (is_deleted = True, merged_into_id = target_id).
+    Ghi nhận lịch sử Activity trên bản ghi chính.
+    """
+    return CustomerMergeService.merge_customers(db=db, request=dto, current_user=current_user)
 
 
 @router.get("/{customer_id}", response_model=CustomerDTO, summary="Xem chi tiết 360° khách hàng")
