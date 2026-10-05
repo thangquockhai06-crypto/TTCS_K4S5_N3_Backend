@@ -114,6 +114,9 @@ def run_auto_migrations(target_engine=None):
                     "company_size": "VARCHAR(30)",
                     "region": "VARCHAR(100)",
                     "tax_code": "VARCHAR(50)",
+                    "website": "VARCHAR(255)",
+                    "is_deleted": "BOOLEAN NOT NULL DEFAULT 0",
+                    "merged_into_id": "VARCHAR(36)",
                     "normalized_name": "VARCHAR(255) NOT NULL DEFAULT ''",
                     "normalized_tax_code": "VARCHAR(50) NOT NULL DEFAULT ''",
                     "normalized_phone": "VARCHAR(30) NOT NULL DEFAULT ''",
@@ -129,10 +132,13 @@ def run_auto_migrations(target_engine=None):
                     "idx_customer_industry": "industry",
                     "idx_customer_company_size": "company_size",
                     "idx_customer_region": "region",
+                    "idx_customer_is_deleted": "is_deleted",
+                    "idx_customer_merged_into": "merged_into_id",
                 }
                 for index_name, column_name in customer_indexes.items():
                     if index_name not in existing_indexes:
                         connection.execute(text(f"CREATE INDEX {index_name} ON customers ({column_name})"))
+
             if "products" in existing_tables:
                 product_columns = {column["name"] for column in inspector.get_columns("products")}
                 had_list_price = "list_price" in product_columns
@@ -186,9 +192,16 @@ def ensure_schema_compatibility() -> None:
     if "users" not in inspector.get_table_names():
         return
     columns = {column["name"] for column in inspector.get_columns("users")}
-    if "avatar_thumbnail_url" not in columns:
-        with engine.begin() as connection:
+    with engine.begin() as connection:
+        if "avatar_thumbnail_url" not in columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN avatar_thumbnail_url TEXT"))
+        if "team_id" not in columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN team_id VARCHAR(50) DEFAULT NULL"))
+        if "data_scope" not in columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN data_scope VARCHAR(20) DEFAULT NULL"))
+        if "status" not in columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'active'"))
+
 
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
