@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, Text, Enum, ForeignKey, event
+from sqlalchemy import Column, String, Integer, DateTime, Text, Enum, ForeignKey, Boolean, event
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.core.customer_search import normalize_phone, normalize_tax_code, normalize_text
@@ -27,6 +27,9 @@ class Customer(Base):
     company_size = Column(String(30), nullable=True, index=True)
     region = Column(String(100), nullable=True, index=True)
     tax_code = Column(String(50), nullable=True)
+    website = Column(String(255), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    merged_into_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
     normalized_name = Column(String(255), nullable=False, default="", index=True)
     normalized_tax_code = Column(String(50), nullable=False, default="", index=True)
     normalized_phone = Column(String(30), nullable=False, default="", index=True)
@@ -37,6 +40,8 @@ class Customer(Base):
     deals = relationship("Deal", back_populates="customer", cascade="all, delete-orphan")
     activities = relationship("Activity", back_populates="customer", cascade="all, delete-orphan")
     notes = relationship("Note", back_populates="customer", cascade="all, delete-orphan")
+    merged_into = relationship("Customer", remote_side=[id], foreign_keys=[merged_into_id])
+
 
 
 class Contact(Base):
