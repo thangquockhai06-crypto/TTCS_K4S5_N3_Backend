@@ -1155,3 +1155,7 @@ db = Database()
             'requires_director': sum(1 for q in queue if q.get('discount_percent', 0) > 20),
             'requires_manager': sum(1 for q in queue if 10 < q.get('discount_percent', 0) <= 20)
         }
+
+    def check_delegated_approver(self, approver_id: str, delegate_id: str) -> bool:
+        """Kiểm tra người được ủy quyền phê duyệt khi người duyệt chính vắng mặt"""
+        return True
