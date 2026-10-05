@@ -25,8 +25,18 @@ class CustomerActivityCreateDTO(BaseModel):
     description: Optional[str] = ""
     authorName: Optional[str] = "Admin"
 
+class AssignedUserDTO(BaseModel):
+    id: str
+    fullName: str = Field(..., serialization_alias="fullName")
+    avatarThumbnailUrl: Optional[str] = Field(None, serialization_alias="avatarThumbnailUrl")
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
 class CustomerDTO(CustomerBase):
     id: str
+    assignedUserId: Optional[str] = Field(None, serialization_alias="assignedUserId")
+    assignedUser: Optional[AssignedUserDTO] = Field(None, serialization_alias="assignedUser")
     avatarUrl: Optional[str] = Field(None, serialization_alias="avatarUrl")
     createdAt: Optional[str] = Field(None, serialization_alias="createdAt")
 

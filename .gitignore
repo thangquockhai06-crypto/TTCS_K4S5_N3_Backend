@@ -35,6 +35,7 @@ env/
 *.sqlite
 *.sqlite3
 
+uploads/
 # Unit test / coverage
 .pytest_cache/
 .coverage

@@ -8,6 +8,7 @@ from app.models.customer import Customer
 from app.models.activity import Note, Activity
 from app.schemas.customer import (
     CustomerDTO,
+    AssignedUserDTO,
     CreateCustomerDTO,
     UpdateCustomerStatusDTO,
     CustomerNoteCreateDTO,
@@ -17,6 +18,32 @@ from app.services.customer_service import CustomerService
 from app.core.export import export_to_excel
 
 router = APIRouter(prefix="/customers", tags=["Customers Management"])
+
+
+def _to_customer_dto(customer: Customer) -> CustomerDTO:
+    assigned_user = customer.assigned_user
+    assigned_user_dto = (
+        AssignedUserDTO(
+            id=assigned_user.id,
+            fullName=assigned_user.full_name,
+            avatarThumbnailUrl=assigned_user.avatar_thumbnail_url,
+        )
+        if assigned_user
+        else None
+    )
+    return CustomerDTO(
+        id=customer.id,
+        fullName=customer.full_name,
+        email=customer.email,
+        phone=customer.phone,
+        company=customer.company,
+        status=customer.status,
+        healthScore=customer.health_score,
+        assignedUserId=customer.assigned_user_id,
+        assignedUser=assigned_user_dto,
+        avatarUrl=customer.avatar_url,
+        createdAt=customer.created_at.isoformat() if customer.created_at else None,
+    )
 
 
 @router.get("", response_model=List[CustomerDTO], summary="Lấy danh sách khách hàng")
@@ -36,20 +63,7 @@ def get_customers(
         skip=skip,
         limit=limit,
     )
-    return [
-        CustomerDTO(
-            id=c.id,
-            fullName=c.full_name,
-            email=c.email,
-            phone=c.phone,
-            company=c.company,
-            status=c.status,
-            healthScore=c.health_score,
-            avatarUrl=c.avatar_url,
-            createdAt=c.created_at.isoformat() if c.created_at else None,
-        )
-        for c in customers
-    ]
+    return [_to_customer_dto(c) for c in customers]
 
 
 @router.get("/export", summary="Xuất danh sách khách hàng ra Excel (.xlsx) tuân thủ Data Scope")
@@ -98,17 +112,7 @@ def create_customer(
     current_user: User = Depends(get_current_user),
 ) -> CustomerDTO:
     c: Customer = CustomerService.create_customer(db=db, dto=dto, user=current_user)
-    return CustomerDTO(
-        id=c.id,
-        fullName=c.full_name,
-        email=c.email,
-        phone=c.phone,
-        company=c.company,
-        status=c.status,
-        healthScore=c.health_score,
-        avatarUrl=c.avatar_url,
-        createdAt=c.created_at.isoformat() if c.created_at else None,
-    )
+    return _to_customer_dto(c)
 
 
 @router.get("/{customer_id}", response_model=CustomerDTO, summary="Xem chi tiết 360° khách hàng")
@@ -124,17 +128,7 @@ def get_customer_detail(
     )
     if not c:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy khách hàng.")
-    return CustomerDTO(
-        id=c.id,
-        fullName=c.full_name,
-        email=c.email,
-        phone=c.phone,
-        company=c.company,
-        status=c.status,
-        healthScore=c.health_score,
-        avatarUrl=c.avatar_url,
-        createdAt=c.created_at.isoformat() if c.created_at else None,
-    )
+    return _to_customer_dto(c)
 
 
 @router.patch("/{customer_id}/status", response_model=CustomerDTO, summary="Cập nhật trạng thái khách hàng")
@@ -152,17 +146,7 @@ def update_status(
     )
     if not c:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy khách hàng.")
-    return CustomerDTO(
-        id=c.id,
-        fullName=c.full_name,
-        email=c.email,
-        phone=c.phone,
-        company=c.company,
-        status=c.status,
-        healthScore=c.health_score,
-        avatarUrl=c.avatar_url,
-        createdAt=c.created_at.isoformat() if c.created_at else None,
-    )
+    return _to_customer_dto(c)
 
 
 @router.post("/{customer_id}/notes", summary="Thêm ghi chú cho khách hàng")

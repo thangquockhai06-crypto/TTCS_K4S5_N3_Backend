@@ -1,5 +1,5 @@
 from typing import Optional, List, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from app.models.customer import Customer
@@ -28,7 +28,7 @@ class CustomerRepository(BaseRepository):
         Lấy danh sách khách hàng có phân trang, tìm kiếm và lọc trạng thái.
         LUÔN áp dụng Centralized Data Scope Filter ở mức câu lệnh CSDL.
         """
-        query = db.query(Customer)
+        query = db.query(Customer).options(joinedload(Customer.assigned_user))
 
         # 1. Áp dụng Data Scope Filter trước tiên
         if user is not None:
@@ -87,7 +87,12 @@ class CustomerRepository(BaseRepository):
     @staticmethod
     def get_by_id(db: Session, customer_id: str) -> Optional[Customer]:
         """Truy vấn khách hàng theo ID không kiểm tra scope (Dùng nội bộ)."""
-        return db.query(Customer).filter(Customer.id == customer_id).first()
+        return (
+            db.query(Customer)
+            .options(joinedload(Customer.assigned_user))
+            .filter(Customer.id == customer_id)
+            .first()
+        )
 
     @staticmethod
     def get_scoped_by_id(db: Session, customer_id: str, user: User) -> Customer:

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     title VARCHAR(150) DEFAULT 'Quản trị viên hệ thống',
     department VARCHAR(150) DEFAULT 'Ban Quản Trị & Vận Hành Doanh Thu',
     avatar_url TEXT,
+    avatar_thumbnail_url TEXT,
     workspace_name VARCHAR(150) DEFAULT 'NexusCRM Enterprise VN',
     team_id VARCHAR(50) DEFAULT NULL,
     data_scope VARCHAR(20) DEFAULT NULL,

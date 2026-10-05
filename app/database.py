@@ -1,7 +1,9 @@
 import os
-from sqlalchemy import create_engine, text
+from collections.abc import Generator
+
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
-from typing import Generator
+
 from app.config import settings
 
 def create_robust_engine():
@@ -46,6 +48,17 @@ engine = create_robust_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+
+def ensure_schema_compatibility() -> None:
+    """Add columns introduced after an existing database was initialized."""
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("users")}
+    if "avatar_thumbnail_url" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN avatar_thumbnail_url TEXT"))
 
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
