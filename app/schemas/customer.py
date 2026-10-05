@@ -12,6 +12,7 @@ class CustomerBase(BaseModel):
     companySize: Optional[str] = Field(None, serialization_alias="companySize")
     region: Optional[str] = None
     taxCode: Optional[str] = Field(None, serialization_alias="taxCode")
+    website: Optional[str] = None
 
 class CreateCustomerDTO(CustomerBase):
     contacts: List["ContactCreateDTO"] = Field(default_factory=list)
