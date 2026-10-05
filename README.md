@@ -157,16 +157,35 @@ TTCS_K4S5_N3_Backend/
 
 ---
 
+### Cảnh báo và Gộp khách hàng trùng lặp (SCRUM-62 / SCRUM-148)
+- **POST `/api/v1/customers/duplicates/scan`**: Quét và phát hiện khách hàng trùng lặp đa tiêu chí:
+  + **Mã số thuế (`tax_code`)**: Chuẩn hóa loại bỏ khoảng trắng, dấu gạch ngang.
+  + **Website (`website`)**: Chuẩn hóa domain (loại bỏ `http://`, `https://`, `www.` và trailing path).
+  + **Tên công ty (`name`)**: So khớp độ tương đồng chuỗi loại bỏ tiền tố/hậu tố pháp lý phổ biến (tỷ lệ tương đồng $\ge 80\%$).
+  + **Số điện thoại**: Chuẩn hóa số điện thoại liên hệ.
+- **GET `/api/v1/customers/compare`**: So sánh cạnh nhau 2 khách hàng, chi tiết hồ sơ, contacts, deals, activities và danh sách các trường dữ liệu có sự khác biệt.
+- **POST `/api/v1/customers/merge`**: Thực hiện gộp khách hàng trong một Database Transaction an toàn (ACID):
+  + **Phân quyền RBAC:** Chỉ Trưởng nhóm (`TEAM_LEAD`) trở lên (`DIRECTOR`, `ADMIN`). Nhân viên kinh doanh (`SALES_REP`) bị chặn HTTP 403 Forbidden.
+  + **Data Scope:** `TEAM_LEAD` chỉ được gộp khách hàng thuộc phạm vi quản lý của nhóm mình; `DIRECTOR` có quyền trên toàn bộ hệ thống.
+  + **Bảo toàn dữ liệu:** Chuyển toàn bộ `contacts`, `deals`, `quotations`, `activities`, `notes` từ khách phụ sang khách chính. Khách phụ được đánh dấu `is_deleted = True`, `merged_into_id = target_id`.
+  + **Lưu vết kiểm toán:** Tự động tạo bản ghi `Activity` hệ thống trên khách hàng chính ghi nhận việc gộp.
+
+---
+
 ## 🧪 Kiểm thử tự động (Unit & Integration Tests)
-Chạy bộ kiểm thử tự động gồm 69 test cases:
+Chạy bộ kiểm thử tự động:
 ```bash
 pytest
 ```
 Bộ test bao gồm:
+- `tests/test_customer_merge.py` (12 tests quét trùng đa tiêu chí, so sánh cạnh nhau, gộp giao dịch ACID, phân quyền RBAC và Data Scope)
 - `tests/test_user_management.py` (22 tests CRUD, gán vai trò, nhóm, chuyển giao dữ liệu)
 - `tests/test_data_scope_access_control.py` (22 tests cách ly dữ liệu cá nhân/nhóm/toàn quốc)
+- `tests/test_customer_search.py` (tìm kiếm khách hàng và saved filters)
+- `tests/test_catalog_items.py` (catalog sản phẩm và bảng giá)
 - `tests/test_forgot_password.py` (4 tests quên mật khẩu và đặt lại mật khẩu)
 - `tests/test_change_password.py` (4 tests đổi mật khẩu trong phiên)
 - `tests/test_sprint2_features.py` (11 tests nhập Excel, nhật ký kiểm toán, danh mục, sản phẩm, phễu)
 - `tests/test_scrum79_excel_import.py` (6 tests chi tiết xử lý tải template, preview & batch import)
+
 
