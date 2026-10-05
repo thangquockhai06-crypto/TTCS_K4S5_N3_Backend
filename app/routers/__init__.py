@@ -14,7 +14,7 @@ from app.routers.custom_fields import router as custom_fields_router
 from app.routers.pipelines import router as pipelines_router
 from app.routers.win_loss import router as win_loss_router
 from app.routers.user_import import router as user_import_router
-
+from app.routers.catalog_items import router as catalog_items_router
 __all__ = [
     "auth_router",
     "user_import_router",
@@ -31,5 +31,6 @@ __all__ = [
     "org_tree_router",
     "custom_fields_router",
     "pipelines_router",
+    "catalog_items_router",
     "win_loss_router",
 ]

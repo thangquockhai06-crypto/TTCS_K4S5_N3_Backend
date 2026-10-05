@@ -101,7 +101,39 @@ CREATE TABLE IF NOT EXISTS notes (
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. BẢNG BÁO GIÁ (QUOTATIONS)
+-- 7. CATALOG / PRICE BOOK
+CREATE TABLE IF NOT EXISTS products (
+    id VARCHAR(36) PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'Catalog',
+    unit VARCHAR(50) NOT NULL DEFAULT 'unit',
+    selling_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    cost_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    type VARCHAR(30) NOT NULL DEFAULT 'ONE_TIME_PRODUCT',
+    unit_of_measure VARCHAR(50) NOT NULL DEFAULT 'unit',
+    list_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    floor_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    currency VARCHAR(3) NOT NULL DEFAULT 'VND',
+    discontinued_at DATETIME DEFAULT NULL,
+    created_by VARCHAR(36) DEFAULT NULL,
+    updated_by VARCHAR(36) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CHECK (list_price >= 0),
+    CHECK (floor_price >= 0),
+    CHECK (cost_price >= 0),
+    CHECK (floor_price <= list_price),
+    INDEX idx_product_code (code),
+    INDEX idx_product_name (name),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. BẢNG BÁO GIÁ (QUOTATIONS)
 CREATE TABLE IF NOT EXISTS quotations (
     id VARCHAR(36) PRIMARY KEY,
     quote_number VARCHAR(50) NOT NULL UNIQUE,
@@ -109,6 +141,7 @@ CREATE TABLE IF NOT EXISTS quotations (
     customer_id VARCHAR(36) NOT NULL,
     owner_id VARCHAR(36) NOT NULL,
     total_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    discount_approval_required BOOLEAN NOT NULL DEFAULT FALSE,
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     valid_until DATE DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -116,6 +149,25 @@ CREATE TABLE IF NOT EXISTS quotations (
     INDEX idx_quote_number (quote_number),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quotation_lines (
+    id VARCHAR(36) PRIMARY KEY,
+    quotation_id VARCHAR(36) NOT NULL,
+    product_id VARCHAR(36) NOT NULL,
+    product_code VARCHAR(50) NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    quantity DECIMAL(15, 4) NOT NULL,
+    unit_price DECIMAL(15, 2) NOT NULL,
+    list_price_snapshot DECIMAL(15, 2) NOT NULL,
+    floor_price_snapshot DECIMAL(15, 2) NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'VND',
+    discount_approval_required BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_quotation_line_quote (quotation_id),
+    INDEX idx_quotation_line_product (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. BẢNG VAI TRÒ (ROLES) & LIÊN KẾT (USER_ROLES)

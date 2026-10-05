@@ -87,6 +87,51 @@ def run_auto_migrations(target_engine=None):
                     print("[MIGRATION] Da tu dong bo sung cot 'updated_at' vao bang win_loss_reasons.")
     except Exception as exc:
         print(f"[MIGRATION WARNING] Khong the tu dong cap nhat cot CSDL: {exc}")
+    """Apply additive compatibility migrations for existing installations."""
+    eng = target_engine or engine
+    try:
+        inspector = inspect(eng)
+        existing_tables = inspector.get_table_names()
+        with eng.begin() as connection:
+            if "competitors" in existing_tables:
+                columns = {column["name"] for column in inspector.get_columns("competitors")}
+                if "pricing_tier" not in columns:
+                    connection.execute(text("ALTER TABLE competitors ADD COLUMN pricing_tier VARCHAR(100) DEFAULT 'Trung cấp'"))
+                if "is_active" not in columns:
+                    connection.execute(text("ALTER TABLE competitors ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+                if "updated_at" not in columns:
+                    connection.execute(text("ALTER TABLE competitors ADD COLUMN updated_at DATETIME"))
+            if "win_loss_reasons" in existing_tables:
+                columns = {column["name"] for column in inspector.get_columns("win_loss_reasons")}
+                if "usage_count" not in columns:
+                    connection.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN usage_count INTEGER DEFAULT 0"))
+                if "updated_at" not in columns:
+                    connection.execute(text("ALTER TABLE win_loss_reasons ADD COLUMN updated_at DATETIME"))
+            if "products" in existing_tables:
+                product_columns = {column["name"] for column in inspector.get_columns("products")}
+                had_list_price = "list_price" in product_columns
+                product_additions = {
+                    "type": "VARCHAR(30) NOT NULL DEFAULT 'ONE_TIME_PRODUCT'",
+                    "unit_of_measure": "VARCHAR(50) NOT NULL DEFAULT 'unit'",
+                    "list_price": "DECIMAL(15,2) NOT NULL DEFAULT 0",
+                    "floor_price": "DECIMAL(15,2) NOT NULL DEFAULT 0",
+                    "status": "VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'",
+                    "currency": "VARCHAR(3) NOT NULL DEFAULT 'VND'",
+                    "discontinued_at": "DATETIME",
+                    "created_by": "VARCHAR(36)",
+                    "updated_by": "VARCHAR(36)",
+                }
+                for column_name, definition in product_additions.items():
+                    if column_name not in product_columns:
+                        connection.execute(text(f"ALTER TABLE products ADD COLUMN {column_name} {definition}"))
+                if "selling_price" in product_columns and not had_list_price:
+                    connection.execute(text("UPDATE products SET list_price = selling_price"))
+            if "quotations" in existing_tables:
+                quote_columns = {column["name"] for column in inspector.get_columns("quotations")}
+                if "discount_approval_required" not in quote_columns:
+                    connection.execute(text("ALTER TABLE quotations ADD COLUMN discount_approval_required BOOLEAN NOT NULL DEFAULT 0"))
+    except Exception as exc:
+        print(f"[MIGRATION WARNING] Could not apply compatibility migrations: {exc}")
 
 def ensure_schema_compatibility() -> None:
     """Add columns introduced after an existing database was initialized."""

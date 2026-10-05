@@ -13,9 +13,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import engine, Base, run_auto_migrations, ensure_schema_compatibility
+from app.database import engine, Base, ensure_schema_compatibility, run_auto_migrations
 from app.routers import (
     auth_router,
+    catalog_items_router,
     user_import_router,
     users_router,
     customers_router,
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         ensure_schema_compatibility()
+        run_auto_migrations()
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
 
         # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-89)
@@ -97,6 +99,7 @@ app.include_router(categories_router, prefix=settings.API_V1_STR)
 app.include_router(org_tree_router, prefix=settings.API_V1_STR)
 app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
+app.include_router(catalog_items_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")

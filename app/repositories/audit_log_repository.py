@@ -17,6 +17,7 @@ class AuditLogRepository:
         end_date: Optional[datetime] = None,
         page: int = 1,
         limit: int = 20,
+        include_cost_fields: bool = True,
     ) -> Tuple[List[AuditLog], int]:
         query = self.db.query(AuditLog)
 
@@ -39,6 +40,8 @@ class AuditLogRepository:
         if end_date:
             query = query.filter(AuditLog.created_at <= end_date)
 
+        if not include_cost_fields:
+            query = query.filter(AuditLog.field_name != "cost_price")
         total_items: int = query.count()
         offset_val: int = (page - 1) * limit
         records: List[AuditLog] = (

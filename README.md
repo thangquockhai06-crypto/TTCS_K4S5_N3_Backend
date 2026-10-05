@@ -74,6 +74,25 @@ Response 200:
 ```
 
 Ảnh được xoay theo EXIF, crop chính giữa thành hình vuông, loại bỏ metadata và lưu thumbnail mặc định `128x128`. `DELETE /api/v1/users/me/avatar` xóa avatar và trả về hai trường URL có giá trị `null`. Phản hồi khách hàng chứa `assignedUser.avatarThumbnailUrl`; giá trị là `null` nếu khách hàng chưa có người phụ trách hoặc người phụ trách chưa tải avatar.
+### Catalog và Price Book
+Các endpoint yêu cầu Bearer access token. Chỉ role `Sales Director` được tạo, cập nhật, ngừng bán hoặc xóa catalog item; người dùng khác chỉ được đọc và không nhận trường `costPrice`.
+
+```json
+POST /api/v1/catalog-items
+{
+  "code": "CRM-STD-001",
+  "name": "CRM Standard",
+  "type": "ONE_TIME_PRODUCT",
+  "unitOfMeasure": "license",
+  "listPrice": "10000000.00",
+  "floorPrice": "8000000.00",
+  "costPrice": "5000000.00",
+  "currency": "VND"
+}
+```
+
+`POST /api/v1/catalog-items/{id}/discontinue` ngừng bán item. Item đã xuất hiện trong quote trả `409` khi DELETE. Quote lines lưu snapshot `listPriceSnapshot` và `floorPriceSnapshot`; item đã discontinued không thể thêm vào quote mới.
+
 ---
 
 ## 🔑 Tài khoản Mặc định Đăng nhập Hệ thống
