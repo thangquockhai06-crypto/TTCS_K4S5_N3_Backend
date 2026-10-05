@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS customers (
     company_size VARCHAR(30) DEFAULT NULL,
     region VARCHAR(100) DEFAULT NULL,
     tax_code VARCHAR(50) DEFAULT NULL,
+    website VARCHAR(255) DEFAULT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    merged_into_id VARCHAR(36) DEFAULT NULL,
     normalized_name VARCHAR(255) NOT NULL DEFAULT '',
     normalized_tax_code VARCHAR(50) NOT NULL DEFAULT '',
     normalized_phone VARCHAR(30) NOT NULL DEFAULT '',
@@ -71,7 +74,10 @@ CREATE TABLE IF NOT EXISTS customers (
     INDEX idx_customer_industry (industry),
     INDEX idx_customer_company_size (company_size),
     INDEX idx_customer_region (region),
-    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_customer_is_deleted (is_deleted),
+    INDEX idx_customer_merged_into (merged_into_id),
+    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (merged_into_id) REFERENCES customers(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS customer_contacts (
