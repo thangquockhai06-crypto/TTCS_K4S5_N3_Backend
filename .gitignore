@@ -52,7 +52,7 @@ node_modules/
 dist/
 .vite/
 server/
-models/
+models/ #
 routers/
 schemas/
 services/
