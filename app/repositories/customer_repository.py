@@ -32,7 +32,7 @@ class CustomerRepository(BaseRepository):
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Customer], int]:
-        query = db.query(Customer)
+        query = db.query(Customer).filter(or_(Customer.is_deleted == False, Customer.is_deleted.is_(None)))
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Customer)
 
@@ -114,7 +114,7 @@ class CustomerRepository(BaseRepository):
         Lấy toàn bộ danh sách khách hàng thỏa mãn Data Scope để xuất file Excel.
         Sử dụng chung logic lọc với danh sách để tránh thất thoát dữ liệu.
         """
-        query = db.query(Customer)
+        query = db.query(Customer).filter(or_(Customer.is_deleted == False, Customer.is_deleted.is_(None)))
         query = BaseRepository.apply_data_scope_filter(query, user, Customer)
 
         if search and search.strip():
