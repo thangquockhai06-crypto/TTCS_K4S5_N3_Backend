@@ -86,6 +86,7 @@ class CustomerService:
             company_size=dto.companySize,
             region=dto.region,
             tax_code=dto.taxCode,
+            website=dto.website,
         )
         for contact_dto in dto.contacts:
             new_customer.contacts.append(
