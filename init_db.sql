@@ -51,13 +51,17 @@ CREATE TABLE IF NOT EXISTS customers (
     email VARCHAR(120) NOT NULL,
     phone VARCHAR(30) NOT NULL,
     company VARCHAR(150) DEFAULT '',
+    tax_code VARCHAR(50) DEFAULT NULL,
     status ENUM('lead', 'prospect', 'active', 'inactive') NOT NULL DEFAULT 'lead',
     health_score INT NOT NULL DEFAULT 85,
     assigned_user_id VARCHAR(36) DEFAULT NULL,
     avatar_url TEXT,
+    parent_id VARCHAR(36) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (parent_id) REFERENCES customers(id) ON DELETE SET NULL,
+    INDEX idx_customer_parent (parent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. BẢNG CƠ HỘI BÁN HÀNG (DEALS / KANBAN PIPELINE)
