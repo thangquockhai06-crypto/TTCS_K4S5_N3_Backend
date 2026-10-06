@@ -20,24 +20,21 @@ class Customer(Base):
     )
     health_score = Column(Integer, default=85, nullable=False)
     tax_code = Column(String(50), nullable=True)
-    assigned_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    avatar_url = Column(Text, nullable=True)
-    parent_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
-
     assigned_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     avatar_url = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    parent_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
     industry = Column(String(50), nullable=True, index=True)
     company_size = Column(String(30), nullable=True, index=True)
     region = Column(String(100), nullable=True, index=True)
-    tax_code = Column(String(50), nullable=True)
+    address = Column(String(255), nullable=True)
     website = Column(String(255), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     merged_into_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
     normalized_name = Column(String(255), nullable=False, default="", index=True)
     normalized_tax_code = Column(String(50), nullable=False, default="", index=True)
     normalized_phone = Column(String(30), nullable=False, default="", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     assigned_user = relationship("User", back_populates="customers")
@@ -47,8 +44,8 @@ class Customer(Base):
     notes = relationship("Note", back_populates="customer", cascade="all, delete-orphan")
 
     # Self-referential hierarchy (SCRUM-63)
-    parent = relationship("Customer", remote_side=[id], back_populates="subsidiaries", lazy="selectin")
-    subsidiaries = relationship("Customer", back_populates="parent", lazy="selectin")
+    parent = relationship("Customer", remote_side=[id], back_populates="subsidiaries", lazy="selectin", foreign_keys=[parent_id])
+    subsidiaries = relationship("Customer", back_populates="parent", lazy="selectin", foreign_keys=[parent_id])
     merged_into = relationship("Customer", remote_side=[id], foreign_keys=[merged_into_id])
 
 

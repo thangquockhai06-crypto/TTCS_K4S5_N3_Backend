@@ -58,15 +58,10 @@ CREATE TABLE IF NOT EXISTS customers (
     assigned_user_id VARCHAR(36) DEFAULT NULL,
     avatar_url TEXT,
     parent_id VARCHAR(36) DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (parent_id) REFERENCES customers(id) ON DELETE SET NULL,
-    INDEX idx_customer_parent (parent_id)
     industry VARCHAR(50) DEFAULT NULL,
     company_size VARCHAR(30) DEFAULT NULL,
     region VARCHAR(100) DEFAULT NULL,
-    tax_code VARCHAR(50) DEFAULT NULL,
+    address VARCHAR(255) DEFAULT NULL,
     website VARCHAR(255) DEFAULT NULL,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     merged_into_id VARCHAR(36) DEFAULT NULL,
@@ -82,8 +77,10 @@ CREATE TABLE IF NOT EXISTS customers (
     INDEX idx_customer_company_size (company_size),
     INDEX idx_customer_region (region),
     INDEX idx_customer_is_deleted (is_deleted),
+    INDEX idx_customer_parent (parent_id),
     INDEX idx_customer_merged_into (merged_into_id),
     FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (parent_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (merged_into_id) REFERENCES customers(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

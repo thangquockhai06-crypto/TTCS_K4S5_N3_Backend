@@ -51,12 +51,11 @@ Thumbs.db
 node_modules/
 dist/
 .vite/
-server/
-models/ #
-routers/
-schemas/
-services/
-repositories/
+/models/
+/routers/
+/schemas/
+/services/
+/repositories/
 app.py
 database.py
 start-all.bat
