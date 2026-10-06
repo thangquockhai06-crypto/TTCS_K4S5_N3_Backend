@@ -18,6 +18,7 @@ from app.routers import (
     auth_router,
     user_import_router,
     catalog_items_router,
+    customer_import_router,
     customers_router,
     customer_hierarchy_router,
     saved_filters_router,
@@ -46,23 +47,8 @@ async def lifespan(app: FastAPI):
         run_auto_migrations()
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
 
-<<<<<<< HEAD
-        # Đảm bảo các cột mới (SCRUM-63) tồn tại nếu CSDL đã được tạo từ trước
-        try:
-            from sqlalchemy import inspect, text
-            with engine.begin() as conn:
-                inspector = inspect(conn)
-                existing_cols = [c["name"] for c in inspector.get_columns("customers")]
-                if "parent_id" not in existing_cols:
-                    conn.execute(text("ALTER TABLE customers ADD COLUMN parent_id VARCHAR(36)"))
-                if "tax_code" not in existing_cols:
-                    conn.execute(text("ALTER TABLE customers ADD COLUMN tax_code VARCHAR(50)"))
-        except Exception as col_err:
-            pass
-=======
-        # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-89)
+        # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-63 / SCRUM-89)
         run_auto_migrations()
->>>>>>> aca0da5f99951cb229005e576016f30c93b6a1b7
 
         try:
             import seed
@@ -104,12 +90,10 @@ app.add_middleware(
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
+app.include_router(customer_import_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
-<<<<<<< HEAD
 app.include_router(customer_hierarchy_router, prefix=settings.API_V1_STR)
-=======
 app.include_router(saved_filters_router, prefix=settings.API_V1_STR)
->>>>>>> aca0da5f99951cb229005e576016f30c93b6a1b7
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
 app.include_router(activities_router, prefix=settings.API_V1_STR)

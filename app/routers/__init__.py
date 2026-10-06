@@ -18,12 +18,15 @@ from app.routers.customer_hierarchy import router as customer_hierarchy_router
 
 from app.routers.catalog_items import router as catalog_items_router
 from app.routers.saved_filters import router as saved_filters_router
+from app.routers.customer_import import router as customer_import_router
+
 __all__ = [
     "auth_router",
     "user_import_router",
     "users_router",
     "customers_router",
     "customer_hierarchy_router",
+    "customer_import_router",
     "deals_router",
     "opportunities_router",
     "activities_router",
