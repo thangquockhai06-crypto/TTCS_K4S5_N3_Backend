@@ -36,4 +36,15 @@ __all__ = [
     "DealDTO",
     "CreateDealDTO",
     "MoveDealStageDTO",
+    "CustomerImportRow",
+    "CustomerImportPreviewResponse",
+    "CustomerImportExecuteRequest",
+    "CustomerImportSummaryResponse",
 ]
+
+from app.schemas.customer_import import (
+    CustomerImportRow,
+    CustomerImportPreviewResponse,
+    CustomerImportExecuteRequest,
+    CustomerImportSummaryResponse,
+)
