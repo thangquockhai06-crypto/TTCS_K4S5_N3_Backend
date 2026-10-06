@@ -17,6 +17,7 @@ from app.routers import (
     user_import_router,
     users_router,
     customers_router,
+    customer_hierarchy_router,
     deals_router,
     opportunities_router,
     activities_router,
@@ -37,6 +38,20 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
+
+        # Đảm bảo các cột mới (SCRUM-63) tồn tại nếu CSDL đã được tạo từ trước
+        try:
+            from sqlalchemy import inspect, text
+            with engine.begin() as conn:
+                inspector = inspect(conn)
+                existing_cols = [c["name"] for c in inspector.get_columns("customers")]
+                if "parent_id" not in existing_cols:
+                    conn.execute(text("ALTER TABLE customers ADD COLUMN parent_id VARCHAR(36)"))
+                if "tax_code" not in existing_cols:
+                    conn.execute(text("ALTER TABLE customers ADD COLUMN tax_code VARCHAR(50)"))
+        except Exception as col_err:
+            pass
+
         try:
             import seed
             seed.seed_database()
@@ -75,6 +90,7 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
+app.include_router(customer_hierarchy_router, prefix=settings.API_V1_STR)
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
 app.include_router(activities_router, prefix=settings.API_V1_STR)
