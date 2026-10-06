@@ -48,3 +48,19 @@ from app.schemas.customer_import import (
     CustomerImportExecuteRequest,
     CustomerImportSummaryResponse,
 )
+from app.schemas.customer_care import (
+    CustomerCareFilterParams,
+    CustomerCareItemResponse,
+    CustomerCareListResponse,
+    QuickContactRequest,
+    QuickContactResponse,
+)
+
+__all__.extend([
+    "CustomerCareFilterParams",
+    "CustomerCareItemResponse",
+    "CustomerCareListResponse",
+    "QuickContactRequest",
+    "QuickContactResponse",
+])
+
