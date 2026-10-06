@@ -492,3 +492,6 @@ def validate_rejection_reason(reason: str) -> bool:
 def format_approval_webhook_payload(quote_data: dict, status: str) -> dict:
     """Định dạng payload gửi webhook tới kênh thông báo Slack/Telegram nội bộ"""
     return {'quote_id': quote_data.get('id'), 'status': status, 'timestamp': '2026-10-04'}
+
+# SLA Indicator
+DEFAULT_APPROVAL_SLA_HOURS = 24
