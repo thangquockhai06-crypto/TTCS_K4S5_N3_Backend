@@ -35,6 +35,7 @@ from app.routers import (
     custom_fields_router,
     pipelines_router,
     win_loss_router,
+    customer_care_router,
 )
 
 
@@ -107,6 +108,8 @@ app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(catalog_items_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
+app.include_router(customer_care_router, prefix=settings.API_V1_STR)
+
 
 @app.get("/", summary="Health Check")
 def root():

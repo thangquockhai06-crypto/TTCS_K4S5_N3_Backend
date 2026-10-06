@@ -19,6 +19,7 @@ from app.routers.customer_hierarchy import router as customer_hierarchy_router
 from app.routers.catalog_items import router as catalog_items_router
 from app.routers.saved_filters import router as saved_filters_router
 from app.routers.customer_import import router as customer_import_router
+from app.routers.customer_care import router as customer_care_router
 
 __all__ = [
     "auth_router",
@@ -27,6 +28,7 @@ __all__ = [
     "customers_router",
     "customer_hierarchy_router",
     "customer_import_router",
+    "customer_care_router",
     "deals_router",
     "opportunities_router",
     "activities_router",
