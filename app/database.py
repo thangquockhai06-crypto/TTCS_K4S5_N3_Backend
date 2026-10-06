@@ -1,8 +1,39 @@
 import os
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, text, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+@event.listens_for(Engine, "connect")
+def _register_sqlite_custom_functions(dbapi_connection, connection_record):
+    """Đăng ký hàm datediff cho SQLite để tương thích hoàn toàn với MySQL trong test/local."""
+    if hasattr(dbapi_connection, "create_function"):
+        def _datediff(d1, d2):
+            if d1 is None or d2 is None:
+                return 0
+            from datetime import datetime, date
+            def _parse_dt(val):
+                if isinstance(val, (datetime, date)):
+                    return val
+                s = str(val).split(".")[0].replace("T", " ")
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(s, fmt)
+                    except Exception:
+                        pass
+                return datetime.utcnow()
+            dt1 = _parse_dt(d1)
+            dt2 = _parse_dt(d2)
+            d1_date = dt1.date() if isinstance(dt1, datetime) else dt1
+            d2_date = dt2.date() if isinstance(dt2, datetime) else dt2
+            return (d1_date - d2_date).days
+
+        try:
+            dbapi_connection.create_function("datediff", 2, _datediff)
+        except Exception:
+            pass
+
 
 from app.config import settings
 
