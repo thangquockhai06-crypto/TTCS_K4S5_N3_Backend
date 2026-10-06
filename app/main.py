@@ -7,17 +7,21 @@ if sys.platform == "win32":
         pass
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, ensure_schema_compatibility, run_auto_migrations
 from app.routers import (
     auth_router,
     user_import_router,
-    users_router,
+    catalog_items_router,
     customers_router,
     customer_hierarchy_router,
+    saved_filters_router,
+    users_router,
     deals_router,
     opportunities_router,
     activities_router,
@@ -32,13 +36,17 @@ from app.routers import (
     win_loss_router,
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Tu dong tao cac bang trong CSDL neu chua ton tai
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_schema_compatibility()
+        run_auto_migrations()
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
 
+<<<<<<< HEAD
         # Đảm bảo các cột mới (SCRUM-63) tồn tại nếu CSDL đã được tạo từ trước
         try:
             from sqlalchemy import inspect, text
@@ -51,6 +59,10 @@ async def lifespan(app: FastAPI):
                     conn.execute(text("ALTER TABLE customers ADD COLUMN tax_code VARCHAR(50)"))
         except Exception as col_err:
             pass
+=======
+        # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-89)
+        run_auto_migrations()
+>>>>>>> aca0da5f99951cb229005e576016f30c93b6a1b7
 
         try:
             import seed
@@ -75,6 +87,9 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+Path(settings.AVATAR_STORAGE_DIR).mkdir(parents=True, exist_ok=True)
+app.mount(settings.MEDIA_URL, StaticFiles(directory=settings.AVATAR_STORAGE_DIR), name="media")
+
 # Cấu hình CORS (Cho phép Frontend React/Vite tại localhost:5173 truy cập)
 app.add_middleware(
     CORSMiddleware,
@@ -90,7 +105,11 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
+<<<<<<< HEAD
 app.include_router(customer_hierarchy_router, prefix=settings.API_V1_STR)
+=======
+app.include_router(saved_filters_router, prefix=settings.API_V1_STR)
+>>>>>>> aca0da5f99951cb229005e576016f30c93b6a1b7
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
 app.include_router(activities_router, prefix=settings.API_V1_STR)
@@ -102,6 +121,7 @@ app.include_router(categories_router, prefix=settings.API_V1_STR)
 app.include_router(org_tree_router, prefix=settings.API_V1_STR)
 app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
+app.include_router(catalog_items_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")

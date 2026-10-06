@@ -57,6 +57,55 @@ python run.py
 - Tài liệu tương tác Swagger UI: **`http://127.0.0.1:8000/docs`**
 - Tài liệu ReDoc: **`http://127.0.0.1:8000/redoc`**
 
+
+### Avatar người dùng
+Các endpoint yêu cầu Bearer access token:
+
+```text
+POST /api/v1/users/me/avatar
+Content-Type: multipart/form-data
+file=<JPG/JPEG hoặc PNG, tối đa 2 MB>
+
+Response 200:
+{
+  "avatarUrl": "/media/avatars/<uuid>.jpg",
+  "avatarThumbnailUrl": "/media/avatars/<uuid>_thumb.jpg"
+}
+```
+
+Ảnh được xoay theo EXIF, crop chính giữa thành hình vuông, loại bỏ metadata và lưu thumbnail mặc định `128x128`. `DELETE /api/v1/users/me/avatar` xóa avatar và trả về hai trường URL có giá trị `null`. Phản hồi khách hàng chứa `assignedUser.avatarThumbnailUrl`; giá trị là `null` nếu khách hàng chưa có người phụ trách hoặc người phụ trách chưa tải avatar.
+### Tìm kiếm khách hàng và saved filters
+`GET /api/v1/customers` giữ nguyên response dạng danh sách và thêm header `X-Total-Count`. Hỗ trợ:
+
+- `q`: tìm không phân biệt hoa thường/dấu theo tên và công ty; tìm tiền tố mã số thuế; tìm số điện thoại khách hàng hoặc contact, bao gồm định dạng `+84`.
+- `status`, `industry`, `companySize`, `region`, `owner`: lặp query parameter hoặc truyền danh sách phân cách bằng dấu phẩy.
+- `owner=me` lọc người dùng hiện tại; `owner=unassigned` lọc bản ghi chưa gán. Data scope của role vẫn được áp dụng ở tầng truy vấn.
+- `sort=name|created_at|status|owner`, `descending`, `skip`, `limit`.
+- `saved_filter_id`: nạp saved filter của chính người dùng; các tham số gửi trực tiếp ghi đè giá trị đã lưu.
+
+Các bucket `companySize` hợp lệ là `SMB`, `MID_MARKET`, `ENTERPRISE`. CRUD saved filter dùng:
+`GET/POST /api/v1/saved-filters`, `PATCH/DELETE /api/v1/saved-filters/{id}`.
+Saved filter được giới hạn 20 bản ghi mỗi người dùng, không cho trùng tên không phân biệt hoa thường, và definition được kiểm tra trước khi lưu.
+
+### Catalog và Price Book
+Các endpoint yêu cầu Bearer access token. Chỉ role `Sales Director` được tạo, cập nhật, ngừng bán hoặc xóa catalog item; người dùng khác chỉ được đọc và không nhận trường `costPrice`.
+
+```json
+POST /api/v1/catalog-items
+{
+  "code": "CRM-STD-001",
+  "name": "CRM Standard",
+  "type": "ONE_TIME_PRODUCT",
+  "unitOfMeasure": "license",
+  "listPrice": "10000000.00",
+  "floorPrice": "8000000.00",
+  "costPrice": "5000000.00",
+  "currency": "VND"
+}
+```
+
+`POST /api/v1/catalog-items/{id}/discontinue` ngừng bán item. Item đã xuất hiện trong quote trả `409` khi DELETE. Quote lines lưu snapshot `listPriceSnapshot` và `floorPriceSnapshot`; item đã discontinued không thể thêm vào quote mới.
+
 ---
 
 ## 🔑 Tài khoản Mặc định Đăng nhập Hệ thống
@@ -108,16 +157,35 @@ TTCS_K4S5_N3_Backend/
 
 ---
 
+### Cảnh báo và Gộp khách hàng trùng lặp (SCRUM-62 / SCRUM-148)
+- **POST `/api/v1/customers/duplicates/scan`**: Quét và phát hiện khách hàng trùng lặp đa tiêu chí:
+  + **Mã số thuế (`tax_code`)**: Chuẩn hóa loại bỏ khoảng trắng, dấu gạch ngang.
+  + **Website (`website`)**: Chuẩn hóa domain (loại bỏ `http://`, `https://`, `www.` và trailing path).
+  + **Tên công ty (`name`)**: So khớp độ tương đồng chuỗi loại bỏ tiền tố/hậu tố pháp lý phổ biến (tỷ lệ tương đồng $\ge 80\%$).
+  + **Số điện thoại**: Chuẩn hóa số điện thoại liên hệ.
+- **GET `/api/v1/customers/compare`**: So sánh cạnh nhau 2 khách hàng, chi tiết hồ sơ, contacts, deals, activities và danh sách các trường dữ liệu có sự khác biệt.
+- **POST `/api/v1/customers/merge`**: Thực hiện gộp khách hàng trong một Database Transaction an toàn (ACID):
+  + **Phân quyền RBAC:** Chỉ Trưởng nhóm (`TEAM_LEAD`) trở lên (`DIRECTOR`, `ADMIN`). Nhân viên kinh doanh (`SALES_REP`) bị chặn HTTP 403 Forbidden.
+  + **Data Scope:** `TEAM_LEAD` chỉ được gộp khách hàng thuộc phạm vi quản lý của nhóm mình; `DIRECTOR` có quyền trên toàn bộ hệ thống.
+  + **Bảo toàn dữ liệu:** Chuyển toàn bộ `contacts`, `deals`, `quotations`, `activities`, `notes` từ khách phụ sang khách chính. Khách phụ được đánh dấu `is_deleted = True`, `merged_into_id = target_id`.
+  + **Lưu vết kiểm toán:** Tự động tạo bản ghi `Activity` hệ thống trên khách hàng chính ghi nhận việc gộp.
+
+---
+
 ## 🧪 Kiểm thử tự động (Unit & Integration Tests)
-Chạy bộ kiểm thử tự động gồm 69 test cases:
+Chạy bộ kiểm thử tự động:
 ```bash
 pytest
 ```
 Bộ test bao gồm:
+- `tests/test_customer_merge.py` (12 tests quét trùng đa tiêu chí, so sánh cạnh nhau, gộp giao dịch ACID, phân quyền RBAC và Data Scope)
 - `tests/test_user_management.py` (22 tests CRUD, gán vai trò, nhóm, chuyển giao dữ liệu)
 - `tests/test_data_scope_access_control.py` (22 tests cách ly dữ liệu cá nhân/nhóm/toàn quốc)
+- `tests/test_customer_search.py` (tìm kiếm khách hàng và saved filters)
+- `tests/test_catalog_items.py` (catalog sản phẩm và bảng giá)
 - `tests/test_forgot_password.py` (4 tests quên mật khẩu và đặt lại mật khẩu)
 - `tests/test_change_password.py` (4 tests đổi mật khẩu trong phiên)
 - `tests/test_sprint2_features.py` (11 tests nhập Excel, nhật ký kiểm toán, danh mục, sản phẩm, phễu)
 - `tests/test_scrum79_excel_import.py` (6 tests chi tiết xử lý tải template, preview & batch import)
+
 

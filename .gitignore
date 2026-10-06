@@ -35,6 +35,7 @@ env/
 *.sqlite
 *.sqlite3
 
+uploads/
 # Unit test / coverage
 .pytest_cache/
 .coverage
@@ -51,7 +52,7 @@ node_modules/
 dist/
 .vite/
 server/
-models/
+models/ #
 routers/
 schemas/
 services/

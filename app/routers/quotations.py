@@ -7,10 +7,30 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.quotation import Quotation
 from app.schemas.quotation import QuotationDTO, CreateQuotationDTO
+from app.schemas.catalog_item import QuotationLineDTO
 from app.services.quotation_service import QuotationService
 from app.core.export import export_to_excel
 
 router = APIRouter(prefix="/quotations", tags=["Quotations Management"])
+
+
+def _to_quotation_dto(quotation: Quotation) -> QuotationDTO:
+    return QuotationDTO(
+        id=quotation.id,
+        quoteNumber=quotation.quote_number,
+        title=quotation.title,
+        customerId=quotation.customer_id,
+        ownerId=quotation.owner_id,
+        totalAmount=float(quotation.total_amount),
+        status=quotation.status,
+        validUntil=quotation.valid_until.isoformat() if quotation.valid_until else None,
+        createdAt=quotation.created_at.isoformat() if quotation.created_at else None,
+        items=[
+            QuotationLineDTO.model_validate(line)
+            for line in getattr(quotation, "lines", [])
+        ],
+        discount_approval_required=quotation.discount_approval_required,
+    )
 
 
 @router.get("", response_model=List[QuotationDTO], summary="Lấy danh sách các báo giá")
@@ -32,20 +52,7 @@ def get_quotations(
         skip=skip,
         limit=limit,
     )
-    return [
-        QuotationDTO(
-            id=q.id,
-            quoteNumber=q.quote_number,
-            title=q.title,
-            customerId=q.customer_id,
-            ownerId=q.owner_id,
-            totalAmount=float(q.total_amount),
-            status=q.status,
-            validUntil=q.valid_until.isoformat() if q.valid_until else None,
-            createdAt=q.created_at.isoformat() if q.created_at else None,
-        )
-        for q in quotations
-    ]
+    return [_to_quotation_dto(q) for q in quotations]
 
 
 @router.get("/export", summary="Xuất danh sách báo giá ra Excel (.xlsx)")
@@ -91,17 +98,7 @@ def create_quotation(
     current_user: User = Depends(get_current_user),
 ) -> QuotationDTO:
     quotation: Quotation = QuotationService.create_quotation(db=db, dto=dto, user=current_user)
-    return QuotationDTO(
-        id=quotation.id,
-        quoteNumber=quotation.quote_number,
-        title=quotation.title,
-        customerId=quotation.customer_id,
-        ownerId=quotation.owner_id,
-        totalAmount=float(quotation.total_amount),
-        status=quotation.status,
-        validUntil=quotation.valid_until.isoformat() if quotation.valid_until else None,
-        createdAt=quotation.created_at.isoformat() if quotation.created_at else None,
-    )
+    return _to_quotation_dto(quotation)
 
 
 @router.get("/{quotation_id}", response_model=QuotationDTO, summary="Xem chi tiết báo giá")
@@ -117,14 +114,4 @@ def get_quotation_detail(
     )
     if not quotation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy báo giá.")
-    return QuotationDTO(
-        id=quotation.id,
-        quoteNumber=quotation.quote_number,
-        title=quotation.title,
-        customerId=quotation.customer_id,
-        ownerId=quotation.owner_id,
-        totalAmount=float(quotation.total_amount),
-        status=quotation.status,
-        validUntil=quotation.valid_until.isoformat() if quotation.valid_until else None,
-        createdAt=quotation.created_at.isoformat() if quotation.created_at else None,
-    )
+    return _to_quotation_dto(quotation)

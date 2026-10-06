@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Numeric, Boolean, Text, DateTime
+from sqlalchemy import CheckConstraint, Column, String, Numeric, Boolean, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -22,8 +23,28 @@ class Product(Base):
     cost_price = Column(Numeric(15, 2), default=0.00, nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+
+    # Standard catalog / price-book fields.
+    item_type = Column("type", String(30), default="ONE_TIME_PRODUCT", nullable=False)
+    unit_of_measure = Column(String(50), default="unit", nullable=False)
+    list_price = Column(Numeric(15, 2), default=0.00, nullable=False)
+    floor_price = Column(Numeric(15, 2), default=0.00, nullable=False)
+    status = Column(String(20), default="ACTIVE", nullable=False)
+    currency = Column(String(3), default="VND", nullable=False)
+    discontinued_at = Column(DateTime, nullable=True)
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    quotation_lines = relationship("QuotationLine", back_populates="catalog_item")
+
+    __table_args__ = (
+        CheckConstraint("list_price >= 0", name="ck_product_list_price_non_negative"),
+        CheckConstraint("floor_price >= 0", name="ck_product_floor_price_non_negative"),
+        CheckConstraint("cost_price >= 0", name="ck_product_cost_price_non_negative"),
+        CheckConstraint("floor_price <= list_price", name="ck_product_floor_le_list"),
+    )
 
 
 class PriceList(Base):

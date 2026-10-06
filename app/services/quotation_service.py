@@ -1,12 +1,17 @@
 import uuid
+from decimal import Decimal
 from typing import List, Optional, Tuple
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.quotation import Quotation
+from app.models.quotation_line import QuotationLine
+from app.models.product import Product
 from app.models.user import User
 from app.schemas.quotation import CreateQuotationDTO
 from app.repositories.quotation_repository import QuotationRepository
 from app.repositories.customer_repository import CustomerRepository
+from app.services.catalog_item_service import requires_discount_approval
 
 
 class QuotationService:
@@ -77,14 +82,43 @@ class QuotationService:
         # Xác thực quyền truy cập khách hàng trước
         CustomerRepository.get_scoped_by_id(db, dto.customerId, user)
 
+        lines = []
+        total_amount = Decimal("0.00")
+        approval_required = False
+        for line_dto in dto.items:
+            item = db.query(Product).filter(Product.id == line_dto.product_id).first()
+            if not item:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Không tìm thấy catalog item '{line_dto.product_id}'.")
+            if item.status != "ACTIVE" or not item.is_active:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Catalog item '{item.code}' đã ngừng bán và không thể thêm vào báo giá mới.")
+            unit_price = Decimal(str(line_dto.unit_price if line_dto.unit_price is not None else item.list_price))
+            line_approval = requires_discount_approval(unit_price, item)
+            approval_required = approval_required or line_approval
+            total_amount += unit_price * Decimal(str(line_dto.quantity))
+            lines.append(
+                QuotationLine(
+                    product_id=item.id,
+                    product_code=item.code,
+                    product_name=item.name,
+                    quantity=line_dto.quantity,
+                    unit_price=unit_price,
+                    list_price_snapshot=item.list_price,
+                    floor_price_snapshot=item.floor_price,
+                    currency=item.currency or "VND",
+                    discount_approval_required=line_approval,
+                )
+            )
+
         new_quotation = Quotation(
             id=str(uuid.uuid4()),
             quote_number=dto.quoteNumber,
             title=dto.title,
             customer_id=dto.customerId,
             owner_id=user.id,
-            total_amount=dto.totalAmount,
+            total_amount=total_amount if dto.items else dto.totalAmount,
             status=dto.status or "draft",
             valid_until=dto.validUntil,
+            discount_approval_required=approval_required,
+            lines=lines,
         )
         return QuotationRepository.create(db, new_quotation)
