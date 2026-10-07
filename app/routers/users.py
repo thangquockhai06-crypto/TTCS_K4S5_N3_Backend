@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -9,76 +9,13 @@ from app.schemas.user import (
     UserCreateSchema,
     UserUpdateSchema,
     UserResponseSchema,
-    AvatarResponseSchema,
     UserDeactivateSchema,
     RoleAssignSchema,
     TeamAssignSchema,
 )
 from app.services.user_service import UserService
-from app.services.avatar_service import AvatarStorage, MAX_AVATAR_BYTES
 
 router = APIRouter(prefix="/users", tags=["User Account Management"])
-
-
-@router.post(
-    "/me/avatar",
-    response_model=AvatarResponseSchema,
-    summary="Tải lên hoặc thay thế avatar cá nhân",
-)
-async def upload_my_avatar(
-    file: UploadFile = File(..., description="Tệp avatar JPG/JPEG hoặc PNG, tối đa 2 MB"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> AvatarResponseSchema:
-    content = await file.read(MAX_AVATAR_BYTES + 1)
-    try:
-        storage = AvatarStorage()
-        avatar_url, thumbnail_url = storage.save(content, file.content_type or "")
-    finally:
-        await file.close()
-
-    previous_avatar_url = current_user.avatar_url
-    previous_thumbnail_url = current_user.avatar_thumbnail_url
-    current_user.avatar_url = avatar_url
-    current_user.avatar_thumbnail_url = thumbnail_url
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        storage.delete_urls(avatar_url, thumbnail_url)
-        raise
-    db.refresh(current_user)
-
-    storage.delete_urls(previous_avatar_url, previous_thumbnail_url)
-    return AvatarResponseSchema(
-        avatar_url=current_user.avatar_url,
-        avatar_thumbnail_url=current_user.avatar_thumbnail_url,
-    )
-
-
-@router.delete(
-    "/me/avatar",
-    response_model=AvatarResponseSchema,
-    summary="Xóa avatar cá nhân",
-)
-def delete_my_avatar(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> AvatarResponseSchema:
-    storage = AvatarStorage()
-    previous_avatar_url = current_user.avatar_url
-    previous_thumbnail_url = current_user.avatar_thumbnail_url
-    current_user.avatar_url = None
-    current_user.avatar_thumbnail_url = None
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    db.refresh(current_user)
-
-    storage.delete_urls(previous_avatar_url, previous_thumbnail_url)
-    return AvatarResponseSchema()
 
 
 @router.get("", response_model=List[UserResponseSchema], summary="Lấy danh sách người dùng")

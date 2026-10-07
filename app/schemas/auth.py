@@ -25,7 +25,6 @@ class UserDTO(BaseModel):
     title: str
     department: str
     avatarUrl: Optional[str] = Field(None, serialization_alias="avatarUrl")
-    avatarThumbnailUrl: Optional[str] = Field(None, serialization_alias="avatarThumbnailUrl")
     workspaceName: str = Field(..., serialization_alias="workspaceName")
     teamId: Optional[str] = Field(None, serialization_alias="teamId")
     dataScope: Optional[str] = Field(None, serialization_alias="dataScope")

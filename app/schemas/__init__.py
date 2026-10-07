@@ -10,9 +10,32 @@ from app.schemas.auth import (
 from app.schemas.customer import (
     CustomerDTO,
     CreateCustomerDTO,
+    UpdateCustomerDTO,
     UpdateCustomerStatusDTO,
     CustomerNoteCreateDTO,
     CustomerActivityCreateDTO,
+    CustomerMergeDTO,
+    CustomerHierarchyDTO,
+    StagnantCustomerDTO,
+    RiskScanResultDTO,
+)
+from app.schemas.contact import (
+    ContactDTO,
+    ContactCreateDTO,
+    ContactUpdateDTO,
+    TransferContactDTO,
+)
+from app.schemas.support_ticket import (
+    SupportTicketDTO,
+    CreateSupportTicketDTO,
+    UpdateSupportTicketDTO,
+)
+from app.schemas.saved_filter import (
+    SavedFilterPresetDTO,
+    CreateSavedFilterDTO,
+)
+from app.schemas.customer_360 import (
+    Customer360DTO,
 )
 from app.schemas.deal import (
     DealDTO,
@@ -30,37 +53,25 @@ __all__ = [
     "MessageResponse",
     "CustomerDTO",
     "CreateCustomerDTO",
+    "UpdateCustomerDTO",
     "UpdateCustomerStatusDTO",
     "CustomerNoteCreateDTO",
     "CustomerActivityCreateDTO",
+    "CustomerMergeDTO",
+    "CustomerHierarchyDTO",
+    "StagnantCustomerDTO",
+    "RiskScanResultDTO",
+    "ContactDTO",
+    "ContactCreateDTO",
+    "ContactUpdateDTO",
+    "TransferContactDTO",
+    "SupportTicketDTO",
+    "CreateSupportTicketDTO",
+    "UpdateSupportTicketDTO",
+    "SavedFilterPresetDTO",
+    "CreateSavedFilterDTO",
+    "Customer360DTO",
     "DealDTO",
     "CreateDealDTO",
     "MoveDealStageDTO",
-    "CustomerImportRow",
-    "CustomerImportPreviewResponse",
-    "CustomerImportExecuteRequest",
-    "CustomerImportSummaryResponse",
 ]
-
-from app.schemas.customer_import import (
-    CustomerImportRow,
-    CustomerImportPreviewResponse,
-    CustomerImportExecuteRequest,
-    CustomerImportSummaryResponse,
-)
-from app.schemas.customer_care import (
-    CustomerCareFilterParams,
-    CustomerCareItemResponse,
-    CustomerCareListResponse,
-    QuickContactRequest,
-    QuickContactResponse,
-)
-
-__all__.extend([
-    "CustomerCareFilterParams",
-    "CustomerCareItemResponse",
-    "CustomerCareListResponse",
-    "QuickContactRequest",
-    "QuickContactResponse",
-])
-

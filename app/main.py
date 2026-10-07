@@ -7,22 +7,18 @@ if sys.platform == "win32":
         pass
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import engine, Base, ensure_schema_compatibility, run_auto_migrations
+from app.database import engine, Base, run_ep03_migrations
 from app.routers import (
     auth_router,
-    user_import_router,
-    catalog_items_router,
-    customer_import_router,
-    customers_router,
-    customer_hierarchy_router,
-    saved_filters_router,
     users_router,
+    customers_router,
+    contacts_router,
+    support_tickets_router,
+    saved_filters_router,
     deals_router,
     opportunities_router,
     activities_router,
@@ -35,22 +31,16 @@ from app.routers import (
     custom_fields_router,
     pipelines_router,
     win_loss_router,
-    customer_care_router,
+    user_import_router,
 )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Tu dong tao cac bang trong CSDL neu chua ton tai
     try:
         Base.metadata.create_all(bind=engine)
-        ensure_schema_compatibility()
-        run_auto_migrations()
-        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
-
-        # Tu dong cap nhat cot moi vao cac bang da ton tai tu truoc (SCRUM-63 / SCRUM-89)
-        run_auto_migrations()
-
+        run_ep03_migrations(engine)
+        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03 san sang).")
         try:
             import seed
             seed.seed_database()
@@ -67,15 +57,13 @@ app = FastAPI(
     description=(
         "Backend API cho hệ thống NexusCRM (TTCS_K4S5_N3). "
         "Triển khai xác thực JWT an toàn, bảo vệ Brute-force 15 phút (SCRUM-32), "
-        "và duy trì/thu hồi phiên đăng xuất (SCRUM-34)."
+        "duy trì/thu hồi phiên đăng xuất (SCRUM-34), "
+        "và Phân hệ Quản lý Khách hàng Doanh nghiệp Toàn diện (Sprint 3 EP-03: S3-01 -> S3-09)."
     ),
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
-
-Path(settings.AVATAR_STORAGE_DIR).mkdir(parents=True, exist_ok=True)
-app.mount(settings.MEDIA_URL, StaticFiles(directory=settings.AVATAR_STORAGE_DIR), name="media")
 
 # Cấu hình CORS (Cho phép Frontend React/Vite tại localhost:5173 truy cập)
 app.add_middleware(
@@ -89,11 +77,10 @@ app.add_middleware(
 
 # Mount các Router API
 app.include_router(auth_router, prefix=settings.API_V1_STR)
-app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
-app.include_router(customer_import_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
-app.include_router(customer_hierarchy_router, prefix=settings.API_V1_STR)
+app.include_router(contacts_router, prefix=settings.API_V1_STR)
+app.include_router(support_tickets_router, prefix=settings.API_V1_STR)
 app.include_router(saved_filters_router, prefix=settings.API_V1_STR)
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
@@ -106,10 +93,8 @@ app.include_router(categories_router, prefix=settings.API_V1_STR)
 app.include_router(org_tree_router, prefix=settings.API_V1_STR)
 app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
-app.include_router(catalog_items_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
-app.include_router(customer_care_router, prefix=settings.API_V1_STR)
-
+app.include_router(user_import_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")
 def root():
@@ -118,12 +103,10 @@ def root():
         "service": settings.PROJECT_NAME,
         "docsUrl": "/docs",
         "version": "1.0.0",
-        "scrum_stories": ["SCRUM-32 (Login & 15m Lockout)", "SCRUM-34 (Session & Logout Revocation)"],
+        "sprint": "Sprint 3 (EP-03 Customer Management)",
+        "scrum_stories": [
+            "SCRUM-32 (Login & 15m Lockout)",
+            "SCRUM-34 (Session & Logout Revocation)",
+            "S3-01 -> S3-09 (Full Customer Management)",
+        ],
     }
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"message": "Đã xảy ra lỗi máy chủ nội bộ.", "details": str(exc) if settings.DEBUG else None},
-    )

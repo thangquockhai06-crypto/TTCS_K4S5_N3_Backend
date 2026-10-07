@@ -17,7 +17,6 @@ class AuditLogService:
         end_date: Optional[datetime] = None,
         page: int = 1,
         limit: int = 20,
-        include_cost_fields: bool = True,
     ) -> AuditLogPaginatedResponse:
         records, total_items = self.repository.get_audit_logs(
             performed_by=performed_by,
@@ -26,7 +25,6 @@ class AuditLogService:
             end_date=end_date,
             page=page,
             limit=limit,
-            include_cost_fields=include_cost_fields,
         )
 
         data_dtos: List[AuditLogSchema] = [

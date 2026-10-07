@@ -22,12 +22,6 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     REMEMBER_ME_EXPIRE_DAYS: int = 30
 
-    # Avatar storage
-    AVATAR_STORAGE_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-    MEDIA_URL: str = "/media"
-    AVATAR_THUMBNAIL_SIZE: int = 128
-    MAX_SAVED_CUSTOMER_FILTERS: int = 20
-
     # Brute-force protection (SCRUM-32 / SCRUM-101)
     MAX_FAILED_ATTEMPTS: int = 5
     LOCKOUT_DURATION_MINUTES: int = 15

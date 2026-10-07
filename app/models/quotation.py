@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -16,7 +16,6 @@ class Quotation(Base):
     total_amount = Column(Numeric(15, 2), default=0.00, nullable=False)
     status = Column(String(50), default="draft", nullable=False)
     valid_until = Column(Date, nullable=True)
-    discount_approval_required = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -24,4 +23,3 @@ class Quotation(Base):
     # Relationships
     customer = relationship("Customer")
     owner = relationship("User")
-    lines = relationship("QuotationLine", back_populates="quotation", cascade="all, delete-orphan")

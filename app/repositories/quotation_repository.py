@@ -1,5 +1,5 @@
 from typing import Optional, List, Tuple
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.quotation import Quotation
 from app.models.user import User
@@ -24,7 +24,7 @@ class QuotationRepository(BaseRepository):
         limit: int = 100,
     ) -> Tuple[List[Quotation], int]:
         """Lấy danh sách báo giá thỏa mãn Data Scope của người dùng."""
-        query = db.query(Quotation).options(joinedload(Quotation.lines))
+        query = db.query(Quotation)
 
         # 1. Lọc theo Data Scope
         if user is not None:
@@ -74,7 +74,7 @@ class QuotationRepository(BaseRepository):
     @staticmethod
     def get_by_id(db: Session, quotation_id: str) -> Optional[Quotation]:
         """Truy vấn báo giá theo ID không kiểm tra scope (Dùng nội bộ)."""
-        return db.query(Quotation).options(joinedload(Quotation.lines)).filter(Quotation.id == quotation_id).first()
+        return db.query(Quotation).filter(Quotation.id == quotation_id).first()
 
     @staticmethod
     def get_scoped_by_id(db: Session, quotation_id: str, user: User) -> Quotation:

@@ -45,7 +45,6 @@ class UserResponseSchema(BaseModel):
     title: Optional[str] = Field(None, description="Chức danh")
     department: Optional[str] = Field(None, description="Phòng ban")
     avatar_url: Optional[str] = Field(None, serialization_alias="avatarUrl")
-    avatar_thumbnail_url: Optional[str] = Field(None, serialization_alias="avatarThumbnailUrl")
     workspace_name: Optional[str] = Field("NexusCRM Enterprise VN", serialization_alias="workspaceName")
     created_at: Optional[datetime] = Field(None, serialization_alias="createdAt")
     updated_at: Optional[datetime] = Field(None, serialization_alias="updatedAt")
@@ -71,12 +70,5 @@ class RoleAssignSchema(BaseModel):
 class TeamAssignSchema(BaseModel):
     team_id: Optional[str] = Field(None, alias="teamId", description="ID nhóm")
     team_name: Optional[str] = Field(None, alias="teamName", description="Tên nhóm")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AvatarResponseSchema(BaseModel):
-    avatar_url: Optional[str] = Field(None, serialization_alias="avatarUrl")
-    avatar_thumbnail_url: Optional[str] = Field(None, serialization_alias="avatarThumbnailUrl")
 
     model_config = ConfigDict(populate_by_name=True)
