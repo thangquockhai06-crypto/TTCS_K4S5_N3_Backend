@@ -1,57 +1,67 @@
 from typing import List
-
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.customer_search import SavedFilterCreateDTO, SavedFilterDTO, SavedFilterUpdateDTO
-from app.services.customer_search_service import CustomerSearchService
+from app.models.saved_filter import SavedFilterPreset
+from app.schemas.saved_filter import (
+    SavedFilterPresetDTO,
+    CreateSavedFilterDTO,
+)
+from app.services.saved_filter_service import SavedFilterService
 
-router = APIRouter(prefix="/saved-filters", tags=["Saved Customer Filters"])
+router = APIRouter(prefix="/customer-filters", tags=["Saved Customer Filters (S3-07)"])
 
 
-@router.get("", response_model=List[SavedFilterDTO])
-def list_saved_filters(
+def _to_preset_dto(p: SavedFilterPreset) -> SavedFilterPresetDTO:
+    return SavedFilterPresetDTO(
+        id=p.id,
+        userId=p.user_id,
+        name=p.name,
+        entityType=p.entity_type,
+        filterCriteria=p.filter_criteria,
+        isDefault=bool(p.is_default),
+        createdAt=p.created_at.isoformat() if p.created_at else None,
+    )
+
+
+@router.get("", response_model=List[SavedFilterPresetDTO], summary="Lấy danh sách các bộ lọc đã lưu của người dùng hiện tại")
+def get_saved_filters(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[SavedFilterDTO]:
-    return CustomerSearchService(db).list_saved_filters(current_user)
+) -> List[SavedFilterPresetDTO]:
+    presets = SavedFilterService.get_user_filters(
+        db=db,
+        user=current_user,
+        entity_type="customer",
+    )
+    return [_to_preset_dto(p) for p in presets]
 
 
-@router.get("/{filter_id}", response_model=SavedFilterDTO)
-def get_saved_filter(
-    filter_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> SavedFilterDTO:
-    return CustomerSearchService(db).get_saved_filter(filter_id, current_user)
-
-@router.post("", response_model=SavedFilterDTO, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SavedFilterPresetDTO, status_code=status.HTTP_201_CREATED, summary="Lưu bộ lọc tùy chỉnh mới")
 def create_saved_filter(
-    dto: SavedFilterCreateDTO,
+    dto: CreateSavedFilterDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> SavedFilterDTO:
-    return CustomerSearchService(db).create_saved_filter(dto, current_user)
+) -> SavedFilterPresetDTO:
+    preset = SavedFilterService.create_filter(
+        db=db,
+        user=current_user,
+        dto=dto,
+    )
+    return _to_preset_dto(preset)
 
 
-@router.patch("/{filter_id}", response_model=SavedFilterDTO)
-def update_saved_filter(
-    filter_id: str,
-    dto: SavedFilterUpdateDTO,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> SavedFilterDTO:
-    return CustomerSearchService(db).update_saved_filter(filter_id, dto, current_user)
-
-
-@router.delete("/{filter_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{preset_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa bộ lọc đã lưu")
 def delete_saved_filter(
-    filter_id: str,
+    preset_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Response:
-    CustomerSearchService(db).delete_saved_filter(filter_id, current_user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+):
+    SavedFilterService.delete_filter(
+        db=db,
+        user=current_user,
+        preset_id=preset_id,
+    )
+    return None
