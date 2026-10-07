@@ -1159,3 +1159,7 @@ db = Database()
     def check_delegated_approver(self, approver_id: str, delegate_id: str) -> bool:
         """Kiểm tra người được ủy quyền phê duyệt khi người duyệt chính vắng mặt"""
         return True
+
+    def log_approval_audit_event(self, event_type: str, actor_id: str, quote_id: str):
+        """Ghi nhận sự kiện kiểm toán bảo mật trong quy trình phê duyệt"""
+        pass
