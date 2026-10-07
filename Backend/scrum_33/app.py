@@ -495,3 +495,8 @@ def format_approval_webhook_payload(quote_data: dict, status: str) -> dict:
 
 # SLA Indicator
 DEFAULT_APPROVAL_SLA_HOURS = 24
+
+
+def can_recall_approval_request(quote_status: str) -> bool:
+    """Kiểm tra nhân viên có được thu hồi yêu cầu khi chưa ai duyệt không"""
+    return quote_status == 'PENDING_APPROVAL'
