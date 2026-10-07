@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Trình Kiểm Thử Trực Quan 3 Tiêu Chí - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header" style="background: #ffffff; padding: 20px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="font-size: 24px;">🧪</span>
+                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main);">
+                    Trình Mô Phỏng & Kiểm Thử Tự Động 3 Tiêu Chí Chấp Nhận (Acceptance Criteria)
+                </h2>
+            </div>
+            <p style="font-size: 13.5px; color: var(--text-muted);">
+                Ticket Jira: <strong>{{ PARENT_EPIC }} / {{ TICKET_ID }}</strong> • Kiểm tra tính toàn vẹn của Động cơ Phiên bản hóa, Diff Engine và Ràng buộc Bất biến 1 phiên bản hiệu lực.
+            </p>
+        </div>
+
+        <div>
+            <button type="button" id="btn-run-simulation" class="btn btn-primary" style="padding: 10px 20px; font-size: 14.5px;">
+                ▶️ Chạy Bộ Kiểm Thử (1-Click Run)
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <!-- BẢNG GIẢI THÍCH 3 TIÊU CHÍ CHẤP NHẬN -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                <div style="font-weight: 700; color: #1e40af; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span>🛡️</span>
+                    <span>Tiêu Chí 1: Đóng Băng & Phiên Bản Hóa</span>
+                </div>
+                <p style="font-size: 13px; color: #475569; line-height: 1.5;">
+                    <em>"Mỗi lần sửa sau khi đã gửi sẽ tạo phiên bản mới, phiên bản cũ được giữ nguyên."</em>
+                    <br>
+                    <strong>Kiểm thử:</strong> Khởi tạo v1, gửi khách (tạo mã SHA-256 đóng băng). Thực hiện sửa đổi -> Kiểm tra hệ thống tự động sinh v2, v1 bảo lưu nguyên vẹn 100% hash và giá trị.
+                </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                <div style="font-weight: 700; color: #7c3aed; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span>🔍</span>
+                    <span>Tiêu Chí 2: So Sánh Side-by-side</span>
+                </div>
+                <p style="font-size: 13px; color: #475569; line-height: 1.5;">
+                    <em>"So sánh cạnh nhau hai phiên bản để thấy đã thay đổi gì."</em>
+                    <br>
+                    <strong>Kiểm thử:</strong> Chạy hàm <code>diff_versions(v1, v2)</code> -> Xác minh phân loại chuẩn xác từng dòng: Added, Removed, Modified (số lượng, đơn giá, chiết khấu) & Financial Delta.
+                </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                <div style="font-weight: 700; color: #047857; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span>🌟</span>
+                    <span>Tiêu Chí 3: Duy Nhất 1 Bản Hiệu Lực</span>
+                </div>
+                <p style="font-size: 13px; color: #475569; line-height: 1.5;">
+                    <em>"Chỉ một phiên bản ở trạng thái đang hiệu lực tại một thời điểm."</em>
+                    <br>
+                    <strong>Kiểm thử:</strong> Khi gửi v2, cờ <code>is_effective</code> của v2 chuyển thành <code>True</code>, cờ của v1 lập tức chuyển thành <code>False</code>. Khẳng định số lượng bản hiệu lực luôn = 1.
+                </p>
+            </div>
+        </div>
+
+        <!-- KHUNG KẾT QUẢ KIỂM THỬ LIVE -->
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <span>📋</span>
+            <span>Kết Quả Kiểm Thử Thực Tế:</span>
+        </h3>
+        <div id="simulation-results">
+            <div style="padding: 40px; text-align: center; background: #f8fafc; border: 2px dashed var(--border-color); border-radius: var(--radius-md); color: var(--text-muted);">
+                <div style="font-size: 36px; margin-bottom: 10px;">🧪</div>
+                <p style="font-size: 15px; font-weight: 600; color: #334155;">
+                    Chưa có kết quả chạy thử nghiệm trong phiên làm việc này.
+                </p>
+                <p style="font-size: 13px; margin-top: 4px;">
+                    Nhấn nút <strong>"▶️ Chạy Bộ Kiểm Thử (1-Click Run)"</strong> ở trên để thực thi tự động toàn bộ 3 ca kiểm thử!
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
