@@ -1163,3 +1163,7 @@ db = Database()
     def log_approval_audit_event(self, event_type: str, actor_id: str, quote_id: str):
         """Ghi nhận sự kiện kiểm toán bảo mật trong quy trình phê duyệt"""
         pass
+
+    def get_pending_quotes_by_approver(self, approver_id: str):
+        """Lấy danh sách các báo giá đang đợi một người dùng cụ thể phê duyệt"""
+        return [q for q in self.get_approval_queue() if q.get('approver_id') == approver_id]
