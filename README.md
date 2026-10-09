@@ -223,3 +223,35 @@ The project uses startup compatibility migrations rather than versioned migratio
 files. `run_auto_migrations()` adds the close/reopen columns, creates the history
 table, seeds the `OTHER` fallback, and backfills legacy `stage=won/lost` rows:
 WON uses the legacy value and close timestamp; LOST uses the active `OTHER` reason.
+
+---
+
+## SCRUM-24 (Sprint 4 / Story S4-01): Thu thập Lead từ Biểu mẫu nhúng trên Website (Web-to-Lead Form)
+
+### 1. Mô tả tính năng
+Cho phép Marketing và Admin tạo, quản lý và sinh mã nhúng biểu mẫu (Script / Iframe) để đặt trên bất kỳ website hoặc Landing Page bên ngoài nào.
+Khi người dùng truy cập điền biểu mẫu, hệ thống tự động:
+- Kiểm tra tính hợp lệ của số điện thoại di động Việt Nam (10 số, đầu số `03`, `05`, `07`, `08`, `09`) và Email.
+- Kích hoạt cơ chế chống bot spam qua Honeypot hidden fields (`_hp`, `website_hp`). Nếu bot điền dữ liệu vào các trường này, hệ thống âm thầm trả về thành công giả lập nhưng không lưu vào CSDL.
+- Kích hoạt IP Rate Limiting (tối đa 5 request / phút / địa chỉ IP Client). Vượt quá ngưỡng trả về `HTTP 429 Too Many Requests` kèm header `Retry-After`.
+- Tự động tạo bản ghi mới trong bảng `leads` với trạng thái `status = 'NEW'`, nguồn `source = form.lead_source` và ghi nhận `client_ip`.
+
+### 2. Danh sách Endpoints
+- **Quản lý biểu mẫu (Yêu cầu JWT Bearer Token - Marketing / Admin):**
+  - `POST /api/v1/forms`: Tạo cấu hình form mới (tự động sinh `form_key` định danh duy nhất).
+  - `GET /api/v1/forms`: Lấy danh sách biểu mẫu kèm mã nhúng và tổng số lead.
+  - `GET /api/v1/forms/{id}`: Xem chi tiết một biểu mẫu.
+  - `GET /api/v1/forms/{id}/embed-code`: Lấy đoạn mã nhúng Javascript và HTML Iframe.
+  - `PUT /api/v1/forms/{id}`: Cập nhật thông tin form (tên, nguồn lead, trạng thái `is_active`).
+  - `DELETE /api/v1/forms/{id}`: Xóa biểu mẫu.
+  - `GET /api/v1/forms/{id}/leads`: Lấy danh sách lead được thu thập từ biểu mẫu cụ thể.
+- **Quản lý danh sách Lead tổng thể (Yêu cầu JWT Bearer Token):**
+  - `GET /api/v1/leads`: Lấy danh sách Lead toàn hệ thống kèm phân trang và lọc (`status`, `form_id`, `source`, `q`).
+  - `PUT /api/v1/leads/{id}/status`: Cập nhật trạng thái xử lý Lead (`NEW`, `CONTACTED`, `QUALIFIED`, `CONVERTED`, `REJECTED`).
+- **Endpoint Công khai (Public API - Hỗ trợ CORS Cross-Origin):**
+  - `POST /api/v1/public/forms/{form_key}/submit`: Endpoint tiếp nhận submit thông tin lead từ website bất kỳ (không cần JWT token).
+  - `OPTIONS /api/v1/public/forms/{form_key}/submit`: Preflight CORS handler.
+  - `GET /api/v1/public/forms/{form_key}`: Lấy metadata tiêu đề form.
+  - `GET /api/v1/public/forms/{form_key}/render`: Giao diện biểu mẫu HTML hoàn chỉnh dùng cho Iframe độc lập.
+  - `GET /static/form-loader.js` (hoặc `/api/v1/public/forms/loader.js`): File Javascript loader tải và nhúng biểu mẫu tự động.
+
