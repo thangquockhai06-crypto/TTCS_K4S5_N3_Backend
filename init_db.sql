@@ -390,3 +390,36 @@ VALUES
     ('comp-02', 'HubSpot Sales Hub', 'https://www.hubspot.com', 'Trung bình - Cao (1.200.000đ/user/tháng)', 'Marketing Automation mạnh mẽ, giao diện trực quan', 'Tính năng phân quyền sâu và quản lý giá sàn còn hạn chế', 74.00, 1),
     ('comp-03', 'Zoho CRM Plus', 'https://www.zoho.com', 'Trung bình (650.000đ/user/tháng)', 'Nhiều phân hệ tích hợp, chi phí bản quyền ban đầu cạnh tranh', 'Tốc độ tải chậm tại Việt Nam, quy trình tùy biến phễu phức tạp', 82.00, 1)
 ON DUPLICATE KEY UPDATE pricing_tier = VALUES(pricing_tier);
+
+-- 13. BẢNG BIỂU MẪU NHÚNG TRÊN WEBSITE (WEB_FORMS - SCRUM-24 / S4-01)
+CREATE TABLE IF NOT EXISTS web_forms (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    form_key VARCHAR(64) UNIQUE NOT NULL,
+    lead_source VARCHAR(100) NOT NULL DEFAULT 'Website Form',
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_by VARCHAR(36) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_web_forms_key (form_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. BẢNG KHÁCH HÀNG TIỀM NĂNG (LEADS - SCRUM-24 / EP-04)
+CREATE TABLE IF NOT EXISTS leads (
+    id VARCHAR(36) PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    company VARCHAR(255) NULL,
+    interest_need TEXT NULL,
+    source VARCHAR(100) NOT NULL DEFAULT 'Website Form',
+    status VARCHAR(50) NOT NULL DEFAULT 'NEW',
+    form_id VARCHAR(36) NULL,
+    client_ip VARCHAR(45) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_leads_email (email),
+    INDEX idx_leads_status (status),
+    INDEX idx_leads_form_id (form_id),
+    CONSTRAINT fk_leads_form_id FOREIGN KEY (form_id) REFERENCES web_forms(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

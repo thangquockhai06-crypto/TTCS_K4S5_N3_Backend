@@ -16,6 +16,8 @@ from app.models.pipeline_stage import PipelineStage
 from app.models.product import Product, PriceList
 from app.models.win_loss import WinLossReason, Competitor
 from app.models.audit_log import AuditLog
+from app.models.web_form import WebForm
+from app.models.lead import Lead
 
 __all__ = [
     "Base",
@@ -40,4 +42,6 @@ __all__ = [
     "PipelineStage",
     "WinLossReason",
     "Competitor",
+    "WebForm",
+    "Lead",
 ]

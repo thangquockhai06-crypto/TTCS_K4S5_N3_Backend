@@ -210,12 +210,20 @@ def run_auto_migrations(target_engine=None):
                 for column_name, definition in deal_additions.items():
                     if column_name not in deal_columns:
                         connection.execute(text(f"ALTER TABLE deals ADD COLUMN {column_name} {definition}"))
-                connection.execute(
-                    text(
-                        "CREATE INDEX IF NOT EXISTS idx_deal_status "
-                        "ON deals (status)"
-                    )
-                )
+                existing_deal_indexes = {index["name"] for index in inspector.get_indexes("deals")}
+                if "idx_deal_status" not in existing_deal_indexes:
+                    connection.execute(text("CREATE INDEX idx_deal_status ON deals (status)"))
+
+            if "users" in existing_tables:
+                user_columns = {column["name"] for column in inspector.get_columns("users")}
+                if "avatar_thumbnail_url" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN avatar_thumbnail_url TEXT"))
+                if "team_id" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN team_id VARCHAR(100) DEFAULT NULL"))
+                if "data_scope" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN data_scope VARCHAR(20) DEFAULT NULL"))
+                if "status" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'active'"))
                 if eng.dialect.name == "sqlite":
                     connection.exec_driver_sql(
                         """
@@ -238,6 +246,14 @@ def run_auto_migrations(target_engine=None):
                 quote_columns = {column["name"] for column in inspector.get_columns("quotations")}
                 if "discount_approval_required" not in quote_columns:
                     connection.execute(text("ALTER TABLE quotations ADD COLUMN discount_approval_required BOOLEAN NOT NULL DEFAULT 0"))
+
+            # SCRUM-24 (S4-01): Web Forms & Leads
+            if "web_forms" not in existing_tables:
+                from app.models.web_form import WebForm
+                WebForm.__table__.create(bind=connection, checkfirst=True)
+            if "leads" not in existing_tables:
+                from app.models.lead import Lead
+                Lead.__table__.create(bind=connection, checkfirst=True)
         if "deals" in existing_tables and "win_loss_reasons" in existing_tables:
             from sqlalchemy.orm import sessionmaker
             from app.models.deal import Deal
