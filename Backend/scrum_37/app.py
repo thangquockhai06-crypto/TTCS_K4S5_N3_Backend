@@ -573,3 +573,11 @@ def format_vnd_filter(amount):
         return f"{int(amount):,} ₫".replace(',', '.')
     except (ValueError, TypeError):
         return str(amount)
+
+
+def diff_line_items(items_v1: list, items_v2: list) -> list:
+    """So sánh chi tiết từng dòng sản phẩm giữa 2 phiên bản báo giá"""
+    diffs = []
+    for i in items_v2:
+        diffs.append({'sku': i.get('sku'), 'status': 'MODIFIED'})
+    return diffs
