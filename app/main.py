@@ -8,7 +8,7 @@ if sys.platform == "win32":
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -36,6 +36,8 @@ from app.routers import (
     pipelines_router,
     win_loss_router,
     customer_care_router,
+    web_forms_router,
+    public_forms_router,
 )
 
 
@@ -87,6 +89,25 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+# Middleware CORS cho Public Web Forms (Cho phép submit từ mọi website bất kỳ - SCRUM-24)
+@app.middleware("http")
+async def public_cors_middleware(request: Request, call_next):
+    is_public = request.url.path.startswith("/api/v1/public/") or request.url.path.startswith("/static/")
+    if is_public and request.method == "OPTIONS":
+        return Response(
+            status_code=status.HTTP_204_NO_CONTENT,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    response = await call_next(request)
+    if is_public:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
 # Mount các Router API
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
@@ -109,6 +130,14 @@ app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(catalog_items_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 app.include_router(customer_care_router, prefix=settings.API_V1_STR)
+app.include_router(web_forms_router, prefix=settings.API_V1_STR)
+app.include_router(public_forms_router, prefix=settings.API_V1_STR)
+
+# Phục vụ file script tải form nhúng trực tiếp
+@app.get("/static/form-loader.js", tags=["Public Web-to-Lead Forms (SCRUM-24)"])
+def serve_form_loader_js(request: Request):
+    from app.routers.public_forms import get_form_loader_script
+    return get_form_loader_script(request)
 
 
 @app.get("/", summary="Health Check")
