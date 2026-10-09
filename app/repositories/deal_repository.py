@@ -1,6 +1,8 @@
-from typing import Optional, List
-from sqlalchemy.orm import Session
+from datetime import date, datetime, time, timedelta
+from typing import List, Optional
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.models.deal import Deal
 from app.models.user import User
@@ -8,11 +10,7 @@ from app.repositories.base_repository import BaseRepository
 
 
 class DealRepository(BaseRepository):
-    """
-    Tầng Repository xử lý truy vấn dữ liệu Cơ hội bán hàng (Kanban Deal / Opportunity Pipeline).
-    Tích hợp Centralized Data Scope Filter ở mức CSDL.
-    Tuân thủ Clean Layered Architecture & 100% Type Hints.
-    """
+    """Deal queries with centralized data-scope enforcement."""
 
     @staticmethod
     def get_all(
@@ -20,31 +18,40 @@ class DealRepository(BaseRepository):
         user: Optional[User] = None,
         search: Optional[str] = None,
         stage: Optional[str] = None,
+        outcome: Optional[str] = None,
+        closed_from: Optional[date] = None,
+        closed_to: Optional[date] = None,
+        signed_from: Optional[date] = None,
+        signed_to: Optional[date] = None,
+        lost_reason_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[Deal]:
-        """Lấy danh sách deals thỏa mãn Data Scope của người dùng."""
         query = db.query(Deal)
-
-        # 1. Lọc theo Data Scope
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Deal)
-
-        # 2. Tìm kiếm từ khóa
         if search and search.strip():
             query = query.filter(Deal.title.ilike(f"%{search.strip()}%"))
-
-        # 3. Lọc theo stage
         if stage and stage.lower() != "all":
             query = query.filter(Deal.stage == stage.lower())
+        if outcome and outcome.upper() != "ALL":
+            query = query.filter(Deal.status == outcome.upper())
+        if closed_from:
+            query = query.filter(Deal.closed_at >= datetime.combine(closed_from, time.min))
+        if closed_to:
+            query = query.filter(Deal.closed_at < datetime.combine(closed_to + timedelta(days=1), time.min))
+        if signed_from:
+            query = query.filter(Deal.signed_date >= signed_from)
+        if signed_to:
+            query = query.filter(Deal.signed_date <= signed_to)
+        if lost_reason_id:
+            query = query.filter(Deal.lost_reason_id == lost_reason_id)
 
         query = query.order_by(Deal.created_at.desc())
-
         if skip is not None:
             query = query.offset(skip)
         if limit is not None:
             query = query.limit(limit)
-
         return query.all()
 
     @staticmethod
@@ -53,31 +60,22 @@ class DealRepository(BaseRepository):
         user: User,
         search: Optional[str] = None,
         stage: Optional[str] = None,
+        outcome: Optional[str] = None,
     ) -> List[Deal]:
-        """Xuất danh sách Deals ra file Excel tuân thủ Data Scope."""
-        query = db.query(Deal)
-        query = BaseRepository.apply_data_scope_filter(query, user, Deal)
-
-        if search and search.strip():
-            query = query.filter(Deal.title.ilike(f"%{search.strip()}%"))
-
-        if stage and stage.lower() != "all":
-            query = query.filter(Deal.stage == stage.lower())
-
-        return query.order_by(Deal.created_at.desc()).all()
+        return DealRepository.get_all(
+            db=db,
+            user=user,
+            search=search,
+            stage=stage,
+            outcome=outcome,
+        )
 
     @staticmethod
     def get_by_id(db: Session, deal_id: str) -> Optional[Deal]:
-        """Truy vấn deal theo ID không kiểm tra scope (Dùng nội bộ)."""
         return db.query(Deal).filter(Deal.id == deal_id).first()
 
     @staticmethod
     def get_scoped_by_id(db: Session, deal_id: str, user: User) -> Deal:
-        """
-        Truy vấn chi tiết Deal có bảo vệ Data Scope:
-        - Không tồn tại -> HTTP 404
-        - Tồn tại nhưng không thuộc quyền hạn -> HTTP 403 Forbidden
-        """
         return BaseRepository.get_scoped_record_or_raise(
             db=db,
             model=Deal,
@@ -86,6 +84,10 @@ class DealRepository(BaseRepository):
             not_found_msg="Không tìm thấy cơ hội bán hàng.",
             forbidden_msg="Bạn không có quyền truy cập dữ liệu này.",
         )
+
+    @staticmethod
+    def get_for_update(db: Session, deal_id: str) -> Optional[Deal]:
+        return db.query(Deal).filter(Deal.id == deal_id).with_for_update().first()
 
     @staticmethod
     def create(db: Session, deal: Deal) -> Deal:
@@ -97,6 +99,12 @@ class DealRepository(BaseRepository):
     @staticmethod
     def update_stage(db: Session, deal: Deal, new_stage: str) -> Deal:
         deal.stage = new_stage
+        db.commit()
+        db.refresh(deal)
+        return deal
+
+    @staticmethod
+    def update(db: Session, deal: Deal) -> Deal:
         db.commit()
         db.refresh(deal)
         return deal

@@ -33,6 +33,6 @@ class User(Base):
     # Relationships
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     customers = relationship("Customer", back_populates="assigned_user")
-    deals = relationship("Deal", back_populates="owner")
+    deals = relationship("Deal", back_populates="owner", foreign_keys="Deal.owner_id")
     roles = relationship("Role", secondary="user_roles", back_populates="users")
     teams = relationship("Team", secondary="user_teams", back_populates="users")

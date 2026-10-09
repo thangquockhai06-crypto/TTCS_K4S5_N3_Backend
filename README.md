@@ -189,3 +189,37 @@ Bộ test bao gồm:
 - `tests/test_scrum79_excel_import.py` (6 tests chi tiết xử lý tải template, preview & batch import)
 
 
+
+## Opportunity close/reopen lifecycle
+
+The existing `deals` table is the opportunity entity. Both `/api/v1/opportunities` and
+`/api/v1/deals` expose the same lifecycle:
+
+- `POST /api/v1/opportunities/{id}/close`
+  - WON: `{"outcome":"WON","actualValue":"125000000.00","signedDate":"2026-03-31"}`
+  - LOST: `{"outcome":"LOST","lostReasonId":"<reason-id>","lostReasonNote":"...","competitorId":"<optional-id>"}`
+- `POST /api/v1/opportunities/{id}/reopen`
+  - `{"reopenReason":"Customer changed approval path"}`
+- `GET /api/v1/opportunities/{id}/history`
+
+Responses include `outcome`, `status`, `closedAt`, `closedBy`, `actualValue`,
+`signedDate`, lost-reason and competitor fields, reopen metadata, and append-only
+close/reopen history. List queries support `outcome`, `closedFrom`/`closedTo`,
+`signedFrom`/`signedTo`, and `lostReasonId` (snake-case query aliases are also accepted).
+
+WON requires an actual value greater than zero and a signing date no later than the
+server's current date. LOST requires an active LOST catalog reason; `OTHER` also
+requires a non-empty note. Closed deals are immutable until a Team Lead or higher
+role reopens them within the existing data scope. Reopening restores the last open
+stage and clears current close-only fields; the prior values remain in history.
+
+There is no existing KPI persistence module. `KPIService.get_won_value_for_owner`
+and `GET /api/v1/dashboard/kpi/won-value` aggregate active WON rows by owner and
+the inclusive `signed_date` period. Reopened rows are excluded automatically, so a
+re-close is counted once. Currency remains the existing single-currency VND
+convention and database money columns use `DECIMAL(15,2)`.
+
+The project uses startup compatibility migrations rather than versioned migration
+files. `run_auto_migrations()` adds the close/reopen columns, creates the history
+table, seeds the `OTHER` fallback, and backfills legacy `stage=won/lost` rows:
+WON uses the legacy value and close timestamp; LOST uses the active `OTHER` reason.

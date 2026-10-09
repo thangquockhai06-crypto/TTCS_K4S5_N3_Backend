@@ -191,10 +191,94 @@ def run_auto_migrations(target_engine=None):
                         connection.execute(text(f"ALTER TABLE products ADD COLUMN {column_name} {definition}"))
                 if "selling_price" in product_columns and not had_list_price:
                     connection.execute(text("UPDATE products SET list_price = selling_price"))
+            if "deals" in existing_tables:
+                deal_columns = {column["name"] for column in inspector.get_columns("deals")}
+                deal_additions = {
+                    "status": "VARCHAR(10) NOT NULL DEFAULT 'OPEN'",
+                    "closed_at": "DATETIME",
+                    "closed_by": "VARCHAR(36)",
+                    "actual_value": "DECIMAL(15,2)",
+                    "signed_date": "DATE",
+                    "lost_reason_id": "VARCHAR(36)",
+                    "lost_reason_note": "TEXT",
+                    "competitor_id": "VARCHAR(36)",
+                    "reopened_at": "DATETIME",
+                    "reopened_by": "VARCHAR(36)",
+                    "reopen_reason": "TEXT",
+                    "last_open_stage": "VARCHAR(30)",
+                }
+                for column_name, definition in deal_additions.items():
+                    if column_name not in deal_columns:
+                        connection.execute(text(f"ALTER TABLE deals ADD COLUMN {column_name} {definition}"))
+                connection.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_deal_status "
+                        "ON deals (status)"
+                    )
+                )
+                if eng.dialect.name == "sqlite":
+                    connection.exec_driver_sql(
+                        """
+                        CREATE TRIGGER IF NOT EXISTS prevent_closed_deal_update
+                        BEFORE UPDATE OF title, value, stage, probability, customer_id, owner_id, expected_close_date
+                        ON deals
+                        WHEN OLD.status IN ('WON', 'LOST') AND NEW.status = OLD.status
+                        BEGIN
+                            SELECT RAISE(ABORT, 'Closed opportunities cannot be edited.');
+                        END
+                        """
+                    )
+
+            if "deal_outcome_history" not in existing_tables:
+                # Base.metadata.create_all normally creates this table. This branch
+                # keeps direct migration calls safe for older installations.
+                from app.models.deal_outcome_history import DealOutcomeHistory
+                DealOutcomeHistory.__table__.create(bind=connection, checkfirst=True)
             if "quotations" in existing_tables:
                 quote_columns = {column["name"] for column in inspector.get_columns("quotations")}
                 if "discount_approval_required" not in quote_columns:
                     connection.execute(text("ALTER TABLE quotations ADD COLUMN discount_approval_required BOOLEAN NOT NULL DEFAULT 0"))
+        if "deals" in existing_tables and "win_loss_reasons" in existing_tables:
+            from sqlalchemy.orm import sessionmaker
+            from app.models.deal import Deal
+            from app.models.win_loss import WinLossReason
+
+            MigrationSession = sessionmaker(bind=eng)
+            with MigrationSession() as migration_session:
+                other_reason = (
+                    migration_session.query(WinLossReason)
+                    .filter(WinLossReason.code == "OTHER")
+                    .first()
+                )
+                if other_reason is None:
+                    other_reason = WinLossReason(
+                        result_type="LOST",
+                        code="OTHER",
+                        reason="Khác",
+                        description="Lý do khác; bắt buộc ghi chú chi tiết.",
+                        is_active=True,
+                        usage_count=0,
+                    )
+                    migration_session.add(other_reason)
+                    migration_session.flush()
+
+                for deal in migration_session.query(Deal).all():
+                    normalized_stage = (deal.stage or "").lower()
+                    if deal.status == "OPEN" and normalized_stage == "won":
+                        deal.status = "WON"
+                        deal.actual_value = deal.value
+                        deal.signed_date = (deal.updated_at or deal.created_at).date()
+                        deal.closed_at = deal.updated_at or deal.created_at
+                        deal.closed_by = deal.owner_id
+                    elif deal.status == "OPEN" and normalized_stage == "lost":
+                        deal.status = "LOST"
+                        deal.lost_reason_id = other_reason.id
+                        deal.closed_at = deal.updated_at or deal.created_at
+                        deal.closed_by = deal.owner_id
+                    elif deal.status == "OPEN" and not deal.last_open_stage:
+                        deal.last_open_stage = normalized_stage or "lead"
+                migration_session.commit()
+
         if "customers" in existing_tables:
             from sqlalchemy.orm import sessionmaker
             from app.models.customer import Customer, Contact

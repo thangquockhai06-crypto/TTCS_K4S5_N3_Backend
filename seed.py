@@ -302,6 +302,35 @@ def seed_database():
             print("  -> Da nap thanh cong 6 ly do Thang/Thua mac dinh.")
         else:
             print("  -> Danh muc ly do Thang/Thua da co san.")
+        required_lost_reasons = [
+            ("PRICE_TOO_HIGH", "Giá quá cao", "Giá đề xuất vượt ngân sách hoặc kỳ vọng của khách hàng."),
+            ("NO_DECISION", "Không có quyết định", "Khách hàng không ra quyết định trong thời hạn dự kiến."),
+            ("BAD_TIMING", "Thời điểm không phù hợp", "Ngân sách hoặc ưu tiên của khách hàng chưa phù hợp."),
+            ("PRODUCT_GAP", "Thiếu tính năng sản phẩm", "Sản phẩm chưa đáp ứng một yêu cầu quan trọng."),
+            ("OTHER", "Khác", "Lý do khác; bắt buộc ghi chú chi tiết."),
+        ]
+        existing_reason_codes = {
+            code
+            for (code,) in db.query(WinLossReason.code)
+            .filter(WinLossReason.result_type == "LOST")
+            .all()
+        }
+        missing_reasons = [
+            WinLossReason(
+                result_type="LOST",
+                code=code,
+                reason=reason,
+                description=description,
+                is_active=True,
+                usage_count=0,
+            )
+            for code, reason, description in required_lost_reasons
+            if code not in existing_reason_codes
+        ]
+        if missing_reasons:
+            db.add_all(missing_reasons)
+            db.commit()
+
 
         if db.query(Competitor).count() == 0:
             competitors = [

@@ -121,10 +121,60 @@ CREATE TABLE IF NOT EXISTS deals (
     customer_id VARCHAR(36) NOT NULL,
     owner_id VARCHAR(36) NOT NULL,
     expected_close_date DATE DEFAULT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'OPEN',
+    closed_at DATETIME DEFAULT NULL,
+    closed_by VARCHAR(36) DEFAULT NULL,
+    actual_value DECIMAL(15, 2) DEFAULT NULL,
+    signed_date DATE DEFAULT NULL,
+    lost_reason_id VARCHAR(36) DEFAULT NULL,
+    lost_reason_note TEXT DEFAULT NULL,
+    competitor_id VARCHAR(36) DEFAULT NULL,
+    reopened_at DATETIME DEFAULT NULL,
+    reopened_by VARCHAR(36) DEFAULT NULL,
+    reopen_reason TEXT DEFAULT NULL,
+    last_open_stage VARCHAR(30) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT ck_deal_status_valid CHECK (status IN ('OPEN', 'WON', 'LOST')),
+    CONSTRAINT ck_deal_outcome_fields CHECK (
+        (status = 'OPEN' AND actual_value IS NULL AND signed_date IS NULL AND lost_reason_id IS NULL
+            AND lost_reason_note IS NULL AND competitor_id IS NULL AND closed_at IS NULL AND closed_by IS NULL)
+        OR (status = 'WON' AND actual_value IS NOT NULL AND actual_value > 0 AND signed_date IS NOT NULL
+            AND lost_reason_id IS NULL AND lost_reason_note IS NULL AND competitor_id IS NULL
+            AND closed_at IS NOT NULL AND closed_by IS NOT NULL)
+        OR (status = 'LOST' AND actual_value IS NULL AND signed_date IS NULL AND lost_reason_id IS NOT NULL
+            AND closed_at IS NOT NULL AND closed_by IS NOT NULL)
+    ),
+    INDEX idx_deal_status (status),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reopened_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS deal_outcome_history (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    outcome VARCHAR(10) NOT NULL,
+    previous_status VARCHAR(10) NOT NULL,
+    resulting_status VARCHAR(10) NOT NULL,
+    previous_stage VARCHAR(30) DEFAULT NULL,
+    resulting_stage VARCHAR(30) DEFAULT NULL,
+    actor_id VARCHAR(36) DEFAULT NULL,
+    event_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME DEFAULT NULL,
+    closed_by VARCHAR(36) DEFAULT NULL,
+    actual_value DECIMAL(15, 2) DEFAULT NULL,
+    signed_date DATE DEFAULT NULL,
+    lost_reason_id VARCHAR(36) DEFAULT NULL,
+    lost_reason_note TEXT DEFAULT NULL,
+    competitor_id VARCHAR(36) DEFAULT NULL,
+    reopen_reason TEXT DEFAULT NULL,
+    INDEX idx_deal_outcome_history_deal (deal_id),
+    INDEX idx_deal_outcome_history_event (event_at),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. BẢNG NHẬT KÝ HOẠT ĐỘNG (ACTIVITIES)
@@ -325,7 +375,12 @@ VALUES
     ('rs-won-03', 'WON', 'SUPPORT_EXCELLENT', 'Dịch vụ Onboarding & Hỗ trợ kỹ thuật 24/7 tận tâm', 'Cam kết SLA phản hồi dưới 15 phút và hỗ trợ trực tiếp tại doanh nghiệp', 1, 24),
     ('rs-lost-01', 'LOST', 'BUDGET_CUT', 'Khách hàng cắt giảm ngân sách đầu tư CNTT năm nay', 'Dự án bị hoãn sang quý sau do biến động kinh doanh nội bộ khách hàng', 1, 19),
     ('rs-lost-02', 'LOST', 'CHOSE_COMPETITOR', 'Khách hàng chọn đối thủ có giá thành thấp hơn', 'Khách hàng chấp nhận giải pháp ít tính năng hơn để tiết kiệm chi phí ban đầu', 1, 14),
-    ('rs-lost-03', 'LOST', 'INTERNAL_BUILD', 'Khách hàng quyết định tự xây dựng phần mềm nội bộ (In-house)', 'Đội ngũ IT nội bộ của khách hàng tiếp quản dự án', 1, 5)
+    ('rs-lost-03', 'LOST', 'INTERNAL_BUILD', 'Khách hàng quyết định tự xây dựng phần mềm nội bộ (In-house)', 'Đội ngũ IT nội bộ của khách hàng tiếp quản dự án', 1, 5),
+    ('rs-lost-04', 'LOST', 'PRICE_TOO_HIGH', 'Giá quá cao', 'Giá đề xuất vượt ngân sách hoặc kỳ vọng của khách hàng', 1, 0),
+    ('rs-lost-05', 'LOST', 'NO_DECISION', 'Không có quyết định', 'Khách hàng không ra quyết định trong thời hạn dự kiến', 1, 0),
+    ('rs-lost-06', 'LOST', 'BAD_TIMING', 'Thời điểm không phù hợp', 'Ngân sách hoặc ưu tiên của khách hàng chưa phù hợp', 1, 0),
+    ('rs-lost-07', 'LOST', 'PRODUCT_GAP', 'Thiếu tính năng sản phẩm', 'Sản phẩm chưa đáp ứng một yêu cầu quan trọng', 1, 0),
+    ('rs-lost-08', 'LOST', 'OTHER', 'Khác', 'Lý do khác; bắt buộc ghi chú chi tiết', 1, 0)
 ON DUPLICATE KEY UPDATE reason = VALUES(reason);
 
 -- Nạp đối thủ cạnh tranh mặc định
