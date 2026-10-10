@@ -1037,3 +1037,8 @@ class Database:
 
 # Singleton instance toàn cục
 db = Database()
+
+    def serialize_version_snapshot(self, version_obj: dict) -> str:
+        """Chuẩn hóa lưu trữ JSON snapshot đóng băng của một phiên bản"""
+        import json
+        return json.dumps(version_obj, default=str)
