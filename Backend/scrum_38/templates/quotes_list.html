@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Báo Giá - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title"><span>📑</span> Quản Lý Báo Giá CPQ</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Chỉ những báo giá ở trạng thái <strong style="color: var(--success);">Đã chấp nhận (ACCEPTED)</strong> mới đủ điều kiện chuyển thành hợp đồng kinh tế.
+            </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{{ url_for('quotes_list') }}" class="btn {% if not current_status %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 12.5px;">Tất cả ({{ quotes | length }})</a>
+            <a href="{{ url_for('quotes_list', status='ACCEPTED') }}" class="btn {% if current_status == 'ACCEPTED' %}btn-success{% else %}btn-secondary{% endif %}" style="font-size: 12.5px;">
+                ✓ Đã chấp nhận ({{ ready_count }})
+            </a>
+            <a href="{{ url_for('quotes_list', status='CONVERTED') }}" class="btn {% if current_status == 'CONVERTED' %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 12.5px;">Đã lập hợp đồng</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Mã Báo Giá</th>
+                    <th>Tiêu Đề & Khách Hàng</th>
+                    <th>Cơ Hội CRM</th>
+                    <th>Số Dòng Sản Phẩm</th>
+                    <th>Tổng Giá Trị</th>
+                    <th>Trạng Thái</th>
+                    <th style="text-align: right;">Thao Tác Kế Toán</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in quotes %}
+                <tr>
+                    <td>
+                        <strong style="color: var(--primary);">{{ q.quote_id }}</strong>
+                        <div style="font-size: 11.5px; color: var(--text-muted);">{{ q.created_at | datetime }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: var(--text-main);">{{ q.customer_name }}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">{{ q.title }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-opp-proposal">{{ q.opportunity_id }}</span>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">{{ q.opportunity_name }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-locked">🔒 {{ q['items'] | length }} SP</span>
+                    </td>
+                    <td>
+                        <strong style="color: var(--success); font-size: 14.5px;">{{ q.grand_total | currency }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge {{ QUOTE_STATUS_BADGES.get(q.status, '') }}">
+                            {{ QUOTE_STATUS_LABELS.get(q.status, q.status) }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        {% if q.status == 'ACCEPTED' %}
+                            <a href="{{ url_for('convert_quote', quote_id=q.quote_id) }}" class="btn btn-success" style="font-size: 12.5px; padding: 6px 12px;">
+                                ⚡ Chuyển Thành HĐ
+                            </a>
+                        {% elif q.status == 'CONVERTED' %}
+                            <a href="{{ url_for('contract_detail', contract_id=q.contract_id) }}" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                                📄 Xem HĐ {{ q.contract_number }}
+                            </a>
+                        {% else %}
+                            <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+                                Chưa chấp nhận
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

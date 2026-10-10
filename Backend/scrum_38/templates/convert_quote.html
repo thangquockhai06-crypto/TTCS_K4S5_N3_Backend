@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Chuyển Báo Giá Thành Hợp Đồng - {{ quote.quote_id }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('quotes_list') }}" style="text-decoration: none; color: var(--text-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 4px;">
+        ← Quay lại Danh sách Báo giá
+    </a>
+</div>
+
+<!-- KHUNG THỰC THI CHÍNH CỦA USER STORY -->
+<div class="card" style="border-top: 4px solid var(--primary);">
+    <div class="card-header">
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span class="badge badge-accepted">✓ Báo giá đã được chấp nhận</span>
+                <span style="font-size: 12px; color: var(--text-muted);">Mã: <strong>{{ quote.quote_id }}</strong></span>
+            </div>
+            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main);">
+                Chuyển Báo Giá Thành Hợp Đồng Kinh Tế
+            </h2>
+            <p style="font-size: 13.5px; color: var(--text-muted); margin-top: 4px;">
+                Áp dụng quy trình số hóa kế toán: Tự động kế thừa toàn bộ dòng sản phẩm, khớp chính xác số liệu tài chính và đồng bộ Đóng Thắng Cơ hội CRM.
+            </p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-muted);">Tổng giá trị hợp đồng kế thừa:</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--success);">{{ quote.grand_total | currency }}</div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('convert_quote', quote_id=quote.quote_id) }}" id="formConvertQuote">
+        <!-- ===================================================================
+             TIÊU CHÍ 2 & 4: KHAI BÁO PHÁP LÝ HỢP ĐỒNG & SỐ HỢP ĐỒNG DUY NHẤT
+             =================================================================== -->
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <span>📋</span> Khai Báo Thông Tin Pháp Lý Hợp Đồng (Tiêu chí 2 & Tiêu chí 4)
+                </h3>
+                <span style="font-size: 12px; color: var(--text-muted);">Các trường đánh dấu <span class="required" style="color: var(--danger);">*</span> là bắt buộc</span>
+            </div>
+
+            <div class="form-grid">
+                <!-- SỐ HỢP ĐỒNG (TIÊU CHÍ 4: DUY NHẤT) -->
+                <div class="form-group">
+                    <label class="form-label" for="contract_number">
+                        Số Hợp Đồng <span class="required">*</span>
+                        <span style="font-weight: normal; color: var(--primary); font-size: 12px;">(Tiêu chí 4: Bắt buộc duy nhất toàn hệ thống)</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-control" id="contract_number" name="contract_number" 
+                               placeholder="Ví dụ: HD-2026/002" required autocomplete="off"
+                               value="{{ request.form.get('contract_number', suggested_contract_number) }}">
+                        <button type="button" class="btn btn-secondary" id="btnQuickFill" 
+                                data-suggested="{{ suggested_contract_number }}" style="white-space: nowrap; font-size: 12px;">
+                            💡 Gợi ý số mới
+                        </button>
+                    </div>
+                    <!-- Feedback AJAX Real-time -->
+                    <div id="contractNumberFeedback" class="validation-feedback"></div>
+                    <small class="form-hint">
+                        💡 <em>Thử gõ <strong>HD-2026/001</strong> (số HĐ đã tồn tại) để kiểm chứng hệ thống tự động phát hiện và chặn trùng lặp ngay tức thì!</em>
+                    </small>
+                </div>
+
+                <!-- ĐIỀU KHOẢN THANH TOÁN (TIÊU CHÍ 2) -->
+                <div class="form-group">
+                    <label class="form-label" for="payment_terms">
+                        Điều Khoản Thanh Toán <span class="required">*</span>
+                    </label>
+                    <select class="form-control" id="payment_terms" name="payment_terms" required>
+                        {% for opt in PAYMENT_TERMS_OPTIONS %}
+                            <option value="{{ opt.name }}" {% if loop.first or opt.name == quote.payment_terms %}selected{% endif %}>
+                                {{ opt.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Chọn phương thức và tiến độ thanh toán theo thỏa thuận chốt với khách hàng.</small>
+                </div>
+
+                <!-- NGÀY KÝ (TIÊU CHÍ 2) -->
+                <div class="form-group">
+                    <label class="form-label" for="signed_date">
+                        Ngày Ký Hợp Đồng <span class="required">*</span>
+                    </label>
+                    <input type="date" class="form-control" id="signed_date" name="signed_date" 
+                           value="{{ request.form.get('signed_date', today) }}" required>
+                    <small class="form-hint">Ngày đại diện pháp luật hai bên ký kết hợp đồng.</small>
+                </div>
+
+                <!-- THỜI HẠN HIỆU LỰC & HẾT HẠN (TIÊU CHÍ 2) -->
+                <div class="form-group">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label class="form-label" for="effective_date">
+                                Ngày Hiệu Lực <span class="required">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="effective_date" name="effective_date" 
+                                   value="{{ request.form.get('effective_date', today) }}" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="expiration_date">
+                                Ngày Hết Hạn <span class="required">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="expiration_date" name="expiration_date" 
+                                   value="{{ request.form.get('expiration_date', next_year) }}" required>
+                        </div>
+                    </div>
+                    <div id="dateFeedback" class="validation-feedback"></div>
+                    <small class="form-hint">Ngày hiệu lực phải trước hoặc bằng ngày hết hạn hợp đồng.</small>
+                </div>
+
+                <!-- GHI CHÚ ĐIỀU KHOẢN PHỤ (NẾU CÓ) -->
+                <div class="form-group full-width">
+                    <label class="form-label" for="payment_terms_notes">
+                        Ghi Chú Điều Khoản Bổ Sung / Thông Tin Tài Khoản Ngân Hàng
+                    </label>
+                    <input type="text" class="form-control" id="payment_terms_notes" name="payment_terms_notes" 
+                           placeholder="Ví dụ: Chuyển khoản qua số tài khoản Vietcombank 101889988999 của AutoLead Solutions..."
+                           value="{{ request.form.get('payment_terms_notes', '') }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================
+             TIÊU CHÍ 3: CƠ HỘI CRM TỰ ĐỘNG CHUYỂN SANG ĐÓNG THẮNG (CLOSED_WON)
+             =================================================================== -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px;">
+            <div style="display: flex; align-items: flex-start; gap: 14px;">
+                <div style="font-size: 28px;">🏆</div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <h4 style="font-size: 15px; font-weight: 800; color: #166534;">
+                            ĐÁP ỨNG TIÊU CHÍ 3: Tự Động Chuyển Cơ Hội CRM Sang Đóng Thắng (Closed Won)
+                        </h4>
+                        <span class="badge badge-opp-won">⚡ Tự động hóa 100%</span>
+                    </div>
+                    <p style="font-size: 13.5px; color: #14532d; line-height: 1.5;">
+                        Khi bạn bấm xác nhận lập hợp đồng, hệ thống sẽ <strong>tự động tìm Cơ hội liên kết [{{ quote.opportunity_id }}: {{ quote.opportunity_name }}]</strong> 
+                        và chuyển trạng thái từ 
+                        <span class="badge badge-opp-negotiation">{{ OPP_STAGE_LABELS.get(opportunity.stage, opportunity.stage) }}</span> 
+                        sang 
+                        <span class="badge badge-opp-won">🎉 Đóng thắng (CLOSED_WON)</span>.
+                    </p>
+                    <div style="margin-top: 10px; background: rgba(255,255,255,0.7); padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; color: #166534; display: flex; justify-content: space-between; align-items: center;">
+                        <span>
+                            Giá trị cơ hội ban đầu: <strong>{{ opportunity.value | currency }}</strong> 
+                            ➔ Tự động cập nhật đúng bằng giá trị hợp đồng: <strong>{{ quote.grand_total | currency }}</strong>
+                        </span>
+                        <span style="font-size: 11.5px; color: #047857; font-weight: 700;">✓ KHỚP TỪNG ĐỒNG</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================
+             TIÊU CHÍ 1: KẾ THỪA TOÀN BỘ DÒNG SẢN PHẨM & GIÁ ĐÃ CHỐT, KHÔNG NHẬP LẠI
+             =================================================================== -->
+        <div class="inherited-box">
+            <div class="inherited-header">
+                <div>
+                    <h3 style="font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                        <span>🔒</span> Dòng Sản Phẩm & Giá Chốt Kế Thừa Từ Báo Giá (Tiêu chí 1)
+                    </h3>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                        Kế toán không phải gõ lại số liệu. Dữ liệu kế thừa 100% nguyên vẹn để đảm bảo tính pháp lý và không xảy ra sai sót.
+                    </p>
+                </div>
+                <span class="badge badge-locked">🔒 Read-Only - Không Gõ Lại</span>
+            </div>
+
+            <!-- BẢNG DÒNG SẢN PHẨM KẾ THỪA NGUYÊN VẸN -->
+            <div class="table-responsive" style="background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">STT</th>
+                            <th>Mã & Tên Sản Phẩm / Dịch Vụ</th>
+                            <th style="text-align: center;">ĐVT</th>
+                            <th style="text-align: center;">Số Lượng</th>
+                            <th style="text-align: right;">Đơn Giá Chốt</th>
+                            <th style="text-align: right;">Chiết Khấu Dòng</th>
+                            <th style="text-align: right;">Thành Tiền (VND)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in quote['items'] %}
+                        <tr>
+                            <td style="text-align: center; color: var(--text-muted);">{{ loop.index }}</td>
+                            <td>
+                                <strong style="color: var(--text-main);">{{ item.product_name }}</strong>
+                                <div style="font-size: 11px; color: var(--text-muted);">Mã SKU: {{ item.product_id }}</div>
+                            </td>
+                            <td style="text-align: center;">{{ item.unit }}</td>
+                            <td style="text-align: center; font-weight: 700;">{{ item.quantity }}</td>
+                            <td style="text-align: right;">{{ item.unit_price | currency }}</td>
+                            <td style="text-align: right; color: var(--warning);">
+                                {% if item.discount_percent > 0 %}
+                                    -{{ item.discount_percent }}% ({{ item.discount_amount | currency }})
+                                {% else %}
+                                    <span style="color: var(--text-light);">-</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; font-weight: 700; color: #0f172a;">
+                                {{ item.line_total | currency }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- BẢNG TỔNG KẾT TÀI CHÍNH KẾ THỪA -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                <div style="width: 380px; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13.5px; color: var(--text-muted);">
+                        <span>Tạm tính (Subtotal):</span>
+                        <strong style="color: var(--text-main);">{{ quote.subtotal | currency }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13.5px; color: var(--text-muted);">
+                        <span>Tổng chiết khấu đã chốt:</span>
+                        <strong style="color: var(--danger);">-{{ quote.discount_total | currency }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13.5px; color: var(--text-muted);">
+                        <span>Tiền trước thuế:</span>
+                        <strong style="color: var(--text-main);">{{ quote.after_discount | currency }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13.5px; color: var(--text-muted);">
+                        <span>Thuế GTGT (VAT {{ quote.vat_percent }}%):</span>
+                        <strong style="color: var(--text-main);">{{ quote.vat_amount | currency }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid var(--border-color); font-size: 16px;">
+                        <span style="font-weight: 700; color: var(--text-main);">TỔNG GIÁ TRỊ HỢP ĐỒNG:</span>
+                        <strong style="font-weight: 800; color: var(--success); font-size: 18px;">{{ quote.grand_total | currency }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THÔNG TIN KHÁCH HÀNG KẾ THỪA -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px;">
+            <h4 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px; color: var(--text-main);">
+                🏢 Thông Tin Khách Hàng (Bên Mua) Kế Thừa Từ Báo Giá:
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
+                <div><span style="color: var(--text-muted);">Đơn vị:</span> <strong>{{ quote.customer_name }}</strong></div>
+                <div><span style="color: var(--text-muted);">Mã số thuế:</span> <strong>{{ quote.customer_tax_code or 'Chưa cập nhật' }}</strong></div>
+                <div><span style="color: var(--text-muted);">Người đại diện:</span> <strong>{{ quote.customer_contact }}</strong></div>
+                <div style="grid-column: 1 / -1;"><span style="color: var(--text-muted);">Địa chỉ trụ sở:</span> {{ quote.customer_address }}</div>
+            </div>
+        </div>
+
+        <!-- NÚT HÀNH ĐỘNG KẾ TOÁN -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px;">
+            <a href="{{ url_for('quotes_list') }}" class="btn btn-secondary">
+                Hủy bỏ
+            </a>
+
+            <button type="submit" class="btn btn-success btn-lg" id="btnSubmitConvert">
+                <span>📝</span> Xác Nhận Tạo Hợp Đồng & Đóng Thắng Cơ Hội (AC1 - AC4)
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
