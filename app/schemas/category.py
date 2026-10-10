@@ -34,4 +34,5 @@ class ReorderCategoryItem(BaseModel):
 
 
 class ReorderCategoriesDTO(BaseModel):
-    items: List[ReorderCategoryItem]
+    items: Optional[List[ReorderCategoryItem]] = None
+    ordered_ids: Optional[List[str]] = None

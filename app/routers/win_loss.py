@@ -8,8 +8,10 @@ from app.models.win_loss import WinLossReason, Competitor
 from app.schemas.win_loss import (
     WinLossReasonDTO,
     CreateWinLossReasonDTO,
+    UpdateWinLossReasonDTO,
     CompetitorDTO,
     CreateCompetitorDTO,
+    UpdateCompetitorDTO,
 )
 
 router = APIRouter(prefix="/win-loss-config", tags=["Win/Loss Reasons & Competitors (S2-10)"])
@@ -89,11 +91,36 @@ def create_win_loss_reason(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WinLossReasonDTO:
+    code_clean = dto.code.strip().upper() if dto.code else ""
+    reason_clean = dto.reason.strip() if dto.reason else ""
+    result_type_clean = dto.result_type.strip().upper() if dto.result_type else ""
+
+    if not code_clean:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mã lý do không được để trống.")
+    if not reason_clean:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nội dung lý do không được để trống.")
+    if result_type_clean not in ["WON", "LOST"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phân loại phải là WON hoặc LOST.")
+
+    existing_code = db.query(WinLossReason).filter(
+        WinLossReason.code == code_clean,
+        WinLossReason.result_type == result_type_clean,
+    ).first()
+    if existing_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Mã lý do '{code_clean}' đã tồn tại trong nhóm {result_type_clean}.")
+
+    existing_reason = db.query(WinLossReason).filter(
+        WinLossReason.reason == reason_clean,
+        WinLossReason.result_type == result_type_clean,
+    ).first()
+    if existing_reason:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Lý do '{reason_clean}' đã tồn tại trong nhóm {result_type_clean}.")
+
     reason = WinLossReason(
-        result_type=dto.result_type.upper(),
-        code=dto.code.strip().upper(),
-        reason=dto.reason.strip(),
-        description=dto.description,
+        result_type=result_type_clean,
+        code=code_clean,
+        reason=reason_clean,
+        description=dto.description.strip() if dto.description else None,
     )
     db.add(reason)
     db.commit()
@@ -105,6 +132,36 @@ def create_win_loss_reason(
         reason=reason.reason,
         description=reason.description,
         is_active=reason.is_active,
+    )
+
+
+@router.put("/reasons/{reason_id}", response_model=WinLossReasonDTO, summary="Cập nhật lý do Thắng/Thua")
+def update_win_loss_reason(
+    reason_id: str,
+    dto: UpdateWinLossReasonDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WinLossReasonDTO:
+    r = db.query(WinLossReason).filter(WinLossReason.id == reason_id).first()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy lý do.")
+
+    if dto.reason is not None and dto.reason.strip():
+        r.reason = dto.reason.strip()
+    if dto.description is not None:
+        r.description = dto.description.strip() if dto.description else None
+    if dto.is_active is not None:
+        r.is_active = dto.is_active
+
+    db.commit()
+    db.refresh(r)
+    return WinLossReasonDTO(
+        id=r.id,
+        result_type=r.result_type,
+        code=r.code,
+        reason=r.reason,
+        description=r.description,
+        is_active=r.is_active,
     )
 
 
@@ -177,8 +234,16 @@ def create_competitor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CompetitorDTO:
+    clean_name = dto.name.strip() if dto.name else ""
+    if not clean_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tên đối thủ không được để trống.")
+
+    existing = db.query(Competitor).filter(Competitor.name == clean_name).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Đối thủ '{clean_name}' đã tồn tại.")
+
     comp = Competitor(
-        name=dto.name.strip(),
+        name=clean_name,
         website=dto.website.strip() if dto.website else None,
         strengths=dto.strengths,
         weaknesses=dto.weaknesses,
@@ -194,6 +259,40 @@ def create_competitor(
         strengths=comp.strengths,
         weaknesses=comp.weaknesses,
         win_rate=float(comp.win_rate),
+    )
+
+
+@router.put("/competitors/{competitor_id}", response_model=CompetitorDTO, summary="Cập nhật đối thủ cạnh tranh")
+def update_competitor(
+    competitor_id: str,
+    dto: UpdateCompetitorDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CompetitorDTO:
+    c = db.query(Competitor).filter(Competitor.id == competitor_id).first()
+    if not c:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đối thủ.")
+
+    if dto.name is not None and dto.name.strip():
+        c.name = dto.name.strip()
+    if dto.website is not None:
+        c.website = dto.website.strip() if dto.website else None
+    if dto.strengths is not None:
+        c.strengths = dto.strengths
+    if dto.weaknesses is not None:
+        c.weaknesses = dto.weaknesses
+    if dto.win_rate is not None:
+        c.win_rate = dto.win_rate
+
+    db.commit()
+    db.refresh(c)
+    return CompetitorDTO(
+        id=c.id,
+        name=c.name,
+        website=c.website,
+        strengths=c.strengths,
+        weaknesses=c.weaknesses,
+        win_rate=float(c.win_rate),
     )
 
 

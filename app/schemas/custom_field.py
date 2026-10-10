@@ -24,3 +24,17 @@ class CreateCustomFieldDTO(BaseModel):
     options: Optional[str] = None
     is_required: bool = False
     default_value: Optional[str] = None
+
+
+class UpdateCustomFieldDTO(BaseModel):
+    field_label: Optional[str] = None
+    field_type: Optional[str] = None
+    options: Optional[str] = None
+    is_required: Optional[bool] = None
+    default_value: Optional[str] = None
+
+
+class SaveCustomFieldValuesDTO(BaseModel):
+    entity_type: str
+    entity_id: Optional[str] = "sample"
+    values: dict[str, Optional[str]]

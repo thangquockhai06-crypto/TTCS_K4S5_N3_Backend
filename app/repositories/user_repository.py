@@ -47,7 +47,7 @@ class UserRepository:
 
         # 2. Lọc theo vai trò (Role)
         if role and role.strip() and role.lower() != "all":
-            query = query.filter(User.role.ilike(role.strip()))
+            query = query.filter(User.role.ilike(f"%{role.strip()}%"))
 
         # 3. Lọc theo nhóm (Team ID hoặc Name)
         if team and team.strip() and team.lower() != "all":

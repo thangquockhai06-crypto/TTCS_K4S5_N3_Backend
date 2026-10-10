@@ -275,6 +275,45 @@ def test_pipeline_stages_endpoints(client: TestClient, admin_headers: dict):
     assert len(stages) >= 3
     assert all(0 <= s["probability"] <= 100 for s in stages)
 
+    # 1. Create a custom test stage
+    create_res = client.post(
+        "/api/v1/pipelines/stages",
+        json={
+            "name": "Thử nghiệm xóa",
+            "stage_key": "TestDeleteStage",
+            "probability": 30,
+            "color": "#ef4444",
+        },
+        headers=admin_headers,
+    )
+    assert create_res.status_code == 201
+    created_id = create_res.json()["id"]
+
+    # 2. Reorder stages (testing frontend payload format: ordered_stage_ids)
+    all_stages = client.get("/api/v1/pipelines/stages", headers=admin_headers).json()
+    stage_ids = [s["id"] for s in all_stages]
+    reorder_res = client.post(
+        "/api/v1/pipelines/reorder",
+        json={"ordered_stage_ids": stage_ids},
+        headers=admin_headers,
+    )
+    assert reorder_res.status_code == 200
+
+    # 3. Prevent deleting won/lost system stages
+    won_stage = next(s for s in all_stages if s.get("is_won") or s.get("stage_key") == "Won")
+    del_won_res = client.delete(f"/api/v1/pipelines/stages/{won_stage['id']}", headers=admin_headers)
+    assert del_won_res.status_code == 400
+    assert "Không thể xóa giai đoạn chuẩn" in del_won_res.json()["detail"]
+
+    # 4. Successfully delete custom stage
+    del_res = client.delete(f"/api/v1/pipelines/stages/{created_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+    assert "Đã xóa giai đoạn" in del_res.json()["message"]
+
+    # Verify it is no longer in the list
+    after_stages = client.get("/api/v1/pipelines/stages", headers=admin_headers).json()
+    assert not any(s["id"] == created_id for s in after_stages)
+
 
 # ==============================================================================
 # S2-10: Win/Loss Reasons & Competitors Tests

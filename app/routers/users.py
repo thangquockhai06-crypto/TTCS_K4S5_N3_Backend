@@ -26,10 +26,14 @@ def get_users(
     team: Optional[str] = Query(None, description="Lọc theo nhóm"),
     status: Optional[str] = Query(None, description="Lọc theo trạng thái: active, inactive, locked"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=200),
+    limit: int = Query(20, ge=1, le=200),
+    page: Optional[int] = Query(None, ge=1, description="Trang hiện tại"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[UserResponseSchema]:
+    if page is not None and page >= 1:
+        skip = (page - 1) * limit
+
     users, total_count = UserService.list_users(
         db=db,
         search=search,
@@ -39,7 +43,13 @@ def get_users(
         skip=skip,
         limit=limit,
     )
+    total_pages = max(1, (total_count + limit - 1) // limit) if total_count > 0 else 1
+    current_page = (skip // limit) + 1 if limit > 0 else 1
+
     response.headers["X-Total-Count"] = str(total_count)
+    response.headers["X-Total-Pages"] = str(total_pages)
+    response.headers["X-Current-Page"] = str(current_page)
+    response.headers["X-Page-Size"] = str(limit)
     return [UserResponseSchema.model_validate(u) for u in users]
 
 
@@ -163,6 +173,22 @@ def import_users_excel(
     inserted_users: List[Dict[str, Any]] = []
     seen_emails = set()
 
+    # Pre-hash mật khẩu một lần duy nhất thay vì lặp lại tốn tài nguyên
+    default_pwd_hash = get_password_hash("NexusCRM@2026")
+
+    # Bulk pre-fetch email trùng từ CSDL bằng 1 query duy nhất
+    raw_emails = [
+        (r.email or "").strip().lower()
+        for r in payload.rows
+        if r.email and EMAIL_REGEX.match((r.email or "").strip().lower())
+    ]
+    existing_db_emails = set()
+    if raw_emails:
+        for i in range(0, len(raw_emails), 500):
+            chunk = raw_emails[i : i + 500]
+            for u in db.query(User.email).filter(User.email.in_(chunk)).all():
+                existing_db_emails.add(u[0].lower())
+
     for idx, row in enumerate(payload.rows):
         row_num = idx + 1
         name = (row.name or "").strip()
@@ -197,8 +223,7 @@ def import_users_excel(
         seen_emails.add(email)
 
         # 4. Validate Trùng với CSDL hiện có
-        existing_in_db = db.query(User).filter(User.email == email).first()
-        if existing_in_db:
+        if email in existing_db_emails:
             failed_rows.append(InvalidRowDetail(
                 row_index=row_num,
                 data=row.model_dump(),
@@ -219,7 +244,7 @@ def import_users_excel(
         # 6. Insert dòng hợp lệ
         new_user = User(
             email=email,
-            password_hash=get_password_hash("NexusCRM@2026"),
+            password_hash=default_pwd_hash,
             full_name=name,
             role=row.role or "Account Executive",
             title="Chuyên viên Kinh doanh",
@@ -232,6 +257,7 @@ def import_users_excel(
             "email": email,
             "role": new_user.role,
         })
+
 
     db.commit()
 
@@ -288,3 +314,71 @@ def update_my_profile(
     db.commit()
     db.refresh(current_user)
     return UserResponseSchema.model_validate(current_user)
+
+
+# ==============================================================================
+# S2-03: Avatar Upload Endpoint (2MB validation & persistent storage)
+# ==============================================================================
+import os
+import time
+from fastapi import UploadFile, File
+
+MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024  # 2MB
+ALLOWED_IMAGE_TYPES = {
+    "image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "image/x-png", "image/pjpeg"
+}
+ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+
+@router.post("/me/avatar", summary="Tải lên và lưu trữ ảnh đại diện cá nhân (S2-03)")
+async def upload_my_avatar(
+    file: UploadFile = File(..., description="Tệp hình ảnh PNG, JPG hoặc WEBP tối đa 2MB"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ext = os.path.splitext(file.filename or "")[1].lower() if file.filename else ""
+    content_type = (file.content_type or "").lower()
+
+    if content_type not in ALLOWED_IMAGE_TYPES and ext not in ALLOWED_IMAGE_EXTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh PNG, JPG hoặc WEBP.",
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_AVATAR_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dung lượng ảnh ({len(file_bytes) / 1024 / 1024:.2f}MB) vượt quá giới hạn tối đa cho phép là 2MB.",
+        )
+
+    # Xác định phần mở rộng
+    if not ext or ext not in ALLOWED_IMAGE_EXTS:
+        if "jpeg" in content_type or "jpg" in content_type:
+            ext = ".jpg"
+        elif "webp" in content_type:
+            ext = ".webp"
+        else:
+            ext = ".png"
+
+    # Lưu trữ trong thư mục uploads/avatars
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    avatar_dir = os.path.join(base_dir, "uploads", "avatars")
+    os.makedirs(avatar_dir, exist_ok=True)
+
+    filename = f"avatar_{current_user.id}_{int(time.time())}{ext}"
+    file_path = os.path.join(avatar_dir, filename)
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+
+    relative_url = f"/uploads/avatars/{filename}"
+    full_url = f"http://localhost:8000{relative_url}"
+    current_user.avatar_url = full_url
+    db.commit()
+    db.refresh(current_user)
+
+    return {
+        "avatar_url": full_url,
+        "relative_url": relative_url,
+        "message": "Tải lên và cập nhật ảnh đại diện thành công!",
+        "user": UserResponseSchema.model_validate(current_user),
+    }

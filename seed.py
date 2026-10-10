@@ -16,17 +16,15 @@ if sys.platform == "win32":
 # Them thu muc hien tai vao sys.path de import duoc app
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.database import engine, SessionLocal, Base, run_auto_migrations
+from app.database import engine, SessionLocal, Base
 from app.models.user import User
 from app.models.customer import Customer
 from app.models.deal import Deal
-from app.models.win_loss import WinLossReason, Competitor
 from app.core.security import hash_password
 
 def seed_database():
-    print("[1/4] Kiem tra cau truc bang CSDL & Auto-migration...")
+    print("[1/3] Kiem tra cau truc bang CSDL...")
     Base.metadata.create_all(bind=engine)
-    run_auto_migrations(target_engine=engine)
 
     db = SessionLocal()
     try:
@@ -244,100 +242,6 @@ def seed_database():
             print("  -> Da nap thanh cong 3 khach hang & 3 co hoi ban hang mau.")
         else:
             print("  -> Du lieu khach hang da co san.")
-
-        print("[4/4] Nap du lieu danh muc Ly do Thang/Thua & Doi thu canh tranh (SCRUM-89)...")
-        if db.query(WinLossReason).count() == 0:
-            reasons = [
-                WinLossReason(
-                    result_type="WON",
-                    code="PRICE_COMPETITIVE",
-                    reason="Chính sách giá & Chiết khấu cạnh tranh vượt trội",
-                    description="Báo giá tốt hơn đối thủ từ 10-15% kèm chính sách trả góp linh hoạt",
-                    is_active=True,
-                    usage_count=48,
-                ),
-                WinLossReason(
-                    result_type="WON",
-                    code="FEATURE_RICH",
-                    reason="Tính năng phân quyền & Tùy biến đa cấp đáp ứng 100% nghiệp vụ",
-                    description="Khách hàng đánh giá rất cao phân hệ trường tùy chỉnh và sơ đồ cây phòng ban",
-                    is_active=True,
-                    usage_count=36,
-                ),
-                WinLossReason(
-                    result_type="WON",
-                    code="SUPPORT_EXCELLENT",
-                    reason="Dịch vụ Onboarding & Hỗ trợ kỹ thuật 24/7 tận tâm",
-                    description="Cam kết SLA phản hồi dưới 15 phút và hỗ trợ trực tiếp tại doanh nghiệp",
-                    is_active=True,
-                    usage_count=24,
-                ),
-                WinLossReason(
-                    result_type="LOST",
-                    code="BUDGET_CUT",
-                    reason="Khách hàng cắt giảm ngân sách đầu tư CNTT năm nay",
-                    description="Dự án bị hoãn sang quý sau do biến động kinh doanh nội bộ khách hàng",
-                    is_active=True,
-                    usage_count=19,
-                ),
-                WinLossReason(
-                    result_type="LOST",
-                    code="CHOSE_COMPETITOR",
-                    reason="Khách hàng chọn đối thủ có giá thành thấp hơn",
-                    description="Khách hàng chấp nhận giải pháp ít tính năng hơn để tiết kiệm chi phí ban đầu",
-                    is_active=True,
-                    usage_count=14,
-                ),
-                WinLossReason(
-                    result_type="LOST",
-                    code="INTERNAL_BUILD",
-                    reason="Khách hàng quyết định tự xây dựng phần mềm nội bộ (In-house)",
-                    description="Đội ngũ IT nội bộ của khách hàng tiếp quản dự án",
-                    is_active=True,
-                    usage_count=5,
-                ),
-            ]
-            db.add_all(reasons)
-            db.commit()
-            print("  -> Da nap thanh cong 6 ly do Thang/Thua mac dinh.")
-        else:
-            print("  -> Danh muc ly do Thang/Thua da co san.")
-
-        if db.query(Competitor).count() == 0:
-            competitors = [
-                Competitor(
-                    name="Salesforce CRM Enterprise",
-                    website="https://www.salesforce.com",
-                    pricing_tier="Rất cao (2.500.000đ/user/tháng)",
-                    strengths="Thương hiệu toàn cầu, hệ sinh thái AppExchange phong phú",
-                    weaknesses="Chi phí triển khai cực kỳ đắt đỏ, giao diện tiếng Anh khó sử dụng",
-                    win_rate=68.0,
-                    is_active=True,
-                ),
-                Competitor(
-                    name="HubSpot Sales Hub",
-                    website="https://www.hubspot.com",
-                    pricing_tier="Trung bình - Cao (1.200.000đ/user/tháng)",
-                    strengths="Marketing Automation mạnh mẽ, giao diện trực quan",
-                    weaknesses="Tính năng phân quyền sâu và quản lý giá sàn còn hạn chế",
-                    win_rate=74.0,
-                    is_active=True,
-                ),
-                Competitor(
-                    name="Zoho CRM Plus",
-                    website="https://www.zoho.com",
-                    pricing_tier="Trung bình (650.000đ/user/tháng)",
-                    strengths="Nhiều phân hệ tích hợp, chi phí bản quyền ban đầu cạnh tranh",
-                    weaknesses="Tốc độ tải chậm tại Việt Nam, quy trình tùy biến phễu phức tạp",
-                    win_rate=82.0,
-                    is_active=True,
-                ),
-            ]
-            db.add_all(competitors)
-            db.commit()
-            print("  -> Da nap thanh cong 3 doi thu canh tranh mac dinh.")
-        else:
-            print("  -> Danh muc doi thu canh tranh da co san.")
 
         print("\n=======================================================")
         print(" THANH CONG: Co so du lieu nexuscrm_db da san sang! ")

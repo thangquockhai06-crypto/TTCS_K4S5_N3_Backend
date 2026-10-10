@@ -49,10 +49,12 @@ class ProductRepository:
 
     def is_referenced_by_quotes(self, product_id: str, product_name: str) -> bool:
         """Kiểm tra sản phẩm có đang được tham chiếu trong bất kỳ báo giá nào không."""
-        # Quotation title or matching references
+        return self.count_quotes(product_id, product_name) > 0
+
+    def count_quotes(self, product_id: str, product_name: str) -> int:
+        """Đếm số lượng báo giá tham chiếu đến sản phẩm."""
         pattern = f"%{product_name}%"
-        count = self.db.query(Quotation).filter(Quotation.title.ilike(pattern)).count()
-        return count > 0
+        return self.db.query(Quotation).filter(Quotation.title.ilike(pattern)).count()
 
     def delete(self, product: Product) -> None:
         self.db.delete(product)

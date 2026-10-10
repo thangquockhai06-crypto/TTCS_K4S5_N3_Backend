@@ -41,4 +41,5 @@ class ReorderStageItem(BaseModel):
 
 
 class ReorderStagesDTO(BaseModel):
-    items: List[ReorderStageItem]
+    items: Optional[List[ReorderStageItem]] = None
+    ordered_stage_ids: Optional[List[str]] = None

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
@@ -40,6 +41,7 @@ class ImportRowDetail(BaseModel):
     role: Optional[str] = None
     department: Optional[str] = None
     status: str  # "VALID" hoặc "INVALID"
+    classification: Optional[str] = "NEW"  # "NEW", "EXISTING", "DUPLICATE_FILE", "INVALID"
     errors: List[str] = []
 
 
@@ -76,3 +78,29 @@ class UserImportExecuteResponse(BaseModel):
 
 class UserImportExecutePayload(BaseModel):
     rows: Optional[List[Dict[str, Any]]] = None
+
+
+class UserImportJobResponse(BaseModel):
+    id: str
+    filename: str
+    file_type: str
+    file_size: int
+    batch_size: int
+    total_rows: int
+    processed_rows: int
+    successful_rows: int
+    failed_rows: int
+    duplicate_rows: int
+    remaining_rows: int
+    status: str  # "pending", "processing", "completed", "failed"
+    created_by_user_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_summary: Optional[str] = None
+
+
+class UserImportJobCreatePayload(BaseModel):
+    batch_size: Optional[int] = 500
+    rows: Optional[List[Dict[str, Any]]] = None
+

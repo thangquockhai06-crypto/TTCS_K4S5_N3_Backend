@@ -20,6 +20,12 @@ class CreateWinLossReasonDTO(BaseModel):
     description: Optional[str] = None
 
 
+class UpdateWinLossReasonDTO(BaseModel):
+    reason: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class CompetitorDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,10 +37,17 @@ class CompetitorDTO(BaseModel):
     win_rate: float
 
 
-
 class CreateCompetitorDTO(BaseModel):
     name: str
     website: Optional[str] = None
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
     win_rate: Optional[float] = 50.0
+
+
+class UpdateCompetitorDTO(BaseModel):
+    name: Optional[str] = None
+    website: Optional[str] = None
+    strengths: Optional[str] = None
+    weaknesses: Optional[str] = None
+    win_rate: Optional[float] = None

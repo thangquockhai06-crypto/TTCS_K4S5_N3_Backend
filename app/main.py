@@ -72,8 +72,25 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=[
+        "*",
+        "X-Total-Count",
+        "x-total-count",
+        "X-Total-Pages",
+        "x-total-pages",
+        "X-Current-Page",
+        "x-current-page",
+        "X-Page-Size",
+        "x-page-size",
+    ],
 )
+
+# Phục vụ file uploads tĩnh (ảnh đại diện, tài liệu đính kèm)
+import os
+from fastapi.staticfiles import StaticFiles
+_uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(_uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 # Mount các Router API
 app.include_router(auth_router, prefix=settings.API_V1_STR)
