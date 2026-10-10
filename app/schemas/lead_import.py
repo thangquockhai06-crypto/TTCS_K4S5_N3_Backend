@@ -28,6 +28,8 @@ class LeadCreateManualRequest(BaseModel):
     interest_need: Optional[str] = Field(None, description="Nhu cầu quan tâm")
     source: str = Field(..., min_length=1, max_length=100, description="Nguồn lead bắt buộc (Hội thảo, Sự kiện, Danh thiếp, Giới thiệu...)")
     notes: Optional[str] = Field(None, description="Ghi chú thêm")
+    campaign_id: Optional[str] = Field(None, description="ID chiến dịch liên kết (SCRUM-44)")
+
 
     @field_validator("full_name")
     @classmethod
@@ -67,6 +69,7 @@ class LeadResponse(BaseModel):
     status: str
     notes: Optional[str] = None
     created_by: Optional[str] = None
+    campaign_id: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -83,6 +86,7 @@ class LeadImportRowValidation(BaseModel):
     interest_need: Optional[str] = None
     source: Optional[str] = None
     notes: Optional[str] = None
+    campaign_id: Optional[str] = None
     is_valid: bool = True
     errors: List[str] = Field(default_factory=list)
 
@@ -98,6 +102,7 @@ class LeadImportPreviewResponse(BaseModel):
 class LeadImportExecuteRequest(BaseModel):
     """Dữ liệu yêu cầu thực thi import vào CSDL."""
     rows: Optional[List[LeadImportRowValidation]] = Field(None, description="Danh sách các dòng đã validate để import")
+    campaign_id: Optional[str] = Field(None, description="Gán chiến dịch mặc định cho toàn bộ danh sách nạp (nếu có)")
     skip_errors: bool = Field(True, description="Tự động bỏ qua các dòng lỗi")
 
 
