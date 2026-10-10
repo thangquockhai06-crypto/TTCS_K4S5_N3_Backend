@@ -116,6 +116,20 @@ def run_ep03_migrations(target_engine=None):
                 except Exception:
                     pass
 
+
+def run_sprint4_migrations(target_engine=None):
+    """
+    Tự động nâng cấp CSDL cho Sprint 4 (Lead Management - SCRUM-40).
+    Đảm bảo bảng leads tồn tại đầy đủ chỉ mục.
+    """
+    eng = target_engine or engine
+    inspector = inspect(eng)
+    table_names = inspector.get_table_names()
+
+    if "leads" not in table_names:
+        Base.metadata.create_all(bind=eng)
+
+
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
     db = SessionLocal()

@@ -165,6 +165,28 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 11. BẢNG KHÁCH HÀNG TIỀM NĂNG (LEADS) - SPRINT 4 (SCRUM-40)
+CREATE TABLE IF NOT EXISTS leads (
+    id VARCHAR(36) PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(150) DEFAULT NULL,
+    company VARCHAR(255) DEFAULT NULL,
+    interest_need TEXT DEFAULT NULL,
+    source VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'NEW',
+    notes TEXT DEFAULT NULL,
+    created_by VARCHAR(36) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_leads_phone (phone),
+    INDEX idx_leads_email (email),
+    INDEX idx_leads_source (source),
+    INDEX idx_leads_status (status),
+    INDEX idx_leads_created_by (created_by),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =====================================================================
 -- DỮ LIỆU BAN ĐẦU: Tài khoản Admin mặc định
 -- Mật khẩu mặc định: Admin@2026 (bcrypt hash: $2b$12$N2aF4GgA3Wl5O80S47ZZeepB5G3WJ1dM43hCgXzL9s3fKkYtTz8S2)
