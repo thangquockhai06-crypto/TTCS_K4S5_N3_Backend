@@ -144,6 +144,7 @@ class LeadService:
             notes=request.notes.strip() if request.notes else None,
             status="NEW",
             created_by=current_user.id,
+            campaign_id=request.campaign_id,
         )
 
         db.add(lead)
@@ -527,6 +528,7 @@ class LeadService:
                     notes=row.notes.strip() if row.notes else None,
                     status="NEW",
                     created_by=current_user.id,
+                    campaign_id=row.campaign_id or request.campaign_id,
                 )
                 db.add(lead)
                 imported_count += 1
