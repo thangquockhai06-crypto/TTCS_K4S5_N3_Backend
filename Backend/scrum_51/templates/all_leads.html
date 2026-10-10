@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Toàn Bộ Lead{% endblock %}
+
+{% block content %}
+<div class="section-header">
+    <div class="section-title">
+        <span>📋 Danh Sách Toàn Bộ Khách Hàng Tiềm Năng (Leads)</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('create_lead_route') }}" class="btn btn-primary">
+            <span>➕</span> Thêm Lead Mới
+        </a>
+    </div>
+</div>
+
+<!-- THANH TÌM KIẾM & BỘ LỌC ĐA CHIỀU -->
+<div class="table-card" style="padding: 16px; margin-bottom: 20px;">
+    <form method="GET" action="{{ url_for('all_leads_view') }}" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 2; min-width: 220px;">
+            <label class="form-label">Tìm kiếm từ khóa:</label>
+            <input
+                type="text"
+                name="q"
+                class="form-control"
+                placeholder="Tìm theo Tên, Công ty, Số điện thoại, Mã Lead..."
+                value="{{ search_query or '' }}"
+            >
+        </div>
+
+        <div style="flex: 1; min-width: 160px;">
+            <label class="form-label">Trạng thái:</label>
+            <select name="status" class="form-select">
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="ASSIGNED" {% if current_status == 'ASSIGNED' %}selected{% endif %}>Chờ tiếp nhận</option>
+                <option value="IN_CARE" {% if current_status == 'IN_CARE' %}selected{% endif %}>Đang chăm sóc</option>
+                <option value="CONTACTED" {% if current_status == 'CONTACTED' %}selected{% endif %}>Đã liên hệ (Đạt SLA)</option>
+                <option value="PENDING_ALLOCATION" {% if current_status == 'PENDING_ALLOCATION' %}selected{% endif %}>Hàng chờ phân bổ</option>
+            </select>
+        </div>
+
+        <div style="flex: 1; min-width: 160px;">
+            <label class="form-label">Nhân viên phụ trách:</label>
+            <select name="assigned_to" class="form-select">
+                <option value="">-- Tất cả nhân viên --</option>
+                {% for uid, u in all_users.items() %}
+                {% if u.role == ROLE_SALES_REP %}
+                <option value="{{ uid }}" {% if current_assigned == uid %}selected{% endif %}>{{ u.name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1; min-width: 140px;">
+            <label class="form-label">Cờ cảnh báo SLA:</label>
+            <select name="is_flagged" class="form-select">
+                <option value="">-- Tất cả --</option>
+                <option value="true" {% if current_flagged == 'true' %}selected{% endif %}>🚩 Bị gắn cờ quá hạn</option>
+                <option value="false" {% if current_flagged == 'false' %}selected{% endif %}>Bình thường</option>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-primary" style="height: 38px;">
+                <span>🔍</span> Lọc Lead
+            </button>
+            <a href="{{ url_for('all_leads_view') }}" class="btn btn-secondary" style="height: 38px;">
+                Xóa Lọc
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- BẢNG DANH SÁCH LEAD -->
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Công Ty</th>
+                <th>Người Phụ Trách</th>
+                <th>Trạng Thái</th>
+                <th>Thời Hạn SLA Phản Hồi</th>
+                <th>Giá Trị</th>
+                <th>Cảnh Báo / Ghi Chú</th>
+                <th style="text-align: right;">Thao Tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if leads %}
+                {% for lead in leads %}
+                <tr class="{% if lead.is_flagged %}row-flagged{% endif %}">
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }} &bull; {{ lead.phone }}</div>
+                    </td>
+                    <td>
+                        {% if lead.assigned_to_name %}
+                            <div style="font-weight: 600; color: #e2e8f0;">{{ lead.assigned_to_name }}</div>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">(Chưa phân bổ)</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge {% if lead.status == 'PENDING_ALLOCATION' %}badge-pending{% elif lead.status == 'ASSIGNED' %}badge-assigned{% elif lead.status == 'IN_CARE' %}badge-incare{% else %}badge-contacted{% endif %}">
+                            {{ STATUS_LABELS[lead.status] }}
+                        </span>
+                        {% if lead.is_flagged %}
+                        <div class="flag-badge" style="margin-top: 4px;">🚩 QUÁ HẠN SLA</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if lead.status == 'CONTACTED' %}
+                            <span class="status-badge badge-contacted">✅ ĐÃ ĐẠT SLA</span>
+                        {% elif lead.sla_deadline %}
+                            <span
+                                class="countdown-box"
+                                data-sla-deadline="{{ lead.sla_deadline.isoformat() }}"
+                                data-contacted="false"
+                                data-flagged="{{ 'true' if lead.is_flagged else 'false' }}"
+                            >
+                                ⏱️ Đang tính SLA...
+                            </span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">--</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight: 600; color: #34d399;">
+                        {{ lead.estimated_value }}
+                    </td>
+                    <td style="max-width: 250px; font-size: 0.8rem;">
+                        {% if lead.is_flagged %}
+                            <span style="color: #fca5a5;">{{ lead.flag_reason }}</span>
+                        {% elif lead.rejection_reason %}
+                            <span style="color: #fde68a;">Từ chối: "{{ lead.rejection_reason }}"</span>
+                        {% elif lead.contact_notes %}
+                            <span style="color: #6ee7b7;">Đã liên hệ: {{ lead.contact_notes[:35] }}...</span>
+                        {% else %}
+                            <span style="color: var(--text-muted);">Bình thường</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">
+                            Chi Tiết &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">
+                        Không tìm thấy lead nào phù hợp với bộ lọc.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Chiến Dịch Marketing{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+            🎯 Quản Lý Chiến Dịch Marketing (Campaigns)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Theo dõi chi tiêu ngân sách, số lead thu về và lợi tức đầu tư (ROAS) của từng chiến dịch
+        </p>
+    </div>
+    <a href="{{ url_for('report_view') }}" class="btn btn-outline">
+        &larr; Xem Báo Cáo Tổng Hợp
+    </a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên Chiến Dịch</th>
+                    <th>Nguồn Lead</th>
+                    <th>Ngân Sách Phê Duyệt</th>
+                    <th>Đã Chi Tiêu</th>
+                    <th>Tiến Độ Ngân Sách</th>
+                    <th style="text-align: right;">Số Lead</th>
+                    <th style="text-align: right;">Tỷ Lệ Nhận</th>
+                    <th style="text-align: right;">Cơ Hội</th>
+                    <th style="text-align: right;">Doanh Thu Thực Tế</th>
+                    <th style="text-align: right;">ROAS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaign_reports %}
+                <tr>
+                    <td><code>{{ c.id }}</code></td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ c.name }}</strong>
+                    </td>
+                    <td>{{ c.source }}</td>
+                    <td>{{ c.budget|vi_currency }}</td>
+                    <td>{{ c.spent|vi_currency }}</td>
+                    <td style="width: 140px;">
+                        {% set budget_percent = (c.spent / c.budget * 100)|round(1) if c.budget > 0 else 0 %}
+                        <div style="font-size: 0.78rem; font-weight: 600; color: #64748b; margin-bottom: 2px;">
+                            {{ budget_percent }}%
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: {{ budget_percent }}%; background: {% if budget_percent > 90 %}#ef4444{% else %}#10b981{% endif %};"></div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 700;">{{ c.total_leads }}</td>
+                    <td style="text-align: right; font-weight: 600; color: #1e40af;">{{ c.acceptance_rate|vi_percent }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #7c3aed;">{{ c.opportunity_leads }}</td>
+                    <td style="text-align: right;">
+                        <strong style="color: #059669;">{{ c.actual_revenue|vi_currency }}</strong>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: #b45309;">
+                        {{ c.roas }}x
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

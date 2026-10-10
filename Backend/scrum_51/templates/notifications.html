@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Hộp Thư Thông Báo Cảnh Báo SLA{% endblock %}
+
+{% block content %}
+<div class="section-header">
+    <div class="section-title">
+        <span>🔔 Trung Tâm Thông Báo Cảnh Báo & Điều Phối</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <form action="{{ url_for('mark_read_route') }}" method="POST">
+            <button type="submit" class="btn btn-secondary btn-sm">
+                Đánh Dấu Tất Cả Đã Đọc
+            </button>
+        </form>
+    </div>
+</div>
+
+<div style="max-width: 900px; margin: 0 auto;">
+    {% if notifs %}
+        {% for n in notifs %}
+        <div class="notif-card {% if n.level == 'URGENT' %}urgent{% endif %}">
+            <div class="notif-icon">
+                {% if n.level == 'URGENT' %}
+                    <span class="flag-badge" style="font-size: 1.1rem; padding: 6px 10px;">🚩</span>
+                {% elif n.level == 'WARNING' %}
+                    <span style="font-size: 1.4rem;">⚠️</span>
+                {% else %}
+                    <span style="font-size: 1.4rem;">ℹ️</span>
+                {% endif %}
+            </div>
+            <div class="notif-body">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="notif-title" style="{% if n.level == 'URGENT' %}color: #f87171;{% endif %}">
+                        {{ n.title }}
+                    </div>
+                    <span class="notif-time">{{ n.created_at|vi_datetime }}</span>
+                </div>
+                <div class="notif-msg" style="margin-top: 6px; line-height: 1.5;">
+                    {{ n.message }}
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <a href="{{ url_for('lead_detail', lead_id=n.lead_id) }}" class="btn btn-primary btn-sm">
+                        Xem Chi Tiết Lead {{ n.lead_id }} &rarr;
+                    </a>
+                    <button
+                        type="button"
+                        class="btn btn-secondary btn-sm btn-open-reassign-modal"
+                        data-lead-id="{{ n.lead_id }}"
+                        data-lead-name="{{ n.lead_name }}"
+                    >
+                        🔄 Phân Bổ / Điều Chuyển Ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="table-card" style="text-align: center; padding: 48px; color: #64748b;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">📭</div>
+            <div style="font-size: 1.1rem; color: #cbd5e1; font-weight: 600;">Không có thông báo mới nào</div>
+            <p style="font-size: 0.85rem; margin-top: 4px;">Khi có lead bị từ chối hoặc quá SLA phản hồi, cảnh báo khẩn sẽ tự động hiển thị tại đây.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

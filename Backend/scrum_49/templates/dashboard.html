@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Điều Khiển Quản Lý Lead{% endblock %}
+
+{% block content %}
+<!-- HERO BANNER VỚI USER STORY -->
+<div class="hero-card">
+    <div class="hero-info">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span class="ticket-pill">⚡ SCRUM-30 / ☑ SCRUM-49</span>
+            <span style="font-size: 0.8rem; color: var(--slate-500);">Chức năng cốt lõi cho Giám đốc kinh doanh</span>
+        </div>
+        <h2>Phân Bổ Lead Tự Động Trong Vài Phút</h2>
+        <p>
+            Tự động hóa toàn bộ quy trình định tuyến khách hàng tiềm năng dựa trên <strong>Khu vực</strong>, <strong>Ngành nghề</strong> và thuật toán <strong>Xoay vòng đều (Round-Robin)</strong>.
+            Lead tới tay người phụ trách chỉ sau <strong>vài giây</strong> thay vì phải chờ họp giao ban!
+        </p>
+    </div>
+    <div class="hero-actions">
+        <form action="{{ url_for('simulate_single') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-secondary" title="Mô phỏng nạp 1 lead ngẫu nhiên để thấy worker phân bổ tức thì">
+                <span>🎲</span> Nạp 1 Lead Thử Nghiệm
+            </button>
+        </form>
+        <form action="{{ url_for('simulate_batch') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-primary" title="Mô phỏng nạp 5 lead để kiểm tra khả năng xử lý nền đồng thời">
+                <span>⚡</span> Nạp Batch 5 Leads
+            </button>
+        </form>
+        <button type="button" class="btn btn-success" data-modal-target="new-lead-modal">
+            <span>➕</span> Tạo Lead Thủ Công
+        </button>
+    </div>
+</div>
+
+<!-- 4 THẺ CHỈ SỐ KPI -->
+<div class="stats-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-content">
+            <span class="stat-title">Tổng Lead Tiếp Nhận</span>
+            <span class="stat-value">{{ metrics.total_leads }}</span>
+            <span class="stat-subtitle">Từ Website, Ads, Hotline & API</span>
+        </div>
+        <div class="stat-icon">📥</div>
+    </div>
+
+    <div class="stat-card stat-green">
+        <div class="stat-content">
+            <span class="stat-title">Đã Phân Bổ Tự Động</span>
+            <span class="stat-value">{{ metrics.assigned_count }}</span>
+            <span class="stat-subtitle">Khớp quy tắc & giao sale tức thì</span>
+        </div>
+        <div class="stat-icon">✅</div>
+    </div>
+
+    <div class="stat-card stat-amber">
+        <div class="stat-content">
+            <span class="stat-title">Hàng Chờ Phân Tay</span>
+            <span class="stat-value">{{ metrics.manual_queue_count }}</span>
+            <span class="stat-subtitle">Không khớp quy tắc -> Chờ Trưởng nhóm</span>
+        </div>
+        <div class="stat-icon">⏳</div>
+    </div>
+
+    <div class="stat-card stat-indigo">
+        <div class="stat-content">
+            <span class="stat-title">Cam Kết SLA ≤ 5 Phút</span>
+            <span class="stat-value">{{ metrics.sla_rate }}%</span>
+            <span class="stat-subtitle">Hoàn tất trong vài giây (ngưỡng 300s)</span>
+        </div>
+        <div class="stat-icon">⏱️</div>
+    </div>
+</div>
+
+<!-- NỘI DUNG 2 CỘT -->
+<div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 1.5rem; align-items: start;">
+    <!-- CỘT TRÁI: DANH SÁCH LEAD MỚI TIẾP NHẬN -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title"><span>👥</span> Tiến Trình Phân Bổ Lead Gần Đây</h3>
+                <span class="card-subtitle">Theo dõi trạng thái tiếp nhận, quy tắc khớp và thời gian SLA trôi qua</span>
+            </div>
+            <a href="{{ url_for('leads_list') }}" class="btn btn-secondary btn-sm">Xem tất cả ({{ metrics.total_leads }}) &rarr;</a>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã & Doanh Nghiệp</th>
+                        <th>Khu Vực / Ngành</th>
+                        <th>Trạng Thái</th>
+                        <th>Quy Tắc / Người Nhận</th>
+                        <th>Thời Gian SLA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in recent_leads %}
+                    <tr>
+                        <td>
+                            <strong style="color: var(--primary);">{{ lead.code }}</strong><br>
+                            <span style="font-weight: 600; color: var(--slate-900);">{{ lead.name }}</span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem; color: var(--slate-700);">📍 {{ lead.region }}</span><br>
+                            <span style="font-size: 0.75rem; color: var(--slate-500);">🏷️ {{ lead.industry }}</span>
+                        </td>
+                        <td>
+                            {% if lead.status == 'ASSIGNED' %}
+                                <span class="status-pill status-assigned">✓ Đã Phân Bổ</span>
+                            {% elif lead.status == 'MANUAL_QUEUE' %}
+                                <span class="status-pill status-manual">⏳ Chờ Phân Tay</span>
+                            {% else %}
+                                <span class="status-pill status-pending">⚡ Đang Xử Lý</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lead.status == 'ASSIGNED' %}
+                                {% set assigned_u = all_users.get(lead.assigned_to_user_id) %}
+                                <span style="font-size: 0.8rem; font-weight: 600; color: var(--slate-800);">
+                                    👤 {{ assigned_u.name if assigned_u else 'Chuyên viên kinh doanh' }}
+                                </span><br>
+                                <span style="font-size: 0.725rem; color: var(--slate-500);">
+                                    {{ lead.matched_rule_name or lead.notes }}
+                                </span>
+                            {% elif lead.status == 'MANUAL_QUEUE' %}
+                                <span style="font-size: 0.75rem; color: var(--danger);">
+                                    ⚠️ Không khớp quy tắc nào
+                                </span><br>
+                                <a href="{{ url_for('manual_queue') }}" style="font-size: 0.75rem; color: var(--primary); text-decoration: underline;">
+                                    Trưởng nhóm phân tay &rarr;
+                                </a>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--slate-500);">Đang duyệt quy tắc nền...</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lead.elapsed_seconds is not none %}
+                                <span class="sla-met-pill">
+                                    ⏱️ {{ lead.elapsed_seconds }}s / 300s
+                                </span><br>
+                                <span style="font-size: 0.7rem; color: var(--slate-400);">{{ lead.created_at[11:] }}</span>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--slate-400);">Đang tính...</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--slate-500);">
+                            Chưa có dữ liệu lead nào. Nhấn nút "Nạp 1 Lead Thử Nghiệm" ở trên để kiểm thử!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CỘT PHẢI: QUY TẮC FIRST-MATCH-WINS & LIVE LOGS -->
+    <div>
+        <!-- QUY TẮC ĐANG ÁP DỤNG -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title"><span>⚡</span> Thứ Tự Ưu Tiên Quy Tắc</h3>
+                    <span class="card-subtitle">First-Match-Wins: Quy tắc đầu tiên khớp sẽ thắng</span>
+                </div>
+                <a href="{{ url_for('rules_list') }}" class="btn btn-secondary btn-sm">Cấu hình &rarr;</a>
+            </div>
+            <div class="card-body" style="padding: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% for r in rules %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: var(--slate-50); border: 1px solid var(--border); border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span class="priority-badge {% if r.priority == 1 %}p-1{% elif r.priority == 2 %}p-2{% elif r.priority == 3 %}p-3{% else %}p-other{% endif %}">
+                                #{{ r.priority }}
+                            </span>
+                            <div>
+                                <strong style="font-size: 0.85rem; color: var(--slate-800);">{{ r.name }}</strong><br>
+                                <span style="font-size: 0.75rem; color: var(--slate-500);">
+                                    📍 {{ r.region }} &bull; 🏷️ {{ r.industry }}
+                                </span>
+                            </div>
+                        </div>
+                        <span class="status-pill {% if r.is_active %}status-assigned{% else %}status-manual{% endif %}" style="font-size: 0.7rem;">
+                            {{ "BẬT" if r.is_active else "TẮT" }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- NHẬT KÝ LUỒNG NỀN TRỰC TIẾP -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title"><span>📡</span> Nhật Ký Luồng Nền (Worker)</h3>
+                    <span class="card-subtitle">Quét tự động mỗi 2 giây, SLA ≤ 5 phút</span>
+                </div>
+                <form action="{{ url_for('worker_action') }}" method="POST">
+                    <input type="hidden" name="action" value="trigger">
+                    <button type="submit" class="btn btn-secondary btn-sm" title="Kích hoạt quét ngay">Quét ngay 🔄</button>
+                </form>
+            </div>
+            <div class="card-body" style="padding: 0.75rem; max-height: 280px; overflow-y: auto; font-family: monospace; font-size: 0.775rem;">
+                {% for log in recent_logs %}
+                <div style="padding: 0.45rem 0; border-bottom: 1px solid var(--slate-100);">
+                    <span style="color: var(--slate-400);">[{{ log.timestamp[11:19] }}]</span>
+                    {% if log.status == 'SUCCESS' %}
+                        <span style="color: var(--success); font-weight: 600;">[SUCCESS]</span>
+                    {% elif log.status == 'WARNING' %}
+                        <span style="color: var(--warning); font-weight: 600;">[FALLBACK]</span>
+                    {% else %}
+                        <span style="color: var(--primary); font-weight: 600;">[INFO]</span>
+                    {% endif %}
+                    <span style="color: var(--slate-700);">{{ log.details }}</span>
+                </div>
+                {% else %}
+                <p style="color: var(--slate-400); text-align: center;">Chưa có nhật ký.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

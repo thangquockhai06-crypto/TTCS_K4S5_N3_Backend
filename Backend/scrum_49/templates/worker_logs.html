@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Giám Sát Luồng Nền & SLA 5 Phút{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">
+                <span>📡</span> Giám Sát Luồng Chạy Nền (Background Allocation Worker)
+            </h2>
+            <span class="card-subtitle">
+                Tiêu chí SCRUM-49: <strong>Phân bổ chạy nền, hoàn tất trong vòng 5 phút kể từ khi lead vào</strong>
+            </span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <form action="{{ url_for('worker_action') }}" method="POST" style="display: inline;">
+                <input type="hidden" name="action" value="trigger">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    🔄 Kích Hoạt Quét Ngay
+                </button>
+            </form>
+            {% if status.is_paused %}
+            <form action="{{ url_for('worker_action') }}" method="POST" style="display: inline;">
+                <input type="hidden" name="action" value="resume">
+                <button type="submit" class="btn btn-success btn-sm">
+                    ▶️ Tiếp Tục Luồng Nền
+                </button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('worker_action') }}" method="POST" style="display: inline;">
+                <input type="hidden" name="action" value="pause">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                    ⏸️ Tạm Dừng Luồng
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card-body" style="padding: 1.5rem;">
+        <!-- THỐNG KÊ HOẠT ĐỘNG WORKER -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: var(--slate-50); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                <span style="font-size: 0.775rem; color: var(--slate-500); text-transform: uppercase;">Trạng Thái Luồng Nền</span><br>
+                {% if status.is_running and not status.is_paused %}
+                    <strong style="color: var(--success); font-size: 1.1rem;">● Đang Chạy (Active)</strong>
+                {% else %}
+                    <strong style="color: var(--warning); font-size: 1.1rem;">⏸️ Tạm Dừng</strong>
+                {% endif %}
+            </div>
+            <div style="background: var(--slate-50); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                <span style="font-size: 0.775rem; color: var(--slate-500); text-transform: uppercase;">Chu Kỳ Quét Lead</span><br>
+                <strong style="color: var(--slate-900); font-size: 1.1rem;">Mỗi {{ status.poll_interval }} giây</strong>
+            </div>
+            <div style="background: var(--slate-50); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                <span style="font-size: 0.775rem; color: var(--slate-500); text-transform: uppercase;">Giới Hạn SLA Tối Đa</span><br>
+                <strong style="color: var(--primary); font-size: 1.1rem;">5 phút ({{ status.sla_limit_seconds }}s)</strong>
+            </div>
+            <div style="background: var(--slate-50); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                <span style="font-size: 0.775rem; color: var(--slate-500); text-transform: uppercase;">Lần Quét Gần Nhất</span><br>
+                <strong style="color: var(--slate-700); font-size: 0.95rem;">{{ status.last_run_time }}</strong>
+            </div>
+        </div>
+
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.75rem;">
+            📋 Nhật Ký Hoạt Động Của Luồng Nền (Worker Audit Trail)
+        </h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 170px;">Thời Gian</th>
+                        <th style="width: 110px;">Mã Lead</th>
+                        <th style="width: 130px;">Hành Động</th>
+                        <th>Chi Tiết Tiến Trình Xử Lý</th>
+                        <th style="width: 100px; text-align: right;">Thời Gian Xử Lý</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>
+                            <span style="font-size: 0.8rem; color: var(--slate-600); font-family: monospace;">{{ log.timestamp }}</span>
+                        </td>
+                        <td>
+                            <strong style="color: var(--primary);">{{ log.lead_code or '-' }}</strong>
+                        </td>
+                        <td>
+                            {% if log.status == 'SUCCESS' %}
+                                <span class="status-pill status-assigned" style="font-size: 0.7rem;">✓ THÀNH CÔNG</span>
+                            {% elif log.status == 'WARNING' %}
+                                <span class="status-pill status-manual" style="font-size: 0.7rem;">⚠️ FALLBACK</span>
+                            {% else %}
+                                <span class="status-pill status-pending" style="font-size: 0.7rem;">ℹ️ THÔNG TIN</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span style="font-size: 0.825rem; color: var(--slate-800);">{{ log.details }}</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <span style="font-size: 0.75rem; font-family: monospace; color: var(--slate-500);">{{ log.elapsed_ms }} ms</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--slate-400);">
+                            Chưa có nhật ký nào được ghi nhận.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

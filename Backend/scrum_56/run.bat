@@ -1,0 +1,19 @@
+@echo off
+chcp 65001 > nul
+echo =================================================================
+echo  HỆ THỐNG DANH SÁCH LEAD VỚI BỘ LỌC ĐA CHIỀU & BỘ LỌC LƯU SẴN
+echo  Mã Jira Ticket: ⚡ SCRUM-30 / ☑ SCRUM-56
+echo  Ngôn ngữ: Python 3 + Flask Framework
+echo  Vai trò: Nhân viên kinh doanh (Sales Representative)
+echo  Mục tiêu: Mở máy buổi sáng là biết ngay hôm nay cần gọi ai
+echo =================================================================
+echo.
+echo [1/2] Đang kiểm tra & cài đặt thư viện phụ thuộc (Flask)...
+py -m pip install -r requirements.txt
+echo.
+echo [2/2] Đang khởi chạy ứng dụng Flask...
+echo Tự động mở trình duyệt tại: http://127.0.0.1:5000
+echo.
+start http://127.0.0.1:5000
+py app.py
+pause

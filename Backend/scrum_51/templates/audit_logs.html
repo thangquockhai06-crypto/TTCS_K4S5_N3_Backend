@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Nhật Ký Kiểm Toán Toàn Hệ Thống{% endblock %}
+
+{% block content %}
+<div class="section-header">
+    <div class="section-title">
+        <span>📜 Nhật Ký Hoạt Động & Kiểm Toán Hệ Thống (Audit Logs)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #94a3b8;">
+        Ghi nhận minh bạch 100% các thao tác: Nhận lead, Từ chối kèm lý do, Gắn cờ quá hạn SLA, Phân bổ lại.
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 170px;">Thời Gian</th>
+                <th style="width: 180px;">Loại Sự Kiện</th>
+                <th style="width: 110px;">Mã Lead</th>
+                <th style="width: 180px;">Người Thực Hiện</th>
+                <th>Chi Tiết Hoạt Động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if logs %}
+                {% for log in logs %}
+                <tr class="{% if log.event_type == 'SLA_BREACH_FLAGGED' %}row-flagged{% endif %}">
+                    <td style="font-size: 0.8rem; font-family: monospace; color: var(--text-muted);">
+                        {{ log.timestamp|vi_datetime }}
+                    </td>
+                    <td>
+                        {% if log.event_type == 'LEAD_ACCEPTED' %}
+                            <span class="status-badge badge-incare">✅ NHẬN LEAD</span>
+                        {% elif log.event_type == 'LEAD_REJECTED' %}
+                            <span class="status-badge badge-pending">↩️ TỪ CHỐI LEAD</span>
+                        {% elif log.event_type == 'SLA_BREACH_FLAGGED' %}
+                            <span class="flag-badge">🚩 GẮN CỜ QUÁ SLA</span>
+                        {% elif log.event_type == 'LEAD_CONTACTED' %}
+                            <span class="status-badge badge-contacted">📞 ĐÃ LIÊN HỆ</span>
+                        {% elif log.event_type == 'LEAD_REASSIGNED' %}
+                            <span class="status-badge badge-assigned">🔄 PHÂN BỔ LẠI</span>
+                        {% else %}
+                            <span class="status-badge" style="background: rgba(255,255,255,0.06); color: #cbd5e1;">
+                                {{ log.event_type }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.lead_id != 'SYSTEM' %}
+                            <a href="{{ url_for('lead_detail', lead_id=log.lead_id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                                {{ log.lead_id }}
+                            </a>
+                        {% else %}
+                            <span style="color: var(--text-muted);">HỆ THỐNG</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight: 600; color: #e2e8f0;">
+                        {{ log.user_name }}
+                    </td>
+                    <td style="font-size: 0.85rem; color: {% if log.event_type == 'SLA_BREACH_FLAGGED' %}#fca5a5{% elif log.event_type == 'LEAD_REJECTED' %}#fde68a{% elif log.event_type == 'LEAD_ACCEPTED' %}#c084fc{% else %}#cbd5e1{% endif %};">
+                        {{ log.details }}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 24px; color: #64748b;">
+                        Chưa có dữ liệu nhật ký nào.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

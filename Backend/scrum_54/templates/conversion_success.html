@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Chuyển Đổi Thành Công!{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto; text-align: center; padding: 20px 0;">
+    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; margin: 0 auto 20px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);">
+        🎉
+    </div>
+
+    <h1 style="font-size: 2.1rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+        CHUYỂN ĐỔI LEAD THÀNH CÔNG!
+    </h1>
+    <p style="font-size: 1.05rem; color: #64748b; max-width: 650px; margin: 0 auto 30px;">
+        Chỉ với <strong>1 thao tác duy nhất</strong>, hệ thống đã tự động sinh đồng thời <strong>3 thực thể</strong> liên kết chặt chẽ mà bạn không phải nhập lại bất kỳ thông tin nào đã hỏi khách hàng trước đó.
+    </p>
+
+    <!-- 3 THỰC THỂ ĐÃ SINH ĐỒNG THỜI (AC1 & AC2) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; text-align: left; margin-bottom: 30px;">
+        <!-- ACCOUNT -->
+        <div class="card" style="border-top: 4px solid #3b82f6; margin-bottom: 0;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-bottom: 6px;">
+                🏢 Khách Hàng Doanh Nghiệp (Account)
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                {{ account.name }}
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px;">
+                Mã: <strong>{{ account.id }}</strong> • MST: {{ account.tax_id or 'Chưa có' }}<br>
+                Kế thừa <strong>{{ account.activities|length - 1 }} hoạt động</strong> từ Lead
+            </div>
+            <a href="{{ url_for('account_detail', account_id=account.id) }}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+                Xem Khách Hàng &rarr;
+            </a>
+        </div>
+
+        <!-- CONTACT -->
+        <div class="card" style="border-top: 4px solid #f59e0b; margin-bottom: 0;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #b45309; text-transform: uppercase; margin-bottom: 6px;">
+                👤 Người Liên Hệ (Contact)
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                {{ contact.full_name }}
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px;">
+                Mã: <strong>{{ contact.id }}</strong> • Chức vụ: {{ contact.job_title }}<br>
+                📞 {{ contact.phone }} • ✉️ {{ contact.email }}
+            </div>
+            <a href="{{ url_for('contacts_list') }}?search={{ contact.full_name }}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+                Xem Người Liên Hệ &rarr;
+            </a>
+        </div>
+
+        <!-- OPPORTUNITY -->
+        <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 0;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #6d28d9; text-transform: uppercase; margin-bottom: 6px;">
+                💼 Cơ Hội Bán Hàng (Opportunity)
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                {{ opportunity.name }}
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px;">
+                Mã: <strong>{{ opportunity.id }}</strong> • Giá trị: <strong style="color: #059669;">{{ opportunity.amount|vi_currency }}</strong><br>
+                Giai đoạn: {{ STAGE_LABELS.get(opportunity.stage, opportunity.stage) }}
+            </div>
+            <a href="{{ url_for('opportunities_list') }}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+                Xem Pipeline Cơ Hội &rarr;
+            </a>
+        </div>
+    </div>
+
+    <!-- XÁC NHẬN RÀNG BUỘC KHÓA (AC3) -->
+    <div class="card" style="background: #faf5ff; border: 1px dashed #d8b4fe; padding: 18px 24px; text-align: left; margin-bottom: 30px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 1.8rem;">🔒</div>
+            <div>
+                <strong style="color: #5b21b6; font-size: 0.95rem;">
+                    XÁC NHẬN TIÊU CHÍ 3: Lead {{ lead.id }} đã chuyển sang trạng thái "Đã chuyển đổi" và BỊ KHÓA VĨNH VIỄN!
+                </strong>
+                <p style="font-size: 0.84rem; color: #6b21a8; margin-top: 4px;">
+                    Mọi thao tác chỉnh sửa dữ liệu trên lead gốc này đều bị chặn ở cả giao diện và Backend Python để bảo đảm tính toàn vẹn dữ liệu.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- NÚT ĐIỀU HƯỚNG TIẾP THEO -->
+    <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('account_detail', account_id=account.id) }}" class="btn btn-primary btn-lg">
+            🏢 Khám Phá Khách Hàng [{{ account.id }}] & Hoạt Động Kế Thừa
+        </a>
+        <a href="{{ url_for('leads_list') }}" class="btn btn-outline btn-lg">
+            Quay Lại Danh Sách Lead
+        </a>
+    </div>
+</div>
+{% endblock %}

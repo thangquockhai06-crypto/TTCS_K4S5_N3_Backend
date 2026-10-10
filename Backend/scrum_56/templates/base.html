@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Danh Sách Lead & Bộ Lọc Lưu Sẵn{% endblock %} - AutoLead CRM (SCRUM-56)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- TOPBAR TIÊU CHUẨN JIRA SCRUM-56 -->
+    <div class="topbar">
+        <div class="topbar-inner">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="pulse-dot"></span>
+                <strong>CRM BÁN HÀNG BUỔI SÁNG:</strong>
+                <span>Mở máy buổi sáng là biết ngay hôm nay cần gọi ai với Smart Views & Bộ lọc đa chiều!</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <span class="ticket-tag">⚡ {{ PARENT_EPIC }}</span>
+                <span class="ticket-tag">☑ {{ TICKET_ID }}</span>
+                <span style="color: #cbd5e1;">Vai trò: <strong>Nhân viên kinh doanh (Sales Rep)</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="{{ url_for('leads_list_view') }}" class="brand">
+                <div class="brand-icon">⚡</div>
+                <div>
+                    <div class="brand-name">AutoLead CRM</div>
+                    <div style="font-size: 0.72rem; color: #64748b;">Smart Lead Filters & Daily Call Planning</div>
+                </div>
+            </a>
+
+            <!-- NAVIGATION LINKS -->
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a href="{{ url_for('leads_list_view') }}" class="btn btn-outline btn-sm">
+                    📋 Danh Sách Lead
+                </a>
+                <a href="{{ url_for('leads_list_view', filter_id='sf-morning-call') }}" class="btn btn-primary btn-sm">
+                    ☀️ Cần Gọi Sáng Nay
+                </a>
+            </div>
+
+            <!-- PERSONA SWITCHER & RESET -->
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="persona-switch">
+                    <span>{{ current_user.avatar }}</span>
+                    <select class="persona-dropdown" onchange="window.location.href='/switch-user/' + this.value">
+                        {% for uid, u in all_users.items() %}
+                        <option value="{{ uid }}" {% if uid == current_user.id %}selected{% endif %}>
+                            {{ u.name }} ({{ u.role_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <a href="{{ url_for('reset_data') }}" class="btn btn-outline btn-sm" title="Đặt lại dữ liệu mẫu ban đầu">
+                    🔄 Reset Data
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-wrapper">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <span>{% if category == 'success' %}✅{% elif category == 'danger' %}⚠️{% else %}ℹ️{% endif %}</span>
+                    <div>{{ message }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div>
+                <strong>AutoLead CRM</strong> &copy; 2026 - Phân Hệ Danh Sách Lead & Bộ Lọc Lưu Sẵn Thông Minh (Ticket SCRUM-56).
+            </div>
+            <div style="display: flex; gap: 14px; align-items: center;">
+                <span>⚡ Tiêu chí 1: Bộ lọc đa chiều</span>
+                <span>•</span>
+                <span>🚩 Tiêu chí 2: Cảnh báo quá hạn SLA</span>
+                <span>•</span>
+                <span>📌 Tiêu chí 3: Bộ lọc lưu sẵn</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

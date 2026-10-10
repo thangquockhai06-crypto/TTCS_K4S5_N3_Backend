@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Lead & Bộ Lọc Lưu Sẵn (SCRUM-56){% endblock %}
+
+{% block content %}
+<!-- TIÊU ĐỀ USER STORY & JIRA TICKET -->
+<div style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span class="ticket-tag" style="background: #4338ca; color: white;">⚡ {{ PARENT_EPIC }}</span>
+                <span class="ticket-tag" style="background: #2563eb; color: white;">☑ {{ TICKET_ID }}</span>
+                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">ACCEPTANCE CRITERIA SPRINT READY</span>
+            </div>
+            <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">
+                Danh Sách Lead Với Bộ Lọc Đa Chiều & Bộ Lọc Lưu Sẵn
+            </h1>
+            <p style="color: #475569; font-size: 0.92rem; font-style: italic; background: #e0e7ff; padding: 8px 14px; border-radius: 8px; border-left: 4px solid var(--primary);">
+                "Là <strong>Nhân viên kinh doanh</strong>, tôi muốn xem danh sách lead với bộ lọc và bộ lọc lưu sẵn, <strong>để mở máy buổi sáng là biết ngay hôm nay cần gọi ai</strong>."
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-save-filter" id="btn-open-save-filter">
+                💾 Lưu Bộ Lọc Hiện Tại
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI SUMMARY STATS CARDS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- Sáng nay cần gọi -->
+    <a href="{{ url_for('leads_list_view', filter_id='sf-today-calling') }}" style="text-decoration: none; color: inherit;">
+        <div class="card" style="padding: 16px; margin-bottom: 0; border-top: 4px solid #f59e0b; transition: var(--transition); cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #b45309;">☀️ CẦN GỌI SÁNG NAY</span>
+                <span style="font-size: 1.25rem;">📞</span>
+            </div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">{{ kpis.morning_call_count }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">Nóng + Quá SLA + Hẹn hôm nay</div>
+        </div>
+    </a>
+
+    <!-- Quá hạn SLA (Cảnh báo đỏ) -->
+    <a href="{{ url_for('leads_list_view', filter_id='sf-sla-alert') }}" style="text-decoration: none; color: inherit;">
+        <div class="card" style="padding: 16px; margin-bottom: 0; border-top: 4px solid #ef4444; background: #fff5f5; transition: var(--transition); cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #b91c1c;">🚩 QUÁ HẠN SLA CHƯA GỌI</span>
+                <span class="pulse-dot"></span>
+            </div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #b91c1c;">{{ kpis.overdue_count }}</div>
+            <div style="font-size: 0.75rem; color: #dc2626; font-weight: 600;">Cần gọi xử lý khẩn cấp!</div>
+        </div>
+    </a>
+
+    <!-- Lead Nóng của tôi -->
+    <a href="{{ url_for('leads_list_view', filter_id='sf-hot-mine') }}" style="text-decoration: none; color: inherit;">
+        <div class="card" style="padding: 16px; margin-bottom: 0; border-top: 4px solid #ea580c; transition: var(--transition); cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #c2410c;">🔥 LEAD NÓNG (HOT)</span>
+                <span style="font-size: 1.25rem;">🔥</span>
+            </div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">{{ kpis.hot_count }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">Khả năng chốt đơn cao nhất</div>
+        </div>
+    </a>
+
+    <!-- Có hẹn gọi hôm nay -->
+    <a href="{{ url_for('leads_list_view', call_today='true') }}" style="text-decoration: none; color: inherit;">
+        <div class="card" style="padding: 16px; margin-bottom: 0; border-top: 4px solid #3b82f6; transition: var(--transition); cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #1e40af;">📅 HẸN GỌI HÔM NAY</span>
+                <span style="font-size: 1.25rem;">⏰</span>
+            </div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">{{ kpis.call_today_count }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">Đến ngày chăm sóc định kỳ</div>
+        </div>
+    </a>
+
+    <!-- Tổng số lead của tôi -->
+    <a href="{{ url_for('leads_list_view', assigned_to='mine') }}" style="text-decoration: none; color: inherit;">
+        <div class="card" style="padding: 16px; margin-bottom: 0; border-top: 4px solid #10b981; transition: var(--transition); cursor: pointer;"
+             onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #065f46;">💼 LEAD TÔI PHỤ TRÁCH</span>
+                <span style="font-size: 1.25rem;">👤</span>
+            </div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">{{ kpis.my_leads_count }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">Tổng lead toàn hệ thống: {{ kpis.total_leads }}</div>
+        </div>
+    </a>
+</div>
+
+<!-- ========================================================================
+     TIÊU CHÍ 3: THANH BỘ LỌC LƯU SẴN (SAVED FILTERS / SMART VIEWS)
+     "để mở máy buổi sáng là biết ngay hôm nay cần gọi ai"
+     ======================================================================== -->
+<div class="saved-filters-toolbar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 0.85rem; font-weight: 800; color: #1e1b4b; text-transform: uppercase; letter-spacing: 0.5px;">
+            📌 Bộ Lọc Lưu Sẵn:
+        </span>
+    </div>
+
+    <div class="saved-filters-group">
+        {% for sf in saved_filters %}
+        <div style="display: inline-flex; align-items: center; position: relative;">
+            <a href="{{ url_for('leads_list_view', filter_id=sf.id) }}"
+               class="saved-filter-pill {% if selected_filter_id == sf.id %}active{% endif %}"
+               title="Áp dụng bộ lọc '{{ sf.name }}'">
+                <span>{{ sf.icon }}</span>
+                <span>{{ sf.name }}</span>
+                {% if sf.is_default %}
+                <span style="font-size: 0.68rem; background: rgba(245, 158, 11, 0.2); color: #d97706; padding: 1px 6px; border-radius: 9999px; font-weight: 700;">
+                    ⭐ Mặc định
+                </span>
+                {% endif %}
+            </a>
+
+            <!-- Menu thao tác bổ sung cho filter -->
+            {% if selected_filter_id == sf.id %}
+            <div style="display: inline-flex; gap: 4px; margin-left: 6px;">
+                {% if not sf.is_default %}
+                <form action="{{ url_for('saved_filter_set_default', filter_id=sf.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-outline btn-sm" title="Đặt bộ lọc này làm mặc định khi mở máy buổi sáng" style="padding: 4px 8px; font-size: 0.72rem;">
+                        ⭐ Mở máy
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if not sf.id.startswith('sf-today') and not sf.id.startswith('sf-sla') %}
+                <form action="{{ url_for('saved_filter_delete', filter_id=sf.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa bộ lọc này?');">
+                    <button type="submit" class="btn btn-outline btn-sm" title="Xóa bộ lọc này" style="padding: 4px 8px; font-size: 0.72rem; color: #ef4444;">
+                        ✕
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div>
+        <a href="{{ url_for('leads_list_view') }}" class="btn btn-outline btn-sm" title="Bỏ chọn bộ lọc lưu sẵn, hiển thị toàn bộ">
+            Bỏ chọn
+        </a>
+    </div>
+</div>
+
+<!-- ========================================================================
+     TIÊU CHÍ 1: PANEL BỘ LỌC ĐA CHIỀU (MULTI-CRITERIA FILTER FORM)
+     Lọc theo: trạng thái, nguồn, phân loại nóng ấm lạnh, người phụ trách, khoảng thời gian
+     ======================================================================== -->
+<div class="filter-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="font-size: 0.88rem; font-weight: 800; color: #1e1b4b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+            <span>🔍</span>
+            <span>Bộ Lọc Đa Chiều Nâng Cao (Tiêu chí 1)</span>
+        </div>
+        {% if active_filter %}
+        <div style="font-size: 0.8rem; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 9999px; font-weight: 600;">
+            Đang áp dụng: <strong>{{ active_filter.name }}</strong>
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="GET" action="{{ url_for('leads_list_view') }}" id="filter-form">
+        <div class="filter-grid">
+            <!-- 1. Trạng thái Lead -->
+            <div class="form-group">
+                <label class="form-label" for="filter-status">Trạng Thái Lead</label>
+                <select name="status" id="filter-status" class="form-control">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    {% for code, label in STATUS_LABELS.items() %}
+                    <option value="{{ code }}" {% if criteria.get('status') == code %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 2. Nguồn Lead -->
+            <div class="form-group">
+                <label class="form-label" for="filter-source">Nguồn Lead</label>
+                <select name="source" id="filter-source" class="form-control">
+                    <option value="">-- Tất cả nguồn --</option>
+                    {% for src in SOURCES %}
+                    <option value="{{ src }}" {% if criteria.get('source') == src %}selected{% endif %}>
+                        {{ SOURCE_ICONS.get(src, '🌐') }} {{ src }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 3. Phân loại Nóng / Ấm / Lạnh -->
+            <div class="form-group">
+                <label class="form-label" for="filter-temperature">Nhiệt Độ (Nóng/Ấm/Lạnh)</label>
+                <select name="temperature" id="filter-temperature" class="form-control">
+                    <option value="">-- Tất cả nhiệt độ --</option>
+                    {% for t_code in TEMPERATURES %}
+                    <option value="{{ t_code }}" {% if criteria.get('temperature') == t_code %}selected{% endif %}>
+                        {{ TEMP_LABELS.get(t_code) }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 4. Người phụ trách -->
+            <div class="form-group">
+                <label class="form-label" for="filter-assigned">Người Phụ Trách</label>
+                <select name="assigned_to" id="filter-assigned" class="form-control">
+                    <option value="mine" {% if criteria.get('assigned_to') == 'mine' %}selected{% endif %}>
+                        👤 Tôi phụ trách ({{ current_user.name }})
+                    </option>
+                    <option value="all" {% if criteria.get('assigned_to') == 'all' or not criteria.get('assigned_to') %}selected{% endif %}>
+                        👥 Toàn bộ nhân viên
+                    </option>
+                    <option value="unassigned" {% if criteria.get('assigned_to') == 'unassigned' %}selected{% endif %}>
+                        🆕 Chưa phân bổ (Unassigned)
+                    </option>
+                    {% for uid, u in all_users.items() %}
+                    <option value="{{ uid }}" {% if criteria.get('assigned_to') == uid %}selected{% endif %}>
+                        {{ u.avatar }} {{ u.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 5. Khoảng thời gian tiếp nhận -->
+            <div class="form-group">
+                <label class="form-label" for="date-preset-select">Khoảng Thời Gian</label>
+                <select name="date_preset" id="date-preset-select" class="form-control">
+                    <option value="all" {% if criteria.get('date_preset') == 'all' or not criteria.get('date_preset') %}selected{% endif %}>Tất cả thời gian</option>
+                    <option value="today" {% if criteria.get('date_preset') == 'today' %}selected{% endif %}>Hôm nay</option>
+                    <option value="last_7_days" {% if criteria.get('date_preset') == 'last_7_days' %}selected{% endif %}>7 ngày gần nhất</option>
+                    <option value="last_30_days" {% if criteria.get('date_preset') == 'last_30_days' %}selected{% endif %}>30 ngày gần nhất</option>
+                    <option value="custom" {% if criteria.get('date_preset') == 'custom' %}selected{% endif %}>Tùy chỉnh ngày...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Khung chọn ngày tùy chỉnh (Hiện khi chọn custom) -->
+        <div id="custom-date-box" style="display: none; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label">Từ ngày</label>
+                <input type="date" name="from_date" class="form-control" value="{{ criteria.get('from_date', '') }}">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label">Đến ngày</label>
+                <input type="date" name="to_date" class="form-control" value="{{ criteria.get('to_date', '') }}">
+            </div>
+        </div>
+
+        <!-- HÀNG THỨ 2: TÌM KIẾM TỪ KHÓA & BỘ LỌC NHANH SÁNG NAY -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <!-- Checkbox Lọc Quá SLA -->
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: #b91c1c; cursor: pointer;">
+                    <input type="checkbox" name="is_sla_overdue" value="true" {% if criteria.get('is_sla_overdue') %}checked{% endif %}>
+                    <span>🚩 Chỉ Lead Quá Hạn SLA</span>
+                </label>
+
+                <!-- Checkbox Lọc Hẹn Hôm Nay -->
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: #1e40af; cursor: pointer;">
+                    <input type="checkbox" name="call_today" value="true" {% if criteria.get('call_today') %}checked{% endif %}>
+                    <span>📞 Lịch Hẹn Gọi Hôm Nay</span>
+                </label>
+
+                <!-- Tìm kiếm từ khóa -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm theo tên cty, sđt, liên hệ..." value="{{ criteria.get('search', '') }}" style="width: 240px;">
+                </div>
+            </div>
+
+            <!-- Các nút bấm lọc -->
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ url_for('leads_list_view') }}" class="btn btn-outline btn-sm">
+                    🔄 Đặt lại bộ lọc
+                </a>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    🔍 Áp Dụng Bộ Lọc
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ========================================================================
+     TIÊU CHÍ 2: BẢNG DANH SÁCH LEAD & HIỂN THỊ NỔI BẬT LEAD QUÁ SLA
+     "Lead quá SLA hiển thị nổi bật"
+     ======================================================================== -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+                📋 Danh Sách Lead Phù Hợp
+            </h2>
+            <span class="badge badge-purple" style="font-size: 0.82rem; padding: 3px 10px;">
+                {{ leads|length }} lead tìm thấy
+            </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; font-size: 0.8rem; color: #64748b;">
+            <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #fff5f5; border: 2px solid #ef4444; border-radius: 3px; display: inline-block;"></span>
+                <span>Nền đỏ viền đỏ = <strong>Quá Hạn SLA (Cần gọi ngay)</strong></span>
+            </span>
+            <span style="display: flex; align-items: center; gap: 4px;">
+                <span class="badge badge-temp-hot">🔥 Nóng</span>
+                <span>Khả năng chốt cao</span>
+            </span>
+        </div>
+    </div>
+
+    {% if leads|length == 0 %}
+    <div style="text-align: center; padding: 48px 20px; background: #f8fafc; border-radius: 12px; border: 1px dashed var(--border-color);">
+        <div style="font-size: 3rem; margin-bottom: 12px;">🔍</div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #1e1b4b; margin-bottom: 6px;">Không tìm thấy Lead nào phù hợp</h3>
+        <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 16px;">
+            Hãy thử nới lỏng các tiêu chí lọc trong thanh công cụ hoặc chọn bộ lọc lưu sẵn khác.
+        </p>
+        <a href="{{ url_for('leads_list_view') }}" class="btn btn-outline btn-sm">
+            Xem Tất Cả Lead
+        </a>
+    </div>
+    {% else %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Mã Lead</th>
+                    <th style="min-width: 220px;">Khách Hàng / Công Ty</th>
+                    <th style="min-width: 140px;">Nhiệt Độ & Trạng Thái</th>
+                    <th style="min-width: 150px;">Nguồn Lead</th>
+                    <th style="min-width: 140px;">Người Phụ Trách</th>
+                    <th style="min-width: 190px;">Tình Trạng SLA (Tiêu chí 2)</th>
+                    <th style="min-width: 120px;">Giá Trị Dự Kiến</th>
+                    <th style="width: 130px; text-align: center;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <!-- TIÊU CHÍ 2: NẾU QUÁ SLA THÌ DÒNG CÓ CLASS tr-sla-overdue VÀ VIỀN ĐỎ -->
+                <tr class="{% if lead.sla.is_overdue %}tr-sla-overdue{% endif %}">
+                    <!-- Mã Lead -->
+                    <td>
+                        <a href="{{ url_for('lead_detail_view', lead_id=lead.id) }}" style="font-weight: 700; color: var(--primary); text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                        {% if lead.next_call_date == now.strftime('%Y-%m-%d') %}
+                        <div style="font-size: 0.7rem; color: #2563eb; font-weight: 700; margin-top: 2px;">
+                            📞 Hẹn hôm nay
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Tên Công ty & Người liên hệ -->
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+                            {{ lead.company_name }}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 8px;">
+                            <span>👤 {{ lead.contact_name }}</span>
+                            <span>•</span>
+                            <a href="tel:{{ lead.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">
+                                📱 {{ lead.phone }}
+                            </a>
+                        </div>
+                    </td>
+
+                    <!-- Nhiệt độ (Nóng/Ấm/Lạnh) & Trạng thái -->
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                            <!-- Badge Nhiệt độ Nóng / Ấm / Lạnh -->
+                            <span class="badge {{ TEMP_BADGE_CLASSES.get(lead.temperature, 'badge-gray') }}">
+                                {{ TEMP_LABELS.get(lead.temperature, lead.temperature) }}
+                            </span>
+                            <!-- Badge Trạng thái Lead -->
+                            <span class="badge {{ STATUS_BADGE_CLASSES.get(lead.status, 'badge-gray') }}">
+                                {{ STATUS_LABELS.get(lead.status, lead.status) }}
+                            </span>
+                        </div>
+                    </td>
+
+                    <!-- Nguồn Lead -->
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem;">
+                            <span>{{ SOURCE_ICONS.get(lead.source, '🌐') }}</span>
+                            <span>{{ lead.source }}</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                            {{ lead.created_at|vi_date }}
+                        </div>
+                    </td>
+
+                    <!-- Người phụ trách -->
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem;">
+                            {% if lead.assigned_to_id == current_user.id %}
+                            <span style="font-weight: 700; color: var(--primary);">👤 Bạn phụ trách</span>
+                            {% elif lead.assigned_to_id %}
+                            <span>{{ lead.assigned_to_name }}</span>
+                            {% else %}
+                            <span class="badge badge-gray">Chưa phân bổ</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- TIÊU CHÍ 2: TÌNH TRẠNG SLA HIỂN THỊ NỔI BẬT -->
+                    <td>
+                        {% if lead.sla.is_overdue %}
+                        <!-- QUÁ HẠN SLA CÓ BADGE ĐỎ NHẤP NHÁY VÀ THỜI GIAN TRỄ RÕ RÀNG -->
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                            <span class="sla-overdue-tag">
+                                <span>🚩</span>
+                                <span>QUÁ HẠN SLA</span>
+                            </span>
+                            <div style="font-size: 0.75rem; color: #b91c1c; font-weight: 700;">
+                                ⚠️ {{ lead.sla.delay_text }}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #991b1b;">
+                                Hạn chót: {{ lead.sla_deadline|vi_datetime }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div>
+                            <span class="badge {{ lead.sla.badge_class }}">
+                                {{ lead.sla.label }}
+                            </span>
+                            <div style="font-size: 0.73rem; color: #64748b; margin-top: 3px;">
+                                {{ lead.sla.delay_text }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Giá trị dự kiến -->
+                    <td>
+                        <span style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">
+                            {{ lead.deal_value|vi_currency }}
+                        </span>
+                    </td>
+
+                    <!-- Nút thao tác -->
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 6px; justify-content: center;">
+                            <!-- Nút Gọi Ngay -->
+                            <button type="button"
+                                    class="btn btn-sm {% if lead.sla.is_overdue %}btn-call-urgent{% else %}btn-primary{% endif %} btn-quick-call"
+                                    data-lead-id="{{ lead.id }}"
+                                    data-lead-name="{{ lead.company_name }}"
+                                    data-phone="{{ lead.phone }}"
+                                    data-overdue="{{ 'true' if lead.sla.is_overdue else 'false' }}"
+                                    title="Ghi nhận cuộc gọi và cập nhật SLA">
+                                📞 Gọi Ngay
+                            </button>
+                            <a href="{{ url_for('lead_detail_view', lead_id=lead.id) }}" class="btn btn-outline btn-sm" title="Xem chi tiết lead">
+                                👁️
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ========================================================================
+     MODAL LƯU BỘ LỌC MỚI (TIÊU CHÍ 3)
+     "Lưu và đặt tên cho bộ lọc hay dùng"
+     ======================================================================== -->
+<div class="modal-overlay" id="modal-save-filter">
+    <div class="modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e1b4b; display: flex; align-items: center; gap: 8px;">
+                <span>💾</span>
+                <span>Lưu Bộ Lọc Hay Dùng (Smart View)</span>
+            </h3>
+            <button type="button" id="btn-close-save-filter" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #94a3b8;">
+                ✕
+            </button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 18px;">
+            Lưu lại toàn bộ tiêu chí lọc bạn vừa thiết lập để tái sử dụng mỗi buổi sáng chỉ bằng một cú nhấp chuột!
+        </p>
+
+        <form action="{{ url_for('saved_filter_create') }}" method="POST">
+            <!-- Hidden inputs copy tiêu chí hiện tại -->
+            <input type="hidden" name="status" id="modal-criteria-status" value="{{ criteria.get('status', '') }}">
+            <input type="hidden" name="source" id="modal-criteria-source" value="{{ criteria.get('source', '') }}">
+            <input type="hidden" name="temperature" id="modal-criteria-temperature" value="{{ criteria.get('temperature', '') }}">
+            <input type="hidden" name="assigned_to" id="modal-criteria-assigned_to" value="{{ criteria.get('assigned_to', '') }}">
+            <input type="hidden" name="date_preset" id="modal-criteria-date_preset" value="{{ criteria.get('date_preset', '') }}">
+            <input type="hidden" name="from_date" id="modal-criteria-from_date" value="{{ criteria.get('from_date', '') }}">
+            <input type="hidden" name="to_date" id="modal-criteria-to_date" value="{{ criteria.get('to_date', '') }}">
+            <input type="hidden" name="is_sla_overdue" id="modal-criteria-is_sla_overdue" value="{{ 'true' if criteria.get('is_sla_overdue') else '' }}">
+            <input type="hidden" name="call_today" id="modal-criteria-call_today" value="{{ 'true' if criteria.get('call_today') else '' }}">
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="filter-name-input">Tên Bộ Lọc (Bắt buộc) *</label>
+                <input type="text" name="name" id="filter-name-input" class="form-control" placeholder="Ví dụ: Khách Bất Động Sản Nóng, Lead Face Khẩn Cấp..." required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Biểu tượng (Icon)</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="☀️"> ☀️ Sáng nay</label>
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="🔥" checked> 🔥 Nóng</label>
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="⚡"> ⚡ Nhanh</label>
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="🚩"> 🚩 Khẩn</label>
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="🎯"> 🎯 Mục tiêu</label>
+                    <label style="cursor: pointer;"><input type="radio" name="icon" value="⭐"> ⭐ Ưu tiên</label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 700; color: #1e1b4b; cursor: pointer;">
+                    <input type="checkbox" name="is_default" value="true">
+                    <span>⭐ Đặt làm bộ lọc MẶC ĐỊNH khi mở máy buổi sáng</span>
+                </label>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; padding-left: 24px;">
+                    Mỗi khi bạn truy cập CRM vào buổi sáng, hệ thống sẽ tự động kích hoạt bộ lọc này giúp bạn làm việc tức thì.
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-save-filter">Hủy</button>
+                <button type="submit" class="btn btn-save-filter">Lưu Bộ Lọc</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================
+     MODAL GHI NHẬN CUỘC GỌI NHANH (GIẢI PHÓNG QUÁ HẠN SLA)
+     ======================================================================== -->
+<div class="modal-overlay" id="modal-record-call">
+    <div class="modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e1b4b; display: flex; align-items: center; gap: 8px;">
+                <span>📞</span>
+                <span>Ghi Nhận Cuộc Gọi Khách Hàng</span>
+            </h3>
+            <button type="button" id="btn-close-record-call" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #94a3b8;">
+                ✕
+            </button>
+        </div>
+
+        <div id="call-modal-sla-alert" style="display: none; align-items: center; gap: 8px; background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 0.84rem; font-weight: 700;">
+            <span>🚩</span>
+            <span>Khách hàng này đang bị QUÁ HẠN SLA! Cuộc gọi này sẽ giải phóng trạng thái quá hạn.</span>
+        </div>
+
+        <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;">
+            <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;" id="call-modal-lead-title">
+                Khách hàng
+            </div>
+            <div style="font-size: 0.88rem; color: #2563eb; margin-top: 4px; font-weight: 600;">
+                Điện thoại: <a href="#" id="call-modal-phone" style="color: inherit; text-decoration: underline;">0900000000</a>
+            </div>
+        </div>
+
+        <form action="" method="POST" id="form-record-call">
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">Nội Dung Trao Đổi / Ghi Chú *</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Khách hàng trao đổi về nhu cầu phần mềm, hẹn demo..." required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label class="form-label">Hẹn Lịch Gọi Lại (Nếu có)</label>
+                <input type="date" name="next_call_date" class="form-control" value="{{ (now).strftime('%Y-%m-%d') }}">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-record-call">Đóng</button>
+                <button type="submit" class="btn btn-primary">
+                    Hoàn Tất Cuộc Gọi & Cập Nhật SLA
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

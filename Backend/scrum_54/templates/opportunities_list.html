@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Cơ Hội Bán Hàng (Opportunities Pipeline){% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+            💼 Cơ Hội Bán Hàng (Pipeline & Deals)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Theo dõi tiến trình bán hàng, đàm phán hợp đồng được sinh tự động khi chuyển đổi lead
+        </p>
+    </div>
+
+    <!-- TỔNG PIPELINE -->
+    <div style="background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: var(--radius-md); text-align: right;">
+        <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Tổng Giá Trị Pipeline</span>
+        <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">
+            {{ kpis.total_pipeline_val|vi_currency }}
+        </div>
+    </div>
+</div>
+
+<!-- BỘ LỌC GIAI ĐOẠN -->
+<div class="card" style="padding: 14px 18px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-right: 6px;">Giai Đoạn:</span>
+        <a href="{{ url_for('opportunities_list') }}" class="btn btn-sm {% if not stage_filter %}btn-primary{% else %}btn-outline{% endif %}">
+            Tất Cả ({{ kpis.total_opportunities }})
+        </a>
+        <a href="{{ url_for('opportunities_list', stage=STAGE_DISCOVERY) }}" class="btn btn-sm {% if stage_filter == STAGE_DISCOVERY %}btn-primary{% else %}btn-outline{% endif %}">
+            1. Khảo Sát
+        </a>
+        <a href="{{ url_for('opportunities_list', stage=STAGE_PROPOSAL) }}" class="btn btn-sm {% if stage_filter == STAGE_PROPOSAL %}btn-primary{% else %}btn-outline{% endif %}">
+            2. Báo Giá
+        </a>
+        <a href="{{ url_for('opportunities_list', stage=STAGE_NEGOTIATION) }}" class="btn btn-sm {% if stage_filter == STAGE_NEGOTIATION %}btn-primary{% else %}btn-outline{% endif %}">
+            3. Đàm Phán
+        </a>
+        <a href="{{ url_for('opportunities_list', stage=STAGE_WON) }}" class="btn btn-sm {% if stage_filter == STAGE_WON %}btn-success{% else %}btn-outline{% endif %}">
+            4. Thành Công 🎉
+        </a>
+    </div>
+</div>
+
+<!-- BẢNG CƠ HỘI -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Deal</th>
+                    <th>Tên Cơ Hội Bán Hàng</th>
+                    <th>Khách Hàng & Liên Hệ</th>
+                    <th>Giá Trị Hợp Đồng</th>
+                    <th>Giai Đoạn Pipeline</th>
+                    <th>Dự Kiến Chốt</th>
+                    <th>Nguồn Gốc (Lead)</th>
+                    <th style="text-align: right;">Cập Nhật Giai Đoạn</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in opportunities %}
+                <tr>
+                    <td><strong style="color: #7c3aed;">{{ o.id }}</strong></td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ o.name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ o.product }}</div>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('account_detail', account_id=o.account_id) }}" style="color: #4f46e5; font-weight: 600; text-decoration: none;">
+                            🏢 {{ o.account_name }}
+                        </a>
+                        <div style="font-size: 0.78rem; color: #64748b;">👤 {{ o.contact_name }}</div>
+                    </td>
+                    <td>
+                        <strong style="color: #059669; font-size: 1.05rem;">{{ o.amount|vi_currency }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge badge-purple">
+                            {{ STAGE_LABELS.get(o.stage, o.stage) }}
+                        </span>
+                    </td>
+                    <td>📅 {{ o.close_date|vi_date }}</td>
+                    <td>
+                        {% if o.created_from_lead_id %}
+                        <span class="inherited-tag">
+                            🔗 Sinh từ Lead {{ o.created_from_lead_id }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8; font-size: 0.8rem;">Trực tiếp</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <form action="{{ url_for('update_opportunity_stage', opp_id=o.id) }}" method="POST" style="display: inline-flex; gap: 6px;">
+                            <select name="stage" class="form-control" style="padding: 4px 8px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+                                <option value="{{ STAGE_DISCOVERY }}" {% if o.stage == STAGE_DISCOVERY %}selected{% endif %}>1. Khảo sát</option>
+                                <option value="{{ STAGE_PROPOSAL }}" {% if o.stage == STAGE_PROPOSAL %}selected{% endif %}>2. Báo giá</option>
+                                <option value="{{ STAGE_NEGOTIATION }}" {% if o.stage == STAGE_NEGOTIATION %}selected{% endif %}>3. Đàm phán</option>
+                                <option value="{{ STAGE_WON }}" {% if o.stage == STAGE_WON %}selected{% endif %}>4. Chốt thành công 🎉</option>
+                                <option value="{{ STAGE_LOST }}" {% if o.stage == STAGE_LOST %}selected{% endif %}>5. Thất bại</option>
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">
+                        Chưa có cơ hội bán hàng nào. Hãy chuyển đổi một lead đủ điều kiện!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

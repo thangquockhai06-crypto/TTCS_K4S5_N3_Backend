@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Quản Lý Của Trưởng Nhóm Kinh Doanh{% endblock %}
+
+{% block content %}
+<!-- BANNER TRƯỞNG NHÓM -->
+<div class="ticket-banner" style="padding: 18px 24px; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 2.4rem;">🧑‍💼</div>
+            <div>
+                <h2 style="font-size: 1.25rem; margin-bottom: 2px;">Bàn Điều Phối & Giám Sát: {{ user.name }}</h2>
+                <div style="font-size: 0.85rem; color: #94a3b8;">
+                    Vai trò: <strong style="color: white;">{{ user.role_name }}</strong> &bull; {{ user.team_name }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('notifications_view') }}" class="btn btn-secondary btn-sm">
+                <span>🔔</span> Xem Hộp Thư Cảnh Báo ({% if unread_notifs > 0 %}<strong style="color: #f87171;">{{ unread_notifs }} mới</strong>{% else %}0{% endif %})
+            </a>
+            <form action="{{ url_for('sim_scan_now') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <span>🔍</span> Quét SLA Ngay Lập Tức
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MỤC 1: TIÊU CHÍ 3: CẢNH BÁO QUÁ HẠN SLA PHẢN HỒI -->
+<!-- LEAD BỊ GẮN CỜ 🚩 VÀ BÁO TRƯỞNG NHÓM -->
+<!-- ======================================================== -->
+<div class="section-header">
+    <div class="section-title">
+        <span class="flag-badge">🚩 CẢNH BÁO QUÁ HẠN SLA</span>
+        <span>1. Lead Bị Gắn Cờ Do Quá SLA Phản Hồi (Cần Trưởng Nhóm Xử Lý Gấp)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #f87171; font-weight: 600;">
+        {{ flagged_leads|length }} lead vi phạm SLA
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Doanh Nghiệp</th>
+                <th>Nhân Viên Đang Phụ Trách</th>
+                <th>Thời Hạn SLA</th>
+                <th>Trạng Thái Gắn Cờ</th>
+                <th>Lý Do Vi Phạm (Tiêu chí 3)</th>
+                <th style="text-align: right;">Hành Động Can Thiệp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if flagged_leads %}
+                {% for lead in flagged_leads %}
+                <tr class="row-flagged">
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }} &bull; {{ lead.phone }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #fbbf24;">{{ lead.assigned_to_name or 'Chưa rõ' }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ lead.status }}</div>
+                    </td>
+                    <td>
+                        <span class="countdown-box countdown-red" data-sla-deadline="{{ lead.sla_deadline.isoformat() if lead.sla_deadline else '' }}" data-flagged="true">
+                            🚩 Quá hạn SLA
+                        </span>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                            Hạn chót: {{ lead.sla_deadline|vi_datetime }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="flag-badge">🚩 ĐÃ BỊ GẮN CỜ</span>
+                        <div style="font-size: 0.72rem; color: #fca5a5; margin-top: 4px;">
+                            Gắn cờ lúc: {{ lead.flagged_at|vi_datetime }}
+                        </div>
+                    </td>
+                    <td style="max-width: 300px; font-size: 0.82rem; color: #fca5a5;">
+                        {{ lead.flag_reason }}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 8px;">
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-sm btn-open-reassign-modal"
+                                data-lead-id="{{ lead.id }}"
+                                data-lead-name="{{ lead.name }}"
+                            >
+                                <span>🔄</span> Thu Hồi & Điều Chuyển
+                            </button>
+                            <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">
+                                Chi Tiết
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        🎉 Rất tốt! Không có lead nào trong nhóm bị quá hạn SLA phản hồi.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ======================================================== -->
+<!-- MỤC 2: TIÊU CHÍ 2: HÀNG CHỜ PHÂN BỔ (CÁC LEAD BỊ TỪ CHỐI) -->
+<!-- HIỂN THỊ RÕ LÝ DO TỪ CHỐI ĐỂ TRƯỞNG NHÓM PHÂN CÔNG LẠI -->
+<!-- ======================================================== -->
+<div class="section-header" style="margin-top: 36px;">
+    <div class="section-title">
+        <span style="color: #fbbf24;">↩️</span>
+        <span>2. Hàng Chờ Phân Bổ (Gồm Các Lead Bị Nhân Viên Từ Chối)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #fbbf24; font-weight: 600;">
+        {{ pending_alloc_leads|length }} lead chờ phân bổ lại
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Doanh Nghiệp</th>
+                <th>Ngành & Khu Vực</th>
+                <th>Giá Trị</th>
+                <th>Lịch Sử & Lý Do Từ Chối (Tiêu chí 2)</th>
+                <th>Thời Điểm Vào Hàng Chờ</th>
+                <th style="text-align: right;">Hành Động Phân Bổ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if pending_alloc_leads %}
+                {% for lead in pending_alloc_leads %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }} &bull; {{ lead.phone }}</div>
+                    </td>
+                    <td>
+                        <div>{{ lead.industry }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ lead.region }}</div>
+                    </td>
+                    <td style="font-weight: 600; color: #34d399;">
+                        {{ lead.estimated_value }}
+                    </td>
+                    <td style="max-width: 320px;">
+                        {% if lead.rejection_reason %}
+                            <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; color: #fde68a;">
+                                <div><strong>Lý do từ chối:</strong> "{{ lead.rejection_reason }}"</div>
+                                {% if lead.rejection_history %}
+                                <div style="font-size: 0.75rem; color: #fcd34d; margin-top: 4px;">
+                                    Bởi: {{ lead.rejection_history[-1].rejected_by_name }} ({{ lead.rejection_history[-1].rejected_at }})
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.82rem;">Lead mới nhập kho chưa phân</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-secondary);">
+                        {{ lead.created_at|vi_datetime }}
+                    </td>
+                    <td style="text-align: right;">
+                        <button
+                            type="button"
+                            class="btn btn-primary btn-sm btn-open-reassign-modal"
+                            data-lead-id="{{ lead.id }}"
+                            data-lead-name="{{ lead.name }}"
+                        >
+                            <span>➕</span> Phân Bổ Ngay
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        Hàng chờ phân bổ hiện đang trống.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ======================================================== -->
+<!-- MỤC 3: GIÁM SÁT THÀNH VIÊN TRONG ĐỘI KINH DOANH -->
+<!-- ======================================================== -->
+<div class="section-header" style="margin-top: 36px;">
+    <div class="section-title">
+        <span>👥 Giám Sát Nhân Viên Trong Đội Kinh Doanh</span>
+    </div>
+</div>
+
+<div class="stats-grid">
+    {% for member in team_members %}
+    {% set m_leads = db.get_leads(assigned_to_id=member.id) %}
+    {% set m_incare = m_leads|selectattr("status", "equalto", "IN_CARE")|list %}
+    {% set m_flagged = m_leads|selectattr("is_flagged", "equalto", True)|list %}
+    {% set m_contacted = m_leads|selectattr("status", "equalto", "CONTACTED")|list %}
+    <div class="stat-card" style="border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.6rem;">{{ member.avatar }}</span>
+                <div>
+                    <div style="font-weight: 700; color: white;">{{ member.name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">{{ member.email }}</div>
+                </div>
+            </div>
+            {% if m_flagged|length > 0 %}
+            <span class="flag-badge">🚩 {{ m_flagged|length }} vi phạm</span>
+            {% else %}
+            <span class="status-badge badge-contacted">🟢 Đạt chuẩn</span>
+            {% endif %}
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 0.78rem; text-align: center; margin-top: 10px;">
+            <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
+                <div style="color: var(--text-muted);">Đang chăm</div>
+                <strong style="color: #c084fc; font-size: 1.1rem;">{{ m_incare|length }}</strong>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
+                <div style="color: var(--text-muted);">Đã liên hệ</div>
+                <strong style="color: #34d399; font-size: 1.1rem;">{{ m_contacted|length }}</strong>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
+                <div style="color: var(--text-muted);">Quá SLA</div>
+                <strong style="color: #f87171; font-size: 1.1rem;">{{ m_flagged|length }}</strong>
+            </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+            <a href="{{ url_for('all_leads_view', assigned_to=member.id) }}" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">
+                Xem danh sách lead của {{ member.name.split()[-1] }}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

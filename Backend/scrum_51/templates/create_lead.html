@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo Lead Khách Hàng Mới{% endblock %}
+
+{% block content %}
+<div style="max-width: 760px; margin: 0 auto;">
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('all_leads_view') }}" style="color: #94a3b8; text-decoration: none; font-size: 0.85rem;">
+            &larr; Quay lại danh sách lead
+        </a>
+        <h1 style="font-size: 1.5rem; color: white; margin-top: 4px;">
+            ➕ Nhập Lead Khách Hàng Mới Vào Hệ Thống
+        </h1>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Tạo khách hàng tiềm năng mới để kiểm thử quy trình phân bổ, tiếp nhận và giám sát SLA phản hồi.
+        </p>
+    </div>
+
+    <div class="table-card" style="padding: 24px;">
+        <form action="{{ url_for('create_lead_route') }}" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Tên khách hàng / Đại diện <span style="color:var(--danger)">*</span>:</label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Nguyễn Văn Hoàng" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tên Công ty / Doanh nghiệp <span style="color:var(--danger)">*</span>:</label>
+                    <input type="text" name="company" class="form-control" placeholder="Ví dụ: Tập đoàn Công nghệ Á Châu" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Số điện thoại <span style="color:var(--danger)">*</span>:</label>
+                    <input type="text" name="phone" class="form-control" placeholder="Ví dụ: 0912 888 999" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Địa chỉ Email:</label>
+                    <input type="email" name="email" class="form-control" placeholder="hoang.nguyen@achau.com">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Ngành nghề:</label>
+                    <select name="industry" class="form-select">
+                        <option value="Công nghệ thông tin">Công nghệ thông tin & Phần mềm</option>
+                        <option value="Tài chính - Ngân hàng">Tài chính - Ngân hàng</option>
+                        <option value="Bất động sản">Bất động sản & Xây dựng</option>
+                        <option value="Bán lẻ & TMĐT">Bán lẻ & Thương mại điện tử</option>
+                        <option value="Sản xuất & Xuất nhập khẩu">Sản xuất & Xuất nhập khẩu</option>
+                        <option value="Y tế & Dược phẩm">Y tế & Dược phẩm</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Khu vực địa lý:</label>
+                    <select name="region" class="form-select">
+                        <option value="Miền Bắc">Miền Bắc (Hà Nội, Hải Phòng...)</option>
+                        <option value="Miền Trung">Miền Trung (Đà Nẵng, Huế...)</option>
+                        <option value="Miền Nam">Miền Nam (TP.HCM, Cần Thơ...)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Giá trị tiềm năng ước tính:</label>
+                    <input type="text" name="estimated_value" class="form-control" value="250.000.000 đ">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phân bổ ngay cho nhân viên (Tùy chọn):</label>
+                    <select name="assigned_to_id" class="form-select">
+                        <option value="">-- Để trong Hàng chờ phân bổ --</option>
+                        {% for u in team_members %}
+                        <option value="{{ u.id }}">{{ u.avatar }} {{ u.name }} ({{ u.team_name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Thời hạn SLA phản hồi:</label>
+                <select name="sla_seconds" class="form-select">
+                    <option value="30">⚡ 30 giây (Để test siêu nhanh vi phạm SLA)</option>
+                    <option value="120" selected>⏱️ 2 phút (Mặc định thực nghiệm)</option>
+                    <option value="3600">⏱️ 1 giờ</option>
+                    <option value="86400">📅 24 giờ</option>
+                    <option value="259200">📅 3 ngày (72 giờ - Theo đề bài)</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+                <a href="{{ url_for('all_leads_view') }}" class="btn btn-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <span>💾</span> Lưu Lead Vào Hệ Thống
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

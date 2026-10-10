@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Người Liên Hệ{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+            👤 Quản Lý Người Liên Hệ (Contacts)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Thực thể người liên hệ sinh đồng thời từ lead hoặc tạo mới dưới quyền khách hàng doanh nghiệp
+        </p>
+    </div>
+
+    <form action="{{ url_for('contacts_list') }}" method="GET" style="display: flex; gap: 8px;">
+        <input type="text" name="search" value="{{ search or '' }}" placeholder="Tìm họ tên, số điện thoại, email..." class="form-control" style="width: 250px; padding: 6px 12px; font-size: 0.85rem;">
+        <button type="submit" class="btn btn-outline btn-sm">🔍 Tìm</button>
+        {% if search %}
+        <a href="{{ url_for('contacts_list') }}" class="btn btn-outline btn-sm">✖</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Liên Hệ</th>
+                    <th>Họ Và Tên</th>
+                    <th>Chức Vụ</th>
+                    <th>Khách Hàng Doanh Nghiệp</th>
+                    <th>Số Điện Thoại</th>
+                    <th>Email Làm Việc</th>
+                    <th>Nguồn Gốc (Lead Gốc)</th>
+                    <th>Vai Trò</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in contacts %}
+                <tr>
+                    <td><strong style="color: #d97706;">{{ c.id }}</strong></td>
+                    <td>
+                        <strong style="color: #0f172a; font-size: 0.95rem;">{{ c.full_name }}</strong>
+                    </td>
+                    <td>{{ c.job_title }}</td>
+                    <td>
+                        <a href="{{ url_for('account_detail', account_id=c.account_id) }}" style="color: #4f46e5; font-weight: 600; text-decoration: none;">
+                            🏢 {{ c.account_name }}
+                        </a>
+                    </td>
+                    <td><a href="tel:{{ c.phone }}" style="color: #4f46e5;">📞 {{ c.phone }}</a></td>
+                    <td><a href="mailto:{{ c.email }}" style="color: #4f46e5;">✉️ {{ c.email }}</a></td>
+                    <td>
+                        {% if c.created_from_lead_id %}
+                        <span class="inherited-tag">
+                            🔗 Sinh từ Lead {{ c.created_from_lead_id }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8; font-size: 0.8rem;">Trực tiếp</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.is_primary %}
+                        <span class="badge badge-green">Liên Hệ Chính ⭐</span>
+                        {% else %}
+                        <span class="badge badge-blue">Liên Hệ Phụ</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">
+                        Chưa có người liên hệ nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

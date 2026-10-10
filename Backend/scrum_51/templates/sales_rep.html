@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Làm Việc Nhân Viên Kinh Doanh{% endblock %}
+
+{% block content %}
+<!-- THẺ VAI TRÒ NHÂN VIÊN KINH DOANH -->
+<div class="ticket-banner" style="padding: 18px 24px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 2.4rem;">{{ user.avatar }}</div>
+            <div>
+                <h2 style="font-size: 1.25rem; margin-bottom: 2px;">Bàn Làm Việc: {{ user.name }}</h2>
+                <div style="font-size: 0.85rem; color: #94a3b8;">
+                    Vai trò: <strong style="color: white;">{{ user.role_name }}</strong> &bull; {{ user.team_name }} &bull; {{ user.email }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <div class="criteria-pill active" style="font-size: 0.82rem;">
+                <span>⏱️ SLA Phản hồi:</span>
+                <strong style="color: #6ee7b7;">Bắt buộc liên hệ trước khi hết hạn!</strong>
+            </div>
+            <a href="{{ url_for('simulator_view') }}" class="btn btn-secondary btn-sm">
+                ⚡ Giả Lập Quá SLA
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- CÁC THỐNG KÊ NHANH CHO SALES REP -->
+<div class="stats-grid">
+    <div class="stat-card" style="border-left: 4px solid var(--info);">
+        <div class="stat-title">
+            <span>Chờ Bạn Tiếp Nhận</span>
+            <span>⏳</span>
+        </div>
+        <div class="stat-value" style="color: #60a5fa;">{{ leads_assigned|length }}</div>
+        <div class="stat-desc">Cần bấm "Nhận" hoặc "Từ chối"</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #8b5cf6;">
+        <div class="stat-title">
+            <span>Đang Chăm Sóc</span>
+            <span>🤝</span>
+        </div>
+        <div class="stat-value" style="color: #c084fc;">{{ leads_in_care|length }}</div>
+        <div class="stat-desc">Đang đếm ngược hạn SLA liên hệ</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid var(--success);">
+        <div class="stat-title">
+            <span>Đã Phản Hồi Xong</span>
+            <span>✅</span>
+        </div>
+        <div class="stat-value" style="color: #34d399;">{{ leads_contacted|length }}</div>
+        <div class="stat-desc">Đã liên hệ, đạt cam kết SLA</div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- KHỐI 1: LEAD CHỜ TIẾP NHẬN (CÓ NÚT NHẬN VÀ TỪ CHỐI) -->
+<!-- ĐÁP ỨNG TIÊU CHÍ 1 & TIÊU CHÍ 2 -->
+<!-- ======================================================== -->
+<div class="section-header">
+    <div class="section-title">
+        <span style="color: #60a5fa;">⏳</span>
+        <span>1. Lead Chờ Bạn Tiếp Nhận (Mới Phân Bổ)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #94a3b8;">
+        Số lượng: <strong style="color: #60a5fa;">{{ leads_assigned|length }}</strong> lead
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Công Ty</th>
+                <th>SĐT / Email</th>
+                <th>Ngành Nghề & Khu Vực</th>
+                <th>Giá Trị Tiềm Năng</th>
+                <th>Thời Hạn SLA Phản Hồi</th>
+                <th style="text-align: right;">Hành Động Quyết Định</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if leads_assigned %}
+                {% for lead in leads_assigned %}
+                <tr class="{% if lead.is_flagged %}row-flagged{% endif %}">
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 500; color: #e2e8f0;">{{ lead.phone }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ lead.email }}</div>
+                    </td>
+                    <td>
+                        <div>{{ lead.industry }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ lead.region }}</div>
+                    </td>
+                    <td style="font-weight: 600; color: #34d399;">
+                        {{ lead.estimated_value }}
+                    </td>
+                    <td>
+                        <span
+                            class="countdown-box"
+                            data-sla-deadline="{{ lead.sla_deadline.isoformat() if lead.sla_deadline else '' }}"
+                            data-contacted="false"
+                            data-flagged="{{ 'true' if lead.is_flagged else 'false' }}"
+                        >
+                            ⏱️ Đang tính SLA...
+                        </span>
+                        {% if lead.is_flagged %}
+                        <div class="flag-badge" style="margin-top: 4px;">🚩 ĐÃ BỊ GẮN CỜ QUÁ HẠN</div>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 8px;">
+                            <!-- NÚT 1: NHẬN LEAD (TIÊU CHÍ 1 -> CHUYỂN SANG ĐANG CHĂM SÓC) -->
+                            <form action="{{ url_for('accept_lead_route', lead_id=lead.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <span>✅</span> Nhận Lead
+                                </button>
+                            </form>
+
+                            <!-- NÚT 2: TỪ CHỐI LEAD (TIÊU CHÍ 2 -> BẬT MODAL BẮT BUỘC NHẬP LÝ DO) -->
+                            <button
+                                type="button"
+                                class="btn btn-danger btn-sm btn-open-reject-modal"
+                                data-lead-id="{{ lead.id }}"
+                                data-lead-name="{{ lead.name }}"
+                            >
+                                <span>❌</span> Từ Chối
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        Hiện không có lead mới nào đang chờ tiếp nhận.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ======================================================== -->
+<!-- KHỐI 2: LEAD ĐANG CHĂM SÓC (IN_CARE) -->
+<!-- ĐÃ NHẬN LEAD -> ĐẾM NGƯỢC SLA PHẢN HỒI -> GHI NHẬN LIÊN HỆ -->
+<!-- ======================================================== -->
+<div class="section-header" style="margin-top: 36px;">
+    <div class="section-title">
+        <span style="color: #c084fc;">🤝</span>
+        <span>2. Lead Bạn Đang Chăm Sóc (Đã Nhận Lead - Cần Phản Hồi)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #94a3b8;">
+        Số lượng: <strong style="color: #c084fc;">{{ leads_in_care|length }}</strong> lead
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Doanh Nghiệp</th>
+                <th>Thời Điểm Nhận</th>
+                <th>Trạng Thái</th>
+                <th>Đồng Hồ Đếm Ngược SLA Phản Hồi</th>
+                <th>Ghi Chú / Cảnh Báo</th>
+                <th style="text-align: right;">Hành Động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if leads_in_care %}
+                {% for lead in leads_in_care %}
+                <tr class="{% if lead.is_flagged %}row-flagged{% endif %}">
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }} &bull; {{ lead.phone }}</div>
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-secondary);">
+                        {{ lead.accepted_at|vi_datetime or 'Vừa nhận' }}
+                    </td>
+                    <td>
+                        <span class="status-badge badge-incare">
+                            {{ STATUS_LABELS[lead.status] }}
+                        </span>
+                        {% if lead.is_flagged %}
+                        <div class="flag-badge" style="margin-top: 4px;">🚩 QUÁ SLA (ĐÃ BÁO TRƯỞNG NHÓM)</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span
+                            class="countdown-box"
+                            data-sla-deadline="{{ lead.sla_deadline.isoformat() if lead.sla_deadline else '' }}"
+                            data-contacted="false"
+                            data-flagged="{{ 'true' if lead.is_flagged else 'false' }}"
+                        >
+                            ⏱️ Đang tính SLA...
+                        </span>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                            Hạn SLA: {{ lead.sla_deadline|vi_datetime }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if lead.is_flagged %}
+                            <div style="color: #fca5a5; font-size: 0.8rem;">
+                                ⚠️ {{ lead.flag_reason }}
+                            </div>
+                        {% else %}
+                            <div style="color: #6ee7b7; font-size: 0.8rem;">
+                                🟢 Đang trong hạn SLA. Hãy liên hệ khách hàng ngay!
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 8px;">
+                            <!-- NÚT GHI NHẬN LIÊN HỆ (HOÀN TẤT SLA PHẢN HỒI) -->
+                            <button
+                                type="button"
+                                class="btn btn-success btn-sm btn-open-contact-modal"
+                                data-lead-id="{{ lead.id }}"
+                                data-lead-name="{{ lead.name }}"
+                            >
+                                <span>📞</span> Ghi Nhận Liên Hệ
+                            </button>
+
+                            <!-- NÚT TỪ CHỐI BỔ SUNG NẾU KHÔNG TIẾP TỤC CHĂM SÓC -->
+                            <button
+                                type="button"
+                                class="btn btn-secondary btn-sm btn-open-reject-modal"
+                                data-lead-id="{{ lead.id }}"
+                                data-lead-name="{{ lead.name }}"
+                            >
+                                <span>↩️</span> Trả Lại
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        Bạn chưa có lead nào trong mục Đang chăm sóc. Hãy bấm "Nhận Lead" ở danh sách phía trên!
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ======================================================== -->
+<!-- KHỐI 3: LEAD ĐÃ LIÊN HỆ XONG (HOÀN THÀNH SLA PHẢN HỒI) -->
+<!-- ======================================================== -->
+<div class="section-header" style="margin-top: 36px;">
+    <div class="section-title">
+        <span style="color: #34d399;">✅</span>
+        <span>3. Lead Đã Phản Hồi Thành Công (Đạt Cam Kết SLA)</span>
+    </div>
+    <span style="font-size: 0.85rem; color: #94a3b8;">
+        Số lượng: <strong style="color: #34d399;">{{ leads_contacted|length }}</strong> lead
+    </span>
+</div>
+
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã Lead</th>
+                <th>Khách Hàng / Doanh Nghiệp</th>
+                <th>Kênh Liên Hệ</th>
+                <th>Thời Điểm Phản Hồi</th>
+                <th>Tóm Tắt Cuộc Trao Đổi</th>
+                <th>Đánh Giá SLA</th>
+                <th>Hành Động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if leads_contacted %}
+                {% for lead in leads_contacted %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #a5b4fc; font-weight: 700; text-decoration: none;">
+                            {{ lead.id }}
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: white;">{{ lead.name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">{{ lead.company }}</div>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.85rem; color: #cbd5e1;">{{ lead.contact_channel or 'Điện thoại' }}</span>
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-secondary);">
+                        {{ lead.contacted_at|vi_datetime }}
+                    </td>
+                    <td style="max-width: 320px; font-size: 0.82rem; color: #cbd5e1;">
+                        {{ lead.contact_notes }}
+                    </td>
+                    <td>
+                        <span class="status-badge badge-contacted">
+                            ✅ HOÀN TẤT SLA
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn btn-secondary btn-sm">
+                            Xem Lịch Sử
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        Chưa có lead nào hoàn thành liên hệ.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

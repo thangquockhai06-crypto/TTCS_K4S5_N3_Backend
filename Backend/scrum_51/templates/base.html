@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tiếp Nhận Lead & SLA Phản Hồi{% endblock %} - SCRUM-51</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- THANH CAM KẾT SLA TOPBAR -->
+    <div class="sla-topbar">
+        <div class="sla-topbar-inner">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="pulse-dot"></span>
+                <strong>CAM KẾT SLA PHẢN HỒI:</strong>
+                <span>Lead được phân bổ phải được tiếp nhận & liên hệ ngay, không để nằm im 3 ngày rồi nguội hẳn!</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <span>Tỷ lệ hoàn thành SLA: <strong style="color: #34d399;">{{ metrics.sla_rate }}%</strong></span>
+                <span>Luồng nền: <strong style="color: #60a5fa;">Đang quét tự động (2s)</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- THANH ĐIỀU HƯỚNG CHÍNH (NAVBAR) -->
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <div class="brand-icon">⚡</div>
+                <div>
+                    <div class="brand-name">AutoLead CRM</div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 0.72rem; color: #94a3b8;">Tiếp Nhận & SLA Phản Hồi</span>
+                        <span class="ticket-tag">SCRUM-51</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- MENU ĐIỀU HƯỚNG -->
+            <ul class="nav-links">
+                <li>
+                    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == '/' or request.path == '/dashboard' %}active{% endif %}">
+                        📊 Tổng Quan
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('my_leads') }}" class="nav-link {% if request.path == '/my-leads' %}active{% endif %}">
+                        💼 Lead Của Tôi
+                        {% if current_user.role == ROLE_SALES_REP %}
+                        <span class="nav-badge badge-blue">
+                            {{ db.get_leads(assigned_to_id=current_user.id)|length }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('team_lead_view') }}" class="nav-link {% if request.path == '/team-lead' %}active{% endif %}">
+                        👥 Hàng Chờ & Đội Nhóm
+                        {% if metrics.pending_allocation_count > 0 %}
+                        <span class="nav-badge badge-yellow" title="Lead chờ phân bổ">{{ metrics.pending_allocation_count }}</span>
+                        {% endif %}
+                        {% if metrics.flagged_count > 0 %}
+                        <span class="nav-badge badge-red" title="Lead bị cờ đỏ quá SLA">🚩 {{ metrics.flagged_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('all_leads_view') }}" class="nav-link {% if request.path == '/leads' %}active{% endif %}">
+                        📋 Tất Cả Lead
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('simulator_view') }}" class="nav-link {% if request.path == '/simulator' %}active{% endif %}">
+                        ⚡ Kiểm Thử SLA
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('notifications_view') }}" class="nav-link {% if request.path == '/notifications' %}active{% endif %}">
+                        🔔 Thông Báo
+                        <span id="unread-notif-badge" class="nav-badge badge-red" style="{% if unread_notifs == 0 %}display:none;{% endif %}">
+                            {{ unread_notifs }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('audit_logs_view') }}" class="nav-link {% if request.path == '/audit-logs' %}active{% endif %}">
+                        📜 Nhật Ký
+                    </a>
+                </li>
+            </ul>
+
+            <!-- PERSONA SWITCHER -->
+            <div class="persona-box">
+                <span style="font-size: 1.4rem;">{{ current_user.avatar }}</span>
+                <div class="persona-info">
+                    <div class="persona-name">{{ current_user.name }}</div>
+                    <div class="persona-role">{{ current_user.role_name }}</div>
+                </div>
+                <div class="persona-dropdown">
+                    <select id="persona-select" title="Chuyển đổi vai trò người dùng">
+                        {% for uid, u in all_users.items() %}
+                        <option value="{{ uid }}" {% if uid == current_user.id %}selected{% endif %}>
+                            {{ u.avatar }} {{ u.name }} ({{ u.role_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- KHUNG CHÍNH (CONTAINER) -->
+    <main class="container">
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">
+                    <div>{{ message }}</div>
+                    <button type="button" class="modal-close" onclick="this.parentElement.remove()" style="font-size:1.1rem; line-height:1;">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 1: TỪ CHỐI LEAD (TIÊU CHÍ 2: BẮT BUỘC NHẬP LÝ DO) -->
+    <!-- ======================================================== -->
+    <div class="modal-overlay" id="reject-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title" style="color: #f87171;">
+                    <span>⚠️</span> Từ Chối Nhận Lead
+                </div>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <form id="reject-form" method="POST">
+                <div class="modal-body">
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 14px;">
+                        Bạn đang thao tác từ chối lead: <strong id="reject-modal-lead-name" style="color: white;"></strong>.
+                    </p>
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 0.82rem; color: #fca5a5;">
+                        <strong>Quy định hệ thống:</strong> Bắt buộc phải nêu rõ lý do từ chối. Sau khi xác nhận, lead sẽ tự động quay trở lại <strong>Hàng chờ phân bổ</strong> để Trưởng nhóm điều chuyển cho nhân viên khác.
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Chọn nhanh lý do phổ biến:</label>
+                        <div class="reason-presets">
+                            {% for r in DEFAULT_REJECTION_REASONS %}
+                            <div class="reason-chip" data-reason="{{ r }}">
+                                • {{ r }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reject-reason-input">
+                            Lý do từ chối cụ thể <span style="color: var(--danger);">*</span>
+                        </label>
+                        <textarea
+                            id="reject-reason-input"
+                            name="reason"
+                            class="form-textarea"
+                            placeholder="Nhập chi tiết lý do từ chối (bắt buộc)..."
+                            required
+                        ></textarea>
+                        <div class="form-help">Thông tin lý do sẽ được lưu vào hồ sơ lead và gửi thông báo tới Trưởng nhóm.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger">
+                        Xác Nhận Từ Chối & Chuyển Về Hàng Chờ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 2: GHI NHẬN LIÊN HỆ KHÁCH HÀNG (HOÀN TẤT SLA PHẢN HỒI) -->
+    <!-- ======================================================== -->
+    <div class="modal-overlay" id="contact-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title" style="color: #34d399;">
+                    <span>📞</span> Ghi Nhận Liên Hệ Khách Hàng
+                </div>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <form id="contact-form" method="POST">
+                <div class="modal-body">
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 14px;">
+                        Ghi nhận tương tác phản hồi cho lead: <strong id="contact-modal-lead-name" style="color: white;"></strong>.
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label">Kênh liên hệ:</label>
+                        <select name="channel" class="form-select">
+                            <option value="Điện thoại tư vấn trực tiếp">📞 Cuộc gọi điện thoại trực tiếp</option>
+                            <option value="Gửi Email chào giá & tư vấn">✉️ Gửi Email tư vấn giải pháp</option>
+                            <option value="Nhắn tin qua Zalo Doanh Nghiệp">💬 Nhắn tin Zalo Official</option>
+                            <option value="Họp trực tuyến qua Google Meet / Zoom">💻 Họp trực tuyến (Google Meet/Zoom)</option>
+                            <option value="Gặp mặt trực tiếp tại văn phòng">🤝 Gặp gỡ trực tiếp</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="contact-notes-input">
+                            Nội dung tóm tắt cuộc trao đổi <span style="color: var(--success);">*</span>:
+                        </label>
+                        <textarea
+                            id="contact-notes-input"
+                            name="notes"
+                            class="form-textarea"
+                            placeholder="Khách hàng trao đổi nội dung gì? Nhu cầu thế nào? Hẹn lịch tiếp theo..."
+                            required
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel">Hủy</button>
+                    <button type="submit" class="btn btn-success">
+                        ✅ Hoàn Tất Phản Hồi (Đạt SLA)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 3: PHÂN BỔ LẠI LEAD (DÀNH CHO TRƯỞNG NHÓM) -->
+    <!-- ======================================================== -->
+    <div class="modal-overlay" id="reassign-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title" style="color: #60a5fa;">
+                    <span>🔄</span> Phân Bổ Lại Lead Cho Nhân Viên Khác
+                </div>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <form id="reassign-form" method="POST">
+                <div class="modal-body">
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 14px;">
+                        Phân bổ lead: <strong id="reassign-modal-lead-name" style="color: white;"></strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label">Chọn nhân viên phụ trách mới <span style="color:var(--danger)">*</span>:</label>
+                        <select name="target_user_id" class="form-select" required>
+                            <option value="">-- Chọn nhân viên kinh doanh --</option>
+                            {% for uid, u in all_users.items() %}
+                            {% if u.role == ROLE_SALES_REP %}
+                            <option value="{{ uid }}">{{ u.avatar }} {{ u.name }} - {{ u.team_name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Thời hạn SLA phản hồi mới:</label>
+                        <select name="sla_seconds" class="form-select">
+                            <option value="30">⚡ 30 giây (Chế độ Test siêu nhanh)</option>
+                            <option value="120" selected>⏱️ 2 phút (Chế độ thực nghiệm tiêu chuẩn)</option>
+                            <option value="3600">⏱️ 1 giờ</option>
+                            <option value="86400">📅 24 giờ</option>
+                            <option value="259200">📅 3 ngày (72 giờ - Theo chuẩn đề bài)</option>
+                        </select>
+                        <div class="form-help">Hệ thống sẽ cấp bộ đếm ngược SLA mới cho nhân viên được phân công.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        Xác Nhận Phân Công
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div>
+            <strong>Dự Án AutoLead CRM</strong> &bull; Ticket Jira <code>⚡ SCRUM-30 / ☑ SCRUM-51</code>
+            &bull; Ngôn ngữ: Python 3 (Flask) + Vanilla CSS/JS
+        </div>
+        <div style="margin-top: 4px; color: #64748b;">
+            "Là Nhân viên kinh doanh, tôi muốn nhận hoặc từ chối lead được phân, có ràng buộc SLA phản hồi, để lead không nằm im ba ngày rồi nguội hẳn."
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

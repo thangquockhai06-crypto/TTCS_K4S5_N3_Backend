@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Chi Tiết Lead {{ lead.id }} - {{ lead.company_name }}{% endblock %}
+
+{% block content %}
+<!-- HEADER CHI TIẾT LEAD -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+            <a href="{{ url_for('leads_list') }}" style="color: #64748b; text-decoration: none; font-size: 0.9rem;">
+                &larr; Quay lại danh sách
+            </a>
+            <span class="badge {{ STATUS_BADGE_CLASSES.get(lead.status, 'badge-blue') }}">
+                {{ STATUS_LABELS.get(lead.status, lead.status) }}
+            </span>
+            {% if lead.is_locked %}
+            <span class="badge badge-purple">🔒 ĐÃ KHÓA BẤT BIẾN (AC3)</span>
+            {% endif %}
+        </div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a;">
+            {{ lead.company_name }}
+            <span style="font-size: 1.1rem; color: #64748b; font-weight: 500;">({{ lead.id }})</span>
+        </h1>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div style="display: flex; gap: 10px; align-items: center;">
+        {% if lead.status == STATUS_CONVERTED %}
+            <button class="btn btn-outline disabled" title="Lead đã chuyển đổi thành công và đã bị khóa, không thể chỉnh sửa!">
+                🔒 Không Thể Sửa
+            </button>
+            <a href="{{ url_for('account_detail', account_id=lead.converted_account_id) }}" class="btn btn-primary">
+                🏢 Đến Khách Hàng [{{ lead.converted_account_id }}] &rarr;
+            </a>
+        {% else %}
+            <a href="{{ url_for('lead_edit', lead_id=lead.id) }}" class="btn btn-outline">
+                ✏️ Sửa Thông Tin
+            </a>
+            <a href="{{ url_for('lead_convert', lead_id=lead.id) }}" class="btn btn-convert btn-lg">
+                🚀 Chuyển Đổi Lead 1-Click
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- NẾU LEAD ĐÃ CHUYỂN ĐỔI: HIỂN THỊ BANNER KHÓA BẢO VỆ & LIÊN KẾT 3 THỰC THỂ (AC1 & AC3) -->
+{% if lead.is_locked %}
+<div class="lock-banner">
+    <div class="lock-banner-info">
+        <div class="lock-banner-icon">🔒</div>
+        <div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #5b21b6; margin-bottom: 4px;">
+                LEAD ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH CÔNG VÀ ĐÃ BỊ KHÓA BẢO VỆ (AC3)
+            </div>
+            <p style="font-size: 0.88rem; color: #6b21a8; line-height: 1.4;">
+                Chuyển đổi vào lúc: <strong>{{ lead.converted_at|vi_datetime }}</strong> bởi <strong>{{ lead.converted_by_name or 'Nhân viên kinh doanh' }}</strong>.<br>
+                Thao tác 1-click đã sinh đồng thời 3 thực thể liên kết và kế thừa toàn bộ lịch sử hoạt động sang Khách hàng mới:
+            </p>
+        </div>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ url_for('account_detail', account_id=lead.converted_account_id) }}" class="btn btn-outline btn-sm" style="background: #ffffff; color: #5b21b6; border-color: #c084fc;">
+            🏢 Khách Hàng: <strong>{{ lead.converted_account_id }}</strong>
+        </a>
+        <a href="{{ url_for('contacts_list') }}?search={{ lead.contact_name }}" class="btn btn-outline btn-sm" style="background: #ffffff; color: #5b21b6; border-color: #c084fc;">
+            👤 Người Liên Hệ: <strong>{{ lead.converted_contact_id }}</strong>
+        </a>
+        <a href="{{ url_for('opportunities_list') }}" class="btn btn-outline btn-sm" style="background: #ffffff; color: #5b21b6; border-color: #c084fc;">
+            💼 Cơ Hội Bán Hàng: <strong>{{ lead.converted_opportunity_id }}</strong>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- GRID THÔNG TIN 3 MẢNG (DOANH NGHIỆP, LIÊN HỆ, CƠ HỘI) -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+    <!-- CARD 1: THÔNG TIN DOANH NGHIỆP -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">🏢 Khách Hàng Doanh Nghiệp</div>
+            <span style="font-size: 0.78rem; color: #64748b;">(Sẽ chuyển thành Account)</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Tên Công Ty</span>
+                <strong>{{ lead.company_name }}</strong>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Mã Số Thuế (MST)</span>
+                <span>{{ lead.tax_id or 'Chưa cập nhật' }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Ngành Nghề Kinh Doanh</span>
+                <span>{{ lead.industry }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Địa Chỉ & Tỉnh/Thành</span>
+                <span>{{ lead.address }}, {{ lead.city }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Website Doanh Nghiệp</span>
+                {% if lead.website %}
+                <a href="{{ lead.website }}" target="_blank" style="color: #4f46e5;">{{ lead.website }}</a>
+                {% else %}
+                <span style="color: #94a3b8;">Chưa có</span>
+                {% endif %}
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Quy Mô Công Ty</span>
+                <span>{{ lead.company_size }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD 2: THÔNG TIN NGƯỜI LIÊN HỆ -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">👤 Người Liên Hệ Chính</div>
+            <span style="font-size: 0.78rem; color: #64748b;">(Sẽ chuyển thành Contact)</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Họ Và Tên</span>
+                <strong style="color: #0f172a; font-size: 1rem;">{{ lead.contact_name }}</strong>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Chức Vụ / Vị Trí</span>
+                <span>{{ lead.job_title }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Số Điện Thoại Trực Tiếp</span>
+                <a href="tel:{{ lead.phone }}" style="color: #4f46e5; font-weight: 600;">📞 {{ lead.phone }}</a>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Email Làm Việc</span>
+                <a href="mailto:{{ lead.email }}" style="color: #4f46e5;">✉️ {{ lead.email }}</a>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Nguồn Tiếp Cận (Lead Source)</span>
+                <span>{{ lead.source }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Nhân Viên Phụ Trách</span>
+                <strong>{{ all_users.get(lead.assigned_to_id, {}).get('name', 'Nhân viên') }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD 3: THÔNG TIN NHU CẦU & CƠ HỘI -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">💼 Cơ Hội Bán Hàng & Nhu Cầu</div>
+            <span style="font-size: 0.78rem; color: #64748b;">(Sẽ chuyển thành Opportunity)</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Sản Phẩm Quan Tâm</span>
+                <strong style="color: #4338ca;">{{ lead.interested_product }}</strong>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Giá Trị Dự Kiến (Deal Value)</span>
+                <span style="color: #059669; font-weight: 800; font-size: 1.2rem;">{{ lead.estimated_value|vi_currency }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Ngày Dự Kiến Chốt Hợp Đồng</span>
+                <span>📅 {{ lead.expected_close_date|vi_date }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Nhu Cầu Chi Tiết</span>
+                <p style="color: #475569; font-size: 0.84rem; line-height: 1.4;">{{ lead.requirements or 'Chưa có ghi chú' }}</p>
+            </div>
+            <div>
+                <span style="color: #64748b; display: block; font-size: 0.76rem; text-transform: uppercase;">Ghi Chú Đánh Giá Đủ Điều Kiện</span>
+                <p style="color: #475569; font-size: 0.84rem; line-height: 1.4;">{{ lead.qualification_notes or 'Chưa có' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION LỊCH SỬ HOẠT ĐỘNG (AC4: CHỨNG MINH LỊCH SỬ ĐÃ GHI TRÊN LEAD) -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📜 Lịch Sử Tương Tác & Chăm Sóc Lead ({{ lead.activities|length }} Hoạt Động)</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #64748b;">
+            💡 <strong>Tiêu chí 4:</strong> Toàn bộ hoạt động này sẽ được kế thừa nguyên vẹn sang Khách hàng mới khi chuyển đổi!
+        </div>
+    </div>
+
+    <!-- FORM THÊM HOẠT ĐỘNG (NẾU LEAD CHƯA BỊ KHÓA) -->
+    {% if not lead.is_locked %}
+    <div style="background: #f8fafc; border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 24px;">
+        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: #0f172a;">
+            + Ghi Nhận Hoạt Động Chăm Sóc Mới (Cuộc gọi, Cuộc hẹn, Ghi chú)
+        </h3>
+        <form action="{{ url_for('lead_add_activity', lead_id=lead.id) }}" method="POST">
+            <div style="display: grid; grid-template-columns: 180px 1fr auto; gap: 12px; align-items: start;">
+                <div>
+                    <label class="form-label">Loại Hoạt Động</label>
+                    <select name="type" class="form-control">
+                        <option value="{{ ACTIVITY_CALL }}">📞 Cuộc gọi</option>
+                        <option value="{{ ACTIVITY_MEETING }}">🤝 Buổi hẹn / Demo</option>
+                        <option value="{{ ACTIVITY_EMAIL }}">✉️ Email</option>
+                        <option value="{{ ACTIVITY_NOTE }}">📝 Ghi chú tư vấn</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Tiêu Đề & Chi Tiết Tương Tác</label>
+                    <input type="text" name="summary" class="form-control" placeholder="Tóm tắt ngắn (VD: Gọi điện thoại chốt lịch demo sản phẩm...)" required style="margin-bottom: 8px;">
+                    <textarea name="details" class="form-control" rows="2" placeholder="Nội dung chi tiết cuộc trao đổi với khách..."></textarea>
+                </div>
+                <div style="padding-top: 24px;">
+                    <button type="submit" class="btn btn-primary">
+                        + Lưu Hoạt Động
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- TIMELINE LIST -->
+    {% if lead.activities %}
+    <div class="timeline">
+        {% for act in lead.activities %}
+        <div class="timeline-item">
+            <div class="timeline-marker {% if act.is_milestone %}milestone{% endif %}">
+                {{ act.icon }}
+            </div>
+            <div class="timeline-box">
+                <div class="timeline-header">
+                    <div class="timeline-title">
+                        <span>{{ act.icon }} {{ act.summary }}</span>
+                        {% if act.is_milestone %}
+                        <span class="badge badge-purple">Cột Mốc Chuyển Đổi</span>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-time">
+                        {{ act.created_at|vi_datetime }} • Bởi <strong>{{ act.performed_by_name }}</strong>
+                    </div>
+                </div>
+                <div class="timeline-body">
+                    {{ act.details }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding: 24px; text-align: center; color: #64748b;">
+        Chưa có hoạt động nào được ghi nhận trên lead này.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

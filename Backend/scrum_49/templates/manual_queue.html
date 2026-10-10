@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Hàng Chờ Phân Tay - Trưởng Nhóm{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">
+                <span>⏳</span> Hàng Chờ Phân Tay Dành Cho Trưởng Nhóm
+                {% if leads|length > 0 %}
+                    <span class="status-pill status-manual">{{ leads|length }} Lead Chờ Phân Công</span>
+                {% else %}
+                    <span class="status-pill status-assigned">Hàng Đợi Trống (Đã xử lý hết)</span>
+                {% endif %}
+            </h2>
+            <span class="card-subtitle">
+                Tiêu chí SCRUM-49: <strong>Lead không khớp quy tắc nào rơi vào hàng chờ để trưởng nhóm phân tay</strong>
+            </span>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <form action="{{ url_for('re_evaluate_queue') }}" method="POST">
+                <button type="submit" class="btn btn-secondary btn-sm" title="Quét lại hàng chờ nếu Giám đốc vừa thêm hoặc sửa quy tắc mới">
+                    <span>🔄</span> Thử Khớp Lại Quy Tắc
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card-body" style="padding: 1.25rem 1.5rem;">
+        <div style="background: var(--warning-bg); border-left: 4px solid var(--warning); padding: 0.85rem 1rem; border-radius: 4px; font-size: 0.85rem; color: #92400e; margin-bottom: 1.25rem;">
+            ⚠️ <strong>Cơ chế Fallback:</strong> Các lead dưới đây không thỏa mãn bất kỳ quy tắc tự động nào hiện có (do ngành nghề mới, khu vực chưa phủ sóng, hoặc tiêu chí đặc biệt). Trưởng nhóm kinh doanh có thể trực tiếp chỉ định nhân sự chuyên trách hoặc cấu hình thêm quy tắc mới.
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã Lead</th>
+                        <th>Khách Hàng / Doanh Nghiệp</th>
+                        <th>Khu Vực & Tỉnh</th>
+                        <th>Ngành Nghề</th>
+                        <th>Giá Trị</th>
+                        <th>Lý Do Rơi Vào Hàng Chờ</th>
+                        <th>Thời Gian Nhận</th>
+                        <th style="text-align: right;">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>
+                            <strong style="color: var(--danger);">{{ lead.code }}</strong>
+                        </td>
+                        <td>
+                            <strong style="color: var(--slate-900);">{{ lead.name }}</strong><br>
+                            <span style="font-size: 0.75rem; color: var(--slate-500);">
+                                {{ lead.contact_person or 'Chưa rõ' }} &bull; {{ lead.phone or 'Chưa rõ' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600; color: #1e40af;">📍 {{ lead.region }}</span><br>
+                            <span style="font-size: 0.75rem; color: var(--slate-500);">{{ lead.city or 'Chung' }}</span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem; color: var(--slate-700);">🏷️ {{ lead.industry }}</span>
+                        </td>
+                        <td>
+                            <strong style="color: #059669;">{{ "{:,.0f}".format(lead.estimated_value) }} đ</strong>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.775rem; color: #b91c1c; font-style: italic;">
+                                {{ lead.unmatched_reason or 'Không khớp bất kỳ quy tắc nào trong hệ thống.' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem; color: var(--slate-600);">{{ lead.created_at }}</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openManualAssignModal('{{ lead.id }}', '{{ lead.code }}', '{{ lead.name|replace("'", "\\'") }}', '{{ lead.unmatched_reason|replace("'", "\\'") if lead.unmatched_reason else "" }}')">
+                                ✍️ Phân Công Tay
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 3rem; color: var(--slate-500);">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+                            <strong>Tuyệt vời! Hiện không có lead nào bị tồn đọng trong hàng chờ phân tay.</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--slate-400);">Tất cả lead mới đều đã được bộ máy quy tắc phân bổ tự động đến các nhóm kinh doanh.</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PHÂN CÔNG TAY CHO TRƯỞNG NHÓM -->
+<div id="manual-assign-modal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">✍️ Phân Công Lead Thủ Công</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form action="" method="POST">
+            <div class="modal-body">
+                <div style="background: var(--slate-50); padding: 0.85rem; border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid var(--border);">
+                    <div>Mã Lead: <strong id="assign-lead-code" style="color: var(--primary);"></strong></div>
+                    <div>Khách Hàng: <strong id="assign-lead-name" style="color: var(--slate-900);"></strong></div>
+                    <div style="font-size: 0.775rem; color: var(--danger); margin-top: 0.35rem;" id="assign-lead-reason"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Chọn Chuyên Viên Kinh Doanh Phụ Trách <span style="color: var(--danger);">*</span></label>
+                    <select name="target_user_id" class="form-select" required>
+                        <option value="" disabled selected>-- Chọn chuyên viên tiếp nhận --</option>
+                        {% for rep in sales_reps %}
+                            {% set rep_team = db.teams.get(rep.team_id) %}
+                            <option value="{{ rep.id }}">
+                                {{ rep.name }} &bull; {{ rep_team.name if rep_team else 'Độc lập' }} (Đã nhận: {{ rep.assigned_count }} lead)
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ghi Chú & Chỉ Đạo Của Trưởng Nhóm</label>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Ví dụ: Chỉ định anh/chị liên hệ tư vấn chuyên sâu trong vòng 15 phút..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>Hủy bỏ</button>
+                <button type="submit" class="btn btn-success">✅ Xác Nhận Phân Công Ngay</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

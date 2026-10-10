@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Báo Cáo Hiệu Quả Từng Nguồn Lead & Chiến Dịch{% endblock %}
+
+{% block content %}
+<!-- HEADER & NÚT XUẤT EXCEL -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a;">
+            📊 Báo Cáo Hiệu Quả Từng Nguồn Lead & Chiến Dịch
+        </h1>
+        <p style="color: #64748b; font-size: 0.95rem;">
+            Phân tích tỷ lệ nhận lead, tỷ lệ chuyển đổi thành cơ hội và doanh thu thực tế để dồn ngân sách đúng mục tiêu.
+        </p>
+    </div>
+
+    <!-- NÚT XUẤT EXCEL (TIÊU CHÍ 3) -->
+    <a href="{{ url_for('export_excel', preset=preset, from_date=from_date, to_date=to_date) }}" class="btn btn-excel" title="Xuất toàn bộ báo cáo ra định dạng Excel (.xlsx)">
+        📥 Xuất Báo Cáo Excel (.xlsx)
+    </a>
+</div>
+
+<!-- =========================================================================
+     TIÊU CHÍ 2: BỘ LỌC KHOẢNG THỜI GIAN (DATE RANGE FILTER)
+     ========================================================================= -->
+<div class="filter-toolbar">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 4px;">
+            📅 Khoảng Thời Gian:
+        </span>
+        <div class="preset-pills">
+            <a href="{{ url_for('report_view', preset='all') }}" class="preset-pill {% if preset == 'all' %}active{% endif %}">
+                Tất Cả
+            </a>
+            <a href="{{ url_for('report_view', preset='today') }}" class="preset-pill {% if preset == 'today' %}active{% endif %}">
+                Hôm Nay
+            </a>
+            <a href="{{ url_for('report_view', preset='last_7_days') }}" class="preset-pill {% if preset == 'last_7_days' %}active{% endif %}">
+                7 Ngày Qua
+            </a>
+            <a href="{{ url_for('report_view', preset='last_30_days') }}" class="preset-pill {% if preset == 'last_30_days' %}active{% endif %}">
+                30 Ngày Qua
+            </a>
+            <a href="{{ url_for('report_view', preset='this_month') }}" class="preset-pill {% if preset == 'this_month' %}active{% endif %}">
+                Tháng Này
+            </a>
+            <a href="{{ url_for('report_view', preset='this_quarter') }}" class="preset-pill {% if preset == 'this_quarter' %}active{% endif %}">
+                Quý Này
+            </a>
+        </div>
+    </div>
+
+    <!-- FORM TÙY CHỌN TỪ NGÀY ĐẾN NGÀY -->
+    <form action="{{ url_for('report_view') }}" method="GET" class="custom-date-form">
+        <input type="hidden" name="preset" value="custom">
+        <span style="font-size: 0.82rem; color: #64748b;">Từ:</span>
+        <input type="date" name="from_date" value="{{ from_date or '' }}" class="form-control" required style="padding: 4px 8px;">
+        <span style="font-size: 0.82rem; color: #64748b;">Đến:</span>
+        <input type="date" name="to_date" value="{{ to_date or '' }}" class="form-control" required style="padding: 4px 8px;">
+        <button type="submit" class="btn btn-outline btn-sm">Lọc</button>
+        {% if preset == 'custom' %}
+        <a href="{{ url_for('report_view', preset='all') }}" class="btn btn-outline btn-sm" title="Hủy lọc tùy chọn">✖</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- THẺ SUMMARY METRICS TỔNG QUAN PHỄU -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #e0e7ff; color: #4338ca;">🎯</div>
+        <div class="kpi-content">
+            <span class="kpi-val">{{ summary.total_leads }}</span>
+            <span class="kpi-label">Tổng Lead Thu Về</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #dbeafe; color: #1e40af;">🤝</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #1e40af;">{{ summary.avg_acceptance_rate|vi_percent }}</span>
+            <span class="kpi-label">Tỷ Lệ Sales Nhận ({{ summary.total_accepted }} lead)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #ede9fe; color: #7c3aed;">💼</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #7c3aed;">{{ summary.avg_opp_rate|vi_percent }}</span>
+            <span class="kpi-label">Tỷ Lệ Ra Cơ Hội ({{ summary.total_opps }} deals)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 4px solid #10b981;">
+        <div class="kpi-icon" style="background: #d1fae5; color: #059669;">💰</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #059669; font-size: 1.3rem;">{{ summary.total_revenue|vi_currency }}</span>
+            <span class="kpi-label">Doanh Thu Thực Tế ({{ summary.total_won }} hợp đồng)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #fef3c7; color: #b45309;">📈</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #b45309;">{{ summary.overall_roas }}x</span>
+            <span class="kpi-label">Tỷ Lệ Hoàn Vốn (ROAS)</span>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     THẺ KHUYẾN NGHỊ PHÂN BỔ NGÂN SÁCH (TRỌNG TÂM CỦA USER STORY MARKETING)
+     "để dồn ngân sách vào nguồn thực sự ra doanh thu"
+     ========================================================================= -->
+<div class="card" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-left: 5px solid #10b981; padding: 20px 24px;">
+    <div style="display: flex; align-items: flex-start; gap: 16px;">
+        <div style="font-size: 2.2rem;">💡</div>
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #065f46; margin-bottom: 6px;">
+                KHUYẾN NGHỊ PHÂN BỔ NGÂN SÁCH DÀNH CHO NHÂN VIÊN MARKETING:
+            </h3>
+            <p style="font-size: 0.92rem; color: #047857; line-height: 1.5;">
+                • <strong>Nguồn ra doanh thu khủng nhất:</strong> <span style="background: white; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #065f46;">{{ summary.top_revenue_source }}</span> đóng góp tỷ trọng doanh thu vượt trội.<br>
+                • <strong>Nguồn có hiệu suất hoàn vốn (ROAS) cao nhất:</strong> <span style="background: white; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #065f46;">{{ summary.top_roas_source }}</span> mang lại lợi tức đầu tư cao với chi phí tối ưu.<br>
+                • <strong>Hành động đề xuất:</strong> <em>Dồn ngân sách từ các kênh có tỷ lệ cơ hội thấp (như TikTok Ads hoặc Facebook dạng rác) sang <strong>Google Search</strong>, <strong>Sự kiện Triển lãm Tech Expo</strong> và <strong>Đối tác giới thiệu (Referral)</strong> để tối đa hóa doanh thu thực tế!</em>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     BẢNG 1: HIỆU QUẢ THEO TỪNG NGUỒN LEAD (TIÊU CHÍ 1 & 2)
+     ========================================================================= -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📊 1. Báo Cáo Hiệu Quả Theo Từng Nguồn Lead ({{ source_reports|length }} Nguồn)</span>
+        </div>
+        <div style="font-size: 0.85rem; color: #64748b;">
+            Khoảng thời gian: <strong>{{ date_label }}</strong>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nguồn Lead</th>
+                    <th style="text-align: right;">Số Lead</th>
+                    <th style="text-align: right;">Lead Sales Nhận</th>
+                    <th style="text-align: right;">Tỷ Lệ Được Nhận</th>
+                    <th style="text-align: right;">Chuyển Đổi Thành Cơ Hội</th>
+                    <th style="text-align: right;">Tỷ Lệ Ra Cơ Hội</th>
+                    <th style="text-align: right;">Deal Won</th>
+                    <th style="text-align: right;">Doanh Thu Thực Tế (VNĐ)</th>
+                    <th style="text-align: right;">ROAS</th>
+                    <th style="text-align: left;">Khuyến Nghị Phân Bổ Ngân Sách</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in source_reports %}
+                <tr style="{% if s.recommendation_code == 'INCREASE' %}background-color: #f0fdf4;{% endif %}">
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2rem;">{{ s.icon }}</span>
+                            <div>
+                                <strong style="color: #0f172a;">{{ s.source }}</strong>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 700;">{{ s.total_leads }}</td>
+                    <td style="text-align: right;">{{ s.accepted_leads }}</td>
+                    <td style="text-align: right;">
+                        <span style="font-weight: 700; color: #1e40af;">{{ s.acceptance_rate|vi_percent }}</span>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: {{ s.acceptance_rate }}%; background: #3b82f6;"></div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 700;">{{ s.opportunity_leads }}</td>
+                    <td style="text-align: right;">
+                        <span style="font-weight: 700; color: #7c3aed;">{{ s.opportunity_conversion_rate|vi_percent }}</span>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: {{ s.opportunity_conversion_rate }}%; background: #8b5cf6;"></div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 600;">{{ s.won_deals }}</td>
+                    <td style="text-align: right;">
+                        <strong style="color: #059669; font-size: 0.95rem;">
+                            {{ s.actual_revenue|vi_currency }}
+                        </strong>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: #b45309;">
+                        {{ s.roas }}x
+                    </td>
+                    <td>
+                        <span class="badge {{ s.badge_class }}">
+                            {{ s.recommendation }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- =========================================================================
+     BẢNG 2: HIỆU QUẢ THEO TỪNG CHIẾN DỊCH MARKETING (TIÊU CHÍ 1 & 2)
+     ========================================================================= -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🎯 2. Báo Cáo Hiệu Quả Theo Từng Chiến Dịch Marketing ({{ campaign_reports|length }} Chiến Dịch)</span>
+        </div>
+        <a href="{{ url_for('campaigns_view') }}" class="btn btn-outline btn-sm">Xem Chi Tiết Chiến Dịch &rarr;</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Tên Chiến Dịch</th>
+                    <th>Nguồn Lead</th>
+                    <th style="text-align: right;">Chi Phí Đã Dùng</th>
+                    <th style="text-align: right;">Số Lead</th>
+                    <th style="text-align: right;">Tỷ Lệ Nhận</th>
+                    <th style="text-align: right;">Số Cơ Hội</th>
+                    <th style="text-align: right;">Tỷ Lệ Ra Cơ Hội</th>
+                    <th style="text-align: right;">Doanh Thu Thực Tế</th>
+                    <th style="text-align: right;">CPL / CPO</th>
+                    <th style="text-align: right;">ROAS</th>
+                    <th>Đánh Giá</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaign_reports %}
+                <tr>
+                    <td><code>{{ c.id }}</code></td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ c.name }}</strong>
+                    </td>
+                    <td>{{ c.source }}</td>
+                    <td style="text-align: right; color: #64748b;">{{ c.spent|vi_currency }}</td>
+                    <td style="text-align: right; font-weight: 700;">{{ c.total_leads }}</td>
+                    <td style="text-align: right; font-weight: 600; color: #1e40af;">{{ c.acceptance_rate|vi_percent }}</td>
+                    <td style="text-align: right; font-weight: 700;">{{ c.opportunity_leads }}</td>
+                    <td style="text-align: right; font-weight: 600; color: #7c3aed;">{{ c.opportunity_conversion_rate|vi_percent }}</td>
+                    <td style="text-align: right;">
+                        <strong style="color: #059669;">{{ c.actual_revenue|vi_currency }}</strong>
+                    </td>
+                    <td style="text-align: right; font-size: 0.78rem; color: #64748b;">
+                        CPL: {{ c.cpl|vi_currency }}<br>
+                        CPO: {{ c.cpo|vi_currency }}
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: #b45309;">
+                        {{ c.roas }}x
+                    </td>
+                    <td>
+                        <span class="badge {{ c.badge_class }}">
+                            {{ c.recommendation }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

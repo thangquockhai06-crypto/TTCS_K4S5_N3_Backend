@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Cấu Hình Quy Tắc Phân Bổ Lead{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title"><span>⚙️</span> Cấu Hình Quy Tắc Phân Bổ Lead Tự Động</h2>
+            <span class="card-subtitle">
+                Độ ưu tiên: <strong>Quy tắc đầu tiên khớp sẽ thắng (First-Match-Wins)</strong> &bull; Hỗ trợ Khu vực, Ngành nghề, Xoay vòng đều (Round-Robin)
+            </span>
+        </div>
+        <button type="button" class="btn btn-primary" data-modal-target="add-rule-modal">
+            <span>➕</span> Thêm Quy Tắc Mới
+        </button>
+    </div>
+    <div class="card-body" style="padding: 1rem 1.5rem;">
+        <div style="background: var(--info-bg); border-left: 4px solid var(--info); padding: 0.85rem 1rem; border-radius: 4px; font-size: 0.85rem; color: #0e7490; margin-bottom: 1.25rem;">
+            💡 <strong>Nguyên tắc First-Match-Wins:</strong> Khi có Lead mới, hệ thống duyệt từ trên xuống dưới theo thứ tự ưu tiên (#1, #2, #3...). Quy tắc đầu tiên thỏa mãn tất cả điều kiện sẽ được chọn và phân bổ ngay. Lead không khớp bất kỳ quy tắc nào sẽ tự động rơi vào <strong>Hàng chờ phân tay của Trưởng nhóm</strong>.
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Ưu Tiên</th>
+                        <th>Tên Quy Tắc</th>
+                        <th>Điều Kiện Lọc</th>
+                        <th>Cơ Chế Phân Bổ</th>
+                        <th>Đối Tượng Nhận</th>
+                        <th>Số Lead Đã Khớp</th>
+                        <th>Trạng Thái</th>
+                        <th style="text-align: right;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rules %}
+                    <tr style="{% if not r.is_active %}opacity: 0.6; background: #fafafa;{% endif %}">
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <span class="priority-badge {% if r.priority == 1 %}p-1{% elif r.priority == 2 %}p-2{% elif r.priority == 3 %}p-3{% else %}p-other{% endif %}">
+                                    #{{ r.priority }}
+                                </span>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <form action="{{ url_for('rule_move', rule_id=r.id) }}" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 0.65rem;" title="Tăng độ ưu tiên">▲</button>
+                                    </form>
+                                    <form action="{{ url_for('rule_move', rule_id=r.id) }}" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 0.65rem;" title="Giảm độ ưu tiên">▼</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <strong style="color: var(--slate-900); font-size: 0.9rem;">{{ r.name }}</strong><br>
+                            <span style="font-size: 0.775rem; color: var(--slate-500);">{{ r.description }}</span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem; font-weight: 600; color: #1e40af;">📍 Khu vực: {{ r.region }}</span><br>
+                            <span style="font-size: 0.8rem; color: #475569;">🏷️ Ngành: {{ r.industry }}</span>
+                            {% if r.get('min_deal_value', 0) > 0 %}
+                                <br><span style="font-size: 0.75rem; color: #059669;">💰 Tối thiểu: {{ "{:,.0f}".format(r.min_deal_value) }} đ</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.assignment_type == 'ROUND_ROBIN' %}
+                                <span class="status-pill status-assigned" style="font-size: 0.75rem;">🔄 Xoay vòng đều (Round-Robin)</span>
+                            {% else %}
+                                <span class="status-pill status-pending" style="font-size: 0.75rem;">🎯 Chỉ định trực tiếp</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.assignment_type == 'ROUND_ROBIN' %}
+                                {% set team = db.teams.get(r.target_team_id) %}
+                                <strong>👥 {{ team.name if team else 'Nhóm kinh doanh' }}</strong><br>
+                                <span style="font-size: 0.75rem; color: var(--slate-500);">{{ team.members|length if team else 0 }} nhân sự chia đều</span>
+                            {% else %}
+                                {% set user = db.users.get(r.target_user_id) %}
+                                <strong>👤 {{ user.name if user else 'Chuyên viên' }}</strong><br>
+                                <span style="font-size: 0.75rem; color: var(--slate-500);">{{ user.role_name if user else '' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong style="font-size: 1rem; color: var(--primary);">{{ r.matches_count }}</strong> lead
+                        </td>
+                        <td>
+                            <form action="{{ url_for('rule_toggle', rule_id=r.id) }}" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn btn-sm {% if r.is_active %}btn-success{% else %}btn-secondary{% endif %}" style="font-size: 0.75rem;">
+                                    {{ "Đang Bật" if r.is_active else "Đã Tắt" }}
+                                </button>
+                            </form>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openEditRuleModal('{{ r.id }}', '{{ r.name|replace("'", "\\'") }}', '{{ r.priority }}', '{{ r.region }}', '{{ r.industry }}', '{{ r.assignment_type }}', '{{ r.target_team_id or "" }}', '{{ r.target_user_id or "" }}', '{{ r.min_deal_value }}', '{{ r.description|replace("'", "\\'") }}')">
+                                    Sửa
+                                </button>
+                                <form action="{{ url_for('rule_delete', rule_id=r.id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa quy tắc này?');" style="margin: 0;">
+                                    <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL THÊM QUY TẮC MỚI -->
+<div id="add-rule-modal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">➕ Tạo Quy Tắc Phân Bổ Mới</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form action="{{ url_for('rule_add') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên Quy Tắc <span style="color: var(--danger);">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Quy tắc Khách Bất Động Sản Miền Trung" required>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Độ Ưu Tiên (Priority)</label>
+                        <input type="number" name="priority" class="form-control" value="{{ rules|length + 1 }}" min="1">
+                        <span style="font-size: 0.725rem; color: var(--slate-500);">Số nhỏ hơn = Ưu tiên cao hơn (được xét trước).</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Khu Vực Áp Dụng <span style="color: var(--danger);">*</span></label>
+                        <select name="region" class="form-select" required>
+                            {% for reg in REGIONS %}
+                                <option value="{{ reg }}">{{ reg }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Ngành Nghề Áp Dụng <span style="color: var(--danger);">*</span></label>
+                        <select name="industry" class="form-select" required>
+                            {% for ind in INDUSTRIES %}
+                                <option value="{{ ind }}">{{ ind }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Giá Trị Tối Thiểu (VNĐ)</label>
+                        <input type="number" name="min_deal_value" class="form-control" value="0" step="50000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phương Thức Phân Bổ <span style="color: var(--danger);">*</span></label>
+                    <select name="assignment_type" class="form-select assignment-type-select" required>
+                        <option value="ROUND_ROBIN" selected>🔄 Xoay vòng đều trong nhóm (Round-Robin)</option>
+                        <option value="DIRECT">🎯 Chỉ định trực tiếp cho nhân viên cụ thể</option>
+                    </select>
+                </div>
+                <div class="form-group group-target-team">
+                    <label class="form-label">Chọn Nhóm Kinh Doanh Đích <span style="color: var(--danger);">*</span></label>
+                    <select name="target_team_id" class="form-select">
+                        {% for t in teams %}
+                            <option value="{{ t.id }}">{{ t.name }} ({{ t.members|length }} nhân viên)</option>
+                        {% endfor %}
+                    </select>
+                    <span style="font-size: 0.725rem; color: var(--slate-500);">Lead sẽ được chia luân phiên lần lượt cho các thành viên active trong nhóm này.</span>
+                </div>
+                <div class="form-group group-target-user" style="display: none;">
+                    <label class="form-label">Chọn Nhân Viên Tiếp Nhận <span style="color: var(--danger);">*</span></label>
+                    <select name="target_user_id" class="form-select">
+                        {% for u in sales_reps %}
+                            <option value="{{ u.id }}">{{ u.name }} ({{ u.role_name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ghi Chú & Mô Tả Quy Tắc</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Mô tả mục tiêu của quy tắc phân bổ này..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>Hủy bỏ</button>
+                <button type="submit" class="btn btn-primary">Lưu Quy Tắc Mới</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL SỬA QUY TẮC -->
+<div id="edit-rule-modal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">✏️ Chỉnh Sửa Quy Tắc Phân Bổ</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form id="edit-rule-form" action="" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên Quy Tắc <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="edit-rule-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Độ Ưu Tiên (Priority)</label>
+                        <input type="number" id="edit-rule-priority" name="priority" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Khu Vực</label>
+                        <select id="edit-rule-region" name="region" class="form-select">
+                            {% for reg in REGIONS %}
+                                <option value="{{ reg }}">{{ reg }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Ngành Nghề</label>
+                        <select id="edit-rule-industry" name="industry" class="form-select">
+                            {% for ind in INDUSTRIES %}
+                                <option value="{{ ind }}">{{ ind }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Giá Trị Tối Thiểu (VNĐ)</label>
+                        <input type="number" id="edit-rule-min-val" name="min_deal_value" class="form-control" step="10000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phương Thức Phân Bổ</label>
+                    <select id="edit-rule-assignment-type" name="assignment_type" class="form-select assignment-type-select">
+                        <option value="ROUND_ROBIN">🔄 Xoay vòng đều trong nhóm (Round-Robin)</option>
+                        <option value="DIRECT">🎯 Chỉ định trực tiếp cho nhân viên cụ thể</option>
+                    </select>
+                </div>
+                <div class="form-group group-target-team">
+                    <label class="form-label">Chọn Nhóm Đích</label>
+                    <select id="edit-rule-target-team" name="target_team_id" class="form-select">
+                        {% for t in teams %}
+                            <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group group-target-user" style="display: none;">
+                    <label class="form-label">Chọn Nhân Viên Đích</label>
+                    <select id="edit-rule-target-user" name="target_user_id" class="form-select">
+                        {% for u in sales_reps %}
+                            <option value="{{ u.id }}">{{ u.name }} ({{ u.role_name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ghi Chú</label>
+                    <textarea id="edit-rule-description" name="description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>Đóng</button>
+                <button type="submit" class="btn btn-primary">Cập Nhật Quy Tắc</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditRuleModal(id, name, priority, region, industry, assignmentType, teamId, userId, minVal, desc) {
+    const modal = document.getElementById("edit-rule-modal");
+    const form = document.getElementById("edit-rule-form");
+    form.action = `/rules/${id}/edit`;
+
+    document.getElementById("edit-rule-name").value = name;
+    document.getElementById("edit-rule-priority").value = priority;
+    document.getElementById("edit-rule-region").value = region;
+    document.getElementById("edit-rule-industry").value = industry;
+    document.getElementById("edit-rule-min-val").value = minVal;
+    document.getElementById("edit-rule-description").value = desc;
+
+    const typeSelect = document.getElementById("edit-rule-assignment-type");
+    typeSelect.value = assignmentType;
+
+    if (teamId) document.getElementById("edit-rule-target-team").value = teamId;
+    if (userId) document.getElementById("edit-rule-target-user").value = userId;
+
+    typeSelect.dispatchEvent(new Event("change"));
+    modal.classList.add("active");
+}
+</script>
+{% endblock %}

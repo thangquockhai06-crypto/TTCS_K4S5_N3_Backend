@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Phân Bổ Lead Tự Động{% endblock %} - SCRUM-30 / SCRUM-49</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- THANH THÔNG BÁO CAM KẾT SLA 5 PHÚT -->
+    <div class="sla-topbar">
+        <div class="sla-topbar-content">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="sla-badge">
+                    <span class="pulse-dot"></span> Cam kết SLA: Phân bổ ≤ 5 phút
+                </span>
+                <span>Mục tiêu: Lead tới tay người phụ trách trong vài phút thay vì chờ họp giao ban.</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span>Tỷ lệ hoàn tất trong SLA: <strong style="color: #6ee7b7;">{{ metrics.sla_rate }}%</strong></span>
+                <span id="live-worker-badge" class="sla-badge" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white;">
+                    {% if worker_status.is_running and not worker_status.is_paused %}
+                        <span class="pulse-dot"></span> Luồng nền đang chạy
+                    {% else %}
+                        ⏸️ Luồng nền tạm dừng
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVBAR CHÍNH -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <div class="brand-icon">⚡</div>
+                <div class="brand-text">
+                    <h1>AutoLead CRM</h1>
+                    <div class="brand-tag">
+                        <span>Quy Tắc Phân Bổ Tự Động</span>
+                        <span class="ticket-pill">SCRUM-49</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- MENU ĐIỀU HƯỚNG -->
+            <ul class="nav-links">
+                <li class="nav-item {% if request.path == '/' or request.path == '/dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('dashboard') }}">
+                        <span>📊</span> Bảng Điều Khiển
+                    </a>
+                </li>
+                <li class="nav-item {% if request.path == '/rules' %}active{% endif %}">
+                    <a href="{{ url_for('rules_list') }}">
+                        <span>⚙️</span> Quy Tắc Phân Bổ
+                        <span class="nav-badge badge-blue">{{ metrics.active_rules_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.path == '/leads' %}active{% endif %}">
+                    <a href="{{ url_for('leads_list') }}">
+                        <span>👥</span> Danh Sách Lead
+                        <span class="nav-badge badge-blue">{{ metrics.total_leads }}</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.path == '/manual-queue' %}active{% endif %}">
+                    <a href="{{ url_for('manual_queue') }}">
+                        <span>⏳</span> Hàng Chờ Phân Tay
+                        {% if metrics.manual_queue_count > 0 %}
+                            <span class="nav-badge badge-red">{{ metrics.manual_queue_count }}</span>
+                        {% else %}
+                            <span class="nav-badge badge-amber">0</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item {% if request.path == '/team-reps' %}active{% endif %}">
+                    <a href="{{ url_for('team_reps') }}">
+                        <span>🔄</span> Đội Ngũ & Xoay Vòng
+                    </a>
+                </li>
+                <li class="nav-item {% if request.path == '/worker-monitor' %}active{% endif %}">
+                    <a href="{{ url_for('worker_monitor') }}">
+                        <span>📡</span> Giám Sát Luồng Nền
+                    </a>
+                </li>
+            </ul>
+
+            <!-- PERSONA SWITCHER -->
+            <div class="nav-right">
+                <div class="persona-box">
+                    <div class="persona-avatar">{{ current_user.avatar }}</div>
+                    <div class="persona-details">
+                        <span class="persona-name">{{ current_user.name }}</span>
+                        <span class="persona-role">{{ current_user.role_name }}</span>
+                    </div>
+                    <select onchange="window.location.href='/switch-user/' + this.value" style="font-size: 0.75rem; border: none; background: transparent; cursor: pointer; color: var(--primary); font-weight: 600; outline: none;">
+                        <option value="" disabled selected>Đổi vai trò...</option>
+                        <option value="usr-01" {% if current_user.id == 'usr-01' %}selected{% endif %}>Giám đốc: Hoàng Minh Trí</option>
+                        <option value="usr-02" {% if current_user.id == 'usr-02' %}selected{% endif %}>Trưởng nhóm Bắc: Trần Văn Hùng</option>
+                        <option value="usr-03" {% if current_user.id == 'usr-03' %}selected{% endif %}>Trưởng nhóm Nam: Nguyễn Thị Bích</option>
+                        <option value="usr-04" {% if current_user.id == 'usr-04' %}selected{% endif %}>Trưởng nhóm BĐS: Bùi Thanh Tùng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- KHU VỰC THÔNG BÁO FLASH -->
+    <main class="main-wrapper">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem;" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p><strong>Hệ Thống Phân Bổ Lead Tự Động (AutoLead Distribution System)</strong> &bull; Ticket <code>SCRUM-30 / SCRUM-49</code></p>
+        <p style="margin-top: 0.25rem;">Đáp ứng 100% 4 tiêu chí chấp nhận: Phân bổ theo khu vực, ngành nghề, xoay vòng Round-Robin &bull; First-Match-Wins &bull; Hàng chờ phân tay &bull; Luồng nền SLA ≤ 5 phút.</p>
+    </footer>
+
+    <!-- MODAL TIẾP NHẬN LEAD THỦ CÔNG (DÙNG CHUNG) -->
+    <div id="new-lead-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">➕ Tiếp Nhận Lead Mới Vào Hệ Thống</h3>
+                <button class="modal-close" data-modal-close>&times;</button>
+            </div>
+            <form action="{{ url_for('lead_add') }}" method="POST">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 1rem;">
+                        Lead sau khi tạo sẽ được đưa vào hàng đợi <code>PENDING</code> để luồng chạy nền tự động đánh giá và phân bổ trong vài giây (SLA &le; 5 phút).
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Tên Doanh Nghiệp / Khách Hàng <span style="color: var(--danger);">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Tập đoàn Công nghệ Tân Phát" required>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Người liên hệ</label>
+                            <input type="text" name="contact_person" class="form-control" placeholder="Ông/Bà...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="text" name="phone" class="form-control" placeholder="09xx xxx xxx">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Khu vực <span style="color: var(--danger);">*</span></label>
+                            <select name="region" class="form-select" required>
+                                {% for reg in REGIONS if reg != 'Toàn quốc' %}
+                                    <option value="{{ reg }}">{{ reg }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ngành nghề <span style="color: var(--danger);">*</span></label>
+                            <select name="industry" class="form-select" required>
+                                {% for ind in INDUSTRIES if ind != 'Tất cả ngành nghề' %}
+                                    <option value="{{ ind }}">{{ ind }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Giá trị tiềm năng ước tính (VNĐ)</label>
+                            <input type="number" name="estimated_value" class="form-control" value="150000000" step="10000000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nguồn Lead</label>
+                            <select name="source" class="form-select">
+                                {% for src in LEAD_SOURCES %}
+                                    <option value="{{ src }}">{{ src }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ghi chú nhu cầu</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Nhu cầu tư vấn giải pháp chuyển đổi số..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close>Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary">⚡ Tiếp Nhận & Phân Bổ Nền</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

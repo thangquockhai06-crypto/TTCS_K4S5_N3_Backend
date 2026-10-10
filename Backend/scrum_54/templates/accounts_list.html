@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Khách Hàng Doanh Nghiệp{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+            🏢 Khách Hàng Doanh Nghiệp (Accounts)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Danh sách các doanh nghiệp chính thức được sinh từ quá trình chuyển đổi lead hoặc tạo trực tiếp
+        </p>
+    </div>
+
+    <form action="{{ url_for('accounts_list') }}" method="GET" style="display: flex; gap: 8px;">
+        <input type="text" name="search" value="{{ search or '' }}" placeholder="Tìm công ty, MST..." class="form-control" style="width: 250px; padding: 6px 12px; font-size: 0.85rem;">
+        <button type="submit" class="btn btn-outline btn-sm">🔍 Tìm</button>
+        {% if search %}
+        <a href="{{ url_for('accounts_list') }}" class="btn btn-outline btn-sm">✖</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã KH</th>
+                    <th>Tên Doanh Nghiệp</th>
+                    <th>Mã Số Thuế</th>
+                    <th>Ngành Nghề</th>
+                    <th>Tỉnh/Thành</th>
+                    <th>Nguồn Gốc Chuyển Đổi</th>
+                    <th>Hoạt Động Kế Thừa (AC4)</th>
+                    <th>Người Phụ Trách</th>
+                    <th style="text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc in accounts %}
+                <tr>
+                    <td><strong style="color: #0284c7;">{{ acc.id }}</strong></td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ acc.name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ acc.website or acc.phone }}</div>
+                    </td>
+                    <td>{{ acc.tax_id or 'Chưa có' }}</td>
+                    <td>{{ acc.industry }}</td>
+                    <td>{{ acc.city }}</td>
+                    <td>
+                        {% if acc.created_from_lead_id %}
+                        <span class="inherited-tag">
+                            🔗 Sinh từ Lead {{ acc.created_from_lead_id }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8; font-size: 0.8rem;">Trực tiếp</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set inherited_acts = acc.activities|selectattr('inherited_from_lead', 'defined')|selectattr('inherited_from_lead')|list %}
+                        <span class="badge badge-purple" title="Kế thừa đầy đủ các cuộc gọi, ghi chú từ khi là Lead">
+                            📜 {{ inherited_acts|length }} Hoạt động từ Lead
+                        </span>
+                    </td>
+                    <td>{{ acc.owner_name }}</td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('account_detail', account_id=acc.id) }}" class="btn btn-primary btn-sm">
+                            Xem Chi Tiết 🏢
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 30px; color: #64748b;">
+                        Chưa có khách hàng doanh nghiệp nào. Hãy thực hiện chuyển đổi một lead đủ điều kiện!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

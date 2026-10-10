@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Lead Chi Tiết (Drill-Down){% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+            📋 Danh Sách Dữ Liệu Lead Chi Tiết ({{ leads|length }} Lead)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Dữ liệu vi mô từng khách hàng tiềm năng được thu thập từ các kênh tiếp thị và chiến dịch
+        </p>
+    </div>
+    <a href="{{ url_for('report_view') }}" class="btn btn-outline">
+        &larr; Quay Lại Báo Cáo
+    </a>
+</div>
+
+<!-- BỘ LỌC DRILL-DOWN -->
+<div class="card" style="padding: 14px 18px; margin-bottom: 20px;">
+    <form action="{{ url_for('leads_view') }}" method="GET" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #64748b; display: block;">Nguồn Lead:</label>
+            <select name="source" class="form-control" style="font-size: 0.82rem;" onchange="this.form.submit()">
+                <option value="">-- Tất Cả Nguồn --</option>
+                {% for s in SOURCES %}
+                <option value="{{ s }}" {% if s == selected_source %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #64748b; display: block;">Trạng Thái:</label>
+            <select name="status" class="form-control" style="font-size: 0.82rem;" onchange="this.form.submit()">
+                <option value="">-- Tất Cả Trạng Thái --</option>
+                <option value="NEW" {% if selected_status == 'NEW' %}selected{% endif %}>Mới từ Marketing</option>
+                <option value="ACCEPTED" {% if selected_status == 'ACCEPTED' %}selected{% endif %}>Sales đã nhận</option>
+                <option value="OPPORTUNITY" {% if selected_status == 'OPPORTUNITY' %}selected{% endif %}>Đã thành cơ hội</option>
+                <option value="WON" {% if selected_status == 'WON' %}selected{% endif %}>Thành công (Doanh thu) 🎉</option>
+                <option value="REJECTED" {% if selected_status == 'REJECTED' %}selected{% endif %}>Sales từ chối</option>
+            </select>
+        </div>
+
+        {% if selected_source or selected_status %}
+        <div style="padding-top: 18px;">
+            <a href="{{ url_for('leads_view') }}" class="btn btn-outline btn-sm">Xóa Bộ Lọc</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Lead</th>
+                    <th>Tên Doanh Nghiệp</th>
+                    <th>Người Liên Hệ</th>
+                    <th>Nguồn Lead</th>
+                    <th>Chiến Dịch</th>
+                    <th>Ngày Tạo</th>
+                    <th>Trạng Thái</th>
+                    <th style="text-align: right;">Giá Trị Tiềm Năng</th>
+                    <th style="text-align: right;">Doanh Thu Thực Tế</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in leads %}
+                <tr style="{% if l.status == 'WON' %}background-color: #f0fdf4;{% endif %}">
+                    <td><code>{{ l.id }}</code></td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ l.company_name }}</strong>
+                    </td>
+                    <td>
+                        <div>{{ l.contact_name }}</div>
+                        <div style="font-size: 0.76rem; color: #64748b;">{{ l.phone }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ l.source }}</span>
+                    </td>
+                    <td>{{ l.campaign_name }}</td>
+                    <td style="font-size: 0.82rem; color: #64748b;">{{ l.created_at|vi_datetime }}</td>
+                    <td>
+                        {% if l.status == 'WON' %}
+                        <span class="badge badge-green">Thành Công 🎉</span>
+                        {% elif l.status == 'OPPORTUNITY' %}
+                        <span class="badge badge-purple">Cơ Hội Bán Hàng</span>
+                        {% elif l.status == 'ACCEPTED' %}
+                        <span class="badge badge-blue">Sales Đã Nhận</span>
+                        {% elif l.status == 'REJECTED' %}
+                        <span class="badge badge-red">Bị Từ Chối</span>
+                        {% else %}
+                        <span class="badge badge-amber">Mới</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; color: #64748b;">{{ l.deal_value|vi_currency }}</td>
+                    <td style="text-align: right;">
+                        {% if l.actual_revenue > 0 %}
+                        <strong style="color: #059669;">{{ l.actual_revenue|vi_currency }}</strong>
+                        {% else %}
+                        <span style="color: #94a3b8;">0 đ</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 30px; color: #64748b;">
+                        Không có lead nào phù hợp với bộ lọc hiện tại.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

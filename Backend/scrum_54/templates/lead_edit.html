@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh Sửa Lead {{ lead.id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" style="color: #64748b; text-decoration: none; font-size: 0.9rem;">
+            &larr; Quay lại chi tiết Lead
+        </a>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-top: 8px;">
+            ✏️ Chỉnh Sửa Thông Tin Lead {{ lead.id }}
+        </h1>
+    </div>
+
+    {% if lead.is_locked %}
+    <!-- RÀNG BUỘC TIÊU CHÍ 3: LEAD ĐÃ CHUYỂN ĐỔI BỊ KHÓA HOÀN TOÀN -->
+    <div class="alert alert-danger" style="margin-bottom: 24px;">
+        <span>🔒</span>
+        <div>
+            <strong>RÀNG BUỘC TIÊU CHÍ 3: LEAD ĐÃ BỊ KHÓA BẤT BIẾN!</strong><br>
+            Lead này đã được chuyển đổi thành công sang Khách hàng và Cơ hội bán hàng vào lúc {{ lead.converted_at|vi_datetime }}. Trạng thái đã bị khóa vĩnh viễn và không được phép chỉnh sửa nữa.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <form action="{{ url_for('lead_edit', lead_id=lead.id) }}" method="POST">
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                🏢 1. Thông Tin Doanh Nghiệp
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Tên Doanh Nghiệp / Công Ty *</label>
+                    <input type="text" name="company_name" class="form-control" value="{{ lead.company_name }}" required {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mã Số Thuế (MST)</label>
+                    <input type="text" name="tax_id" class="form-control" value="{{ lead.tax_id }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ngành Nghề</label>
+                    <input type="text" name="industry" class="form-control" value="{{ lead.industry }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Địa Chỉ</label>
+                    <input type="text" name="address" class="form-control" value="{{ lead.address }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tỉnh / Thành Phố</label>
+                    <input type="text" name="city" class="form-control" value="{{ lead.city }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Website</label>
+                    <input type="text" name="website" class="form-control" value="{{ lead.website }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-top: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                👤 2. Thông Tin Người Liên Hệ
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Họ Và Tên Người Liên Hệ *</label>
+                    <input type="text" name="contact_name" class="form-control" value="{{ lead.contact_name }}" required {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chức Vụ</label>
+                    <input type="text" name="job_title" class="form-control" value="{{ lead.job_title }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Số Điện Thoại</label>
+                    <input type="text" name="phone" class="form-control" value="{{ lead.phone }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ lead.email }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-top: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                💼 3. Nhu Cầu & Tiềm Năng
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Sản Phẩm Quan Tâm</label>
+                    <input type="text" name="interested_product" class="form-control" value="{{ lead.interested_product }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Giá Trị Dự Kiến (VNĐ)</label>
+                    <input type="number" name="estimated_value" class="form-control" value="{{ lead.estimated_value }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ngày Dự Kiến Chốt</label>
+                    <input type="date" name="expected_close_date" class="form-control" value="{{ lead.expected_close_date }}" {% if lead.is_locked %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng Thái Lead</label>
+                    <select name="status" class="form-control" {% if lead.is_locked %}disabled{% endif %}>
+                        <option value="{{ STATUS_NEW }}" {% if lead.status == STATUS_NEW %}selected{% endif %}>Mới tiếp nhận</option>
+                        <option value="{{ STATUS_CONTACTED }}" {% if lead.status == STATUS_CONTACTED %}selected{% endif %}>Đang chăm sóc</option>
+                        <option value="{{ STATUS_QUALIFIED }}" {% if lead.status == STATUS_QUALIFIED %}selected{% endif %}>Đủ điều kiện chuyển đổi ⭐</option>
+                        <option value="{{ STATUS_DISQUALIFIED }}" {% if lead.status == STATUS_DISQUALIFIED %}selected{% endif %}>Không đủ điều kiện</option>
+                        {% if lead.status == STATUS_CONVERTED %}
+                        <option value="{{ STATUS_CONVERTED }}" selected>Đã chuyển đổi (Đã khóa 🔒)</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Yêu Cầu Chi Tiết Của Khách</label>
+                <textarea name="requirements" class="form-control" rows="3" {% if lead.is_locked %}disabled{% endif %}>{{ lead.requirements }}</textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn btn-outline">
+                    Hủy Bỏ
+                </a>
+                {% if not lead.is_locked %}
+                <button type="submit" class="btn btn-primary">
+                    💾 Lưu Cập Nhật
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-danger disabled" title="Lead bị khóa không thể lưu!">
+                    🔒 Bị Khóa - Không Thể Lưu
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

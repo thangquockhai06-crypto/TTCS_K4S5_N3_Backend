@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Lead Khách Hàng{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title"><span>👥</span> Toàn Bộ Lead Khách Hàng Tiềm Năng</h2>
+            <span class="card-subtitle">
+                Theo dõi quy trình phân bổ tự động, cam kết SLA &le; 5 phút và lịch sử phân công
+            </span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <form action="{{ url_for('simulate_single') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">🎲 Nạp 1 Lead Mẫu</button>
+            </form>
+            <form action="{{ url_for('simulate_batch') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-primary btn-sm">⚡ Nạp Batch 5 Leads</button>
+            </form>
+            <button type="button" class="btn btn-success btn-sm" data-modal-target="new-lead-modal">
+                ➕ Thêm Lead Mới
+            </button>
+        </div>
+    </div>
+    
+    <!-- THANH BỘ LỌC TÌM KIẾM -->
+    <div class="card-body" style="border-bottom: 1px solid var(--border); background: #fafafa; padding: 1rem 1.5rem;">
+        <form method="GET" action="{{ url_for('leads_list') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 1; min-width: 180px;">
+                <label class="form-label" style="font-size: 0.775rem;">Trạng Thái</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="" {% if not status_filter %}selected{% endif %}>Tất cả trạng thái</option>
+                    <option value="ASSIGNED" {% if status_filter == 'ASSIGNED' %}selected{% endif %}>✓ Đã phân bổ</option>
+                    <option value="MANUAL_QUEUE" {% if status_filter == 'MANUAL_QUEUE' %}selected{% endif %}>⏳ Hàng chờ phân tay</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>⚡ Đang xử lý</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+                <label class="form-label" style="font-size: 0.775rem;">Khu Vực</label>
+                <select name="region" class="form-select" onchange="this.form.submit()">
+                    <option value="" {% if not region_filter %}selected{% endif %}>Tất cả khu vực</option>
+                    {% for reg in REGIONS if reg != 'Toàn quốc' %}
+                        <option value="{{ reg }}" {% if region_filter == reg %}selected{% endif %}>{{ reg }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+                <label class="form-label" style="font-size: 0.775rem;">Ngành Nghề</label>
+                <select name="industry" class="form-select" onchange="this.form.submit()">
+                    <option value="" {% if not industry_filter %}selected{% endif %}>Tất cả ngành nghề</option>
+                    {% for ind in INDUSTRIES if ind != 'Tất cả ngành nghề' %}
+                        <option value="{{ ind }}" {% if industry_filter == ind %}selected{% endif %}>{{ ind }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <a href="{{ url_for('leads_list') }}" class="btn btn-secondary btn-sm" style="height: 38px;">Đặt lại lọc</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU LEAD -->
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã Lead</th>
+                    <th>Khách Hàng / Doanh Nghiệp</th>
+                    <th>Khu Vực & Tỉnh Thành</th>
+                    <th>Ngành Nghề</th>
+                    <th>Giá Trị Tiềm Năng</th>
+                    <th>Trạng Thái</th>
+                    <th>Người Phụ Trách</th>
+                    <th>Quy Tắc Khớp</th>
+                    <th>Thời Gian SLA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td>
+                        <strong style="color: var(--primary);">{{ lead.code }}</strong>
+                    </td>
+                    <td>
+                        <strong style="color: var(--slate-900);">{{ lead.name }}</strong><br>
+                        <span style="font-size: 0.75rem; color: var(--slate-500);">
+                            {{ lead.contact_person or 'Chưa có' }} &bull; {{ lead.phone or 'Chưa có SĐT' }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-weight: 600; color: #1e40af;">📍 {{ lead.region }}</span><br>
+                        <span style="font-size: 0.75rem; color: var(--slate-500);">{{ lead.city or 'Chung' }}</span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.8rem; color: var(--slate-700);">🏷️ {{ lead.industry }}</span>
+                    </td>
+                    <td>
+                        <strong style="color: #059669;">{{ "{:,.0f}".format(lead.estimated_value) }} đ</strong><br>
+                        <span style="font-size: 0.7rem; color: var(--slate-400);">Nguồn: {{ lead.source }}</span>
+                    </td>
+                    <td>
+                        {% if lead.status == 'ASSIGNED' %}
+                            <span class="status-pill status-assigned">✓ Đã Phân Bổ</span>
+                        {% elif lead.status == 'MANUAL_QUEUE' %}
+                            <span class="status-pill status-manual">⏳ Chờ Phân Tay</span>
+                        {% else %}
+                            <span class="status-pill status-pending">⚡ Đang Chờ Xử Lý</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if lead.assigned_to_user_id %}
+                            {% set u = all_users.get(lead.assigned_to_user_id) %}
+                            <strong style="color: var(--slate-900); font-size: 0.85rem;">👤 {{ u.name if u else 'Chuyên viên' }}</strong><br>
+                            <span style="font-size: 0.725rem; color: var(--slate-500);">{{ u.phone if u else '' }}</span>
+                        {% elif lead.status == 'MANUAL_QUEUE' %}
+                            <a href="{{ url_for('manual_queue') }}" class="btn btn-secondary btn-sm" style="color: var(--primary); font-size: 0.725rem;">
+                                Phân tay ngay &rarr;
+                            </a>
+                        {% else %}
+                            <span style="font-size: 0.75rem; color: var(--slate-400);">Đang xử lý nền...</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if lead.matched_rule_name %}
+                            <span style="font-size: 0.775rem; color: #3730a3; font-weight: 500;">
+                                {{ lead.matched_rule_name }}
+                            </span>
+                        {% elif lead.manual_assigned_by %}
+                            <span style="font-size: 0.75rem; color: #047857;">
+                                Gán tay bởi {{ lead.manual_assigned_by }}
+                            </span>
+                        {% elif lead.status == 'MANUAL_QUEUE' %}
+                            <span style="font-size: 0.725rem; color: var(--danger);">
+                                Không khớp quy tắc nào
+                            </span>
+                        {% else %}
+                            <span style="font-size: 0.75rem; color: var(--slate-400);">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if lead.elapsed_seconds is not none %}
+                            <span class="sla-met-pill">
+                                ⏱️ {{ lead.elapsed_seconds }}s / 300s SLA
+                            </span><br>
+                            <span style="font-size: 0.7rem; color: var(--slate-400);">Tạo lúc: {{ lead.created_at[11:] }}</span>
+                        {% else %}
+                            <span style="font-size: 0.75rem; color: var(--slate-400);">Đang xử lý...</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
+                        Không tìm thấy lead nào phù hợp với bộ lọc hiện tại.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

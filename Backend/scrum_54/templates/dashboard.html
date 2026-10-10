@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Điều Khiển Tổng Quan{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+        📊 Bảng Điều Khiển Bán Hàng & Chuyển Đổi Lead
+    </h1>
+    <p style="color: #64748b; font-size: 0.95rem;">
+        Quản lý phễu khách hàng tiềm năng, thực hiện chuyển đổi 1-click sinh đồng thời Khách hàng, Người liên hệ và Cơ hội bán hàng.
+    </p>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #e0e7ff; color: #4338ca;">🎯</div>
+        <div class="kpi-content">
+            <span class="kpi-val">{{ kpis.total_leads }}</span>
+            <span class="kpi-label">Tổng Số Lead</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 4px solid #10b981;">
+        <div class="kpi-icon" style="background: #d1fae5; color: #059669;">⭐</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #059669;">{{ kpis.qualified_leads }}</span>
+            <span class="kpi-label">Lead Đủ Điều Kiện (Sẵn Sàng Convert)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 4px solid #8b5cf6;">
+        <div class="kpi-icon" style="background: #ede9fe; color: #7c3aed;">🔒</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="color: #7c3aed;">{{ kpis.converted_leads }}</span>
+            <span class="kpi-label">Lead Đã Chuyển Đổi (Đã Khóa)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">🏢</div>
+        <div class="kpi-content">
+            <span class="kpi-val">{{ kpis.total_accounts }}</span>
+            <span class="kpi-label">Khách Hàng Doanh Nghiệp</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #fef3c7; color: #b45309;">💰</div>
+        <div class="kpi-content">
+            <span class="kpi-val" style="font-size: 1.25rem;">{{ kpis.total_pipeline_val|vi_currency }}</span>
+            <span class="kpi-label">Tổng Pipeline Cơ Hội</span>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 1: LEAD ĐỦ ĐIỀU KIỆN SẴN SÀNG CHUYỂN ĐỔI 1-CLICK -->
+<div class="card" style="border-top: 4px solid #10b981;">
+    <div class="card-header">
+        <div class="card-title">
+            <span>⭐ Lead Đủ Điều Kiện Chuyển Đổi (Qualified Leads)</span>
+            <span class="badge badge-green">{{ qualified_leads|length }} Lead</span>
+        </div>
+        <div style="font-size: 0.85rem; color: #64748b;">
+            💡 Thao tác 1-click sinh đồng thời Khách hàng doanh nghiệp, Người liên hệ và Cơ hội bán hàng
+        </div>
+    </div>
+
+    {% if qualified_leads %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Lead</th>
+                    <th>Doanh Nghiệp & MST</th>
+                    <th>Người Liên Hệ</th>
+                    <th>Nhu Cầu / Giá Trị Dự Kiến</th>
+                    <th>Hoạt Động Đã Ghi</th>
+                    <th>Phụ Trách</th>
+                    <th style="text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in qualified_leads %}
+                <tr>
+                    <td>
+                        <strong style="color: #4f46e5;">{{ lead.id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ lead.company_name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">MST: {{ lead.tax_id or 'Chưa có' }} • {{ lead.city }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ lead.contact_name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ lead.job_title }} • {{ lead.phone }}</div>
+                    </td>
+                    <td>
+                        <div style="color: #059669; font-weight: 700;">{{ lead.estimated_value|vi_currency }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ lead.interested_product }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">
+                            {{ lead.activities|length }} hoạt động 📜
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.85rem;">{{ all_users.get(lead.assigned_to_id, {}).get('name', 'Nhân viên') }}</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn btn-outline btn-sm">
+                                👁️ Chi Tiết
+                            </a>
+                            <a href="{{ url_for('lead_convert', lead_id=lead.id) }}" class="btn btn-convert btn-sm" title="Chuyển đổi 1-click thành Khách hàng, Người liên hệ và Cơ hội">
+                                🚀 Chuyển Đổi Lead
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 30px; text-align: center; color: #64748b;">
+        <p>Hiện không có lead nào ở trạng thái đủ điều kiện chuyển đổi.</p>
+        <a href="{{ url_for('lead_new') }}" class="btn btn-primary btn-sm" style="margin-top: 10px;">+ Tạo Lead Mới</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- SECTION 2: KHÁCH HÀNG DOANH NGHIỆP MỚI SINH TỪ LEAD & KẾ THỪA HOẠT ĐỘNG -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🏢 Khách Hàng Doanh Nghiệp Mới Tạo (Sinh Từ Lead)</span>
+            <span class="badge badge-blue">{{ recent_accounts|length }} Khách hàng</span>
+        </div>
+        <a href="{{ url_for('accounts_list') }}" class="btn btn-outline btn-sm">Xem Tất Cả &rarr;</a>
+    </div>
+
+    {% if recent_accounts %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã KH</th>
+                    <th>Tên Doanh Nghiệp</th>
+                    <th>Nguồn Gốc (Lead Gốc)</th>
+                    <th>Người Phụ Trách</th>
+                    <th>Lịch Sử Kế Thừa</th>
+                    <th>Thời Điểm Tạo</th>
+                    <th style="text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc in recent_accounts %}
+                <tr>
+                    <td><strong style="color: #0284c7;">{{ acc.id }}</strong></td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ acc.name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ acc.industry }} • {{ acc.city }}</div>
+                    </td>
+                    <td>
+                        {% if acc.created_from_lead_id %}
+                        <span class="inherited-tag">
+                            🔗 Sinh từ Lead {{ acc.created_from_lead_id }}
+                        </span>
+                        {% else %}
+                        <span style="color: #94a3b8; font-size: 0.8rem;">Tạo thủ công</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ acc.owner_name }}</td>
+                    <td>
+                        {% set inherited_count = acc.activities|selectattr('inherited_from_lead', 'defined')|selectattr('inherited_from_lead')|list|length %}
+                        <span class="badge badge-purple" title="Số lượng hoạt động kế thừa từ thời điểm là Lead">
+                            📜 {{ inherited_count }} Hoạt động từ Lead
+                        </span>
+                    </td>
+                    <td style="font-size: 0.82rem; color: #64748b;">
+                        {{ acc.created_at|vi_datetime }}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('account_detail', account_id=acc.id) }}" class="btn btn-outline btn-sm">
+                            Xem Khách Hàng 🏢
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 24px; text-align: center; color: #64748b;">
+        Chưa có khách hàng doanh nghiệp nào được tạo. Hãy chuyển đổi một lead để sinh khách hàng!
+    </div>
+    {% endif %}
+</div>
+
+<!-- SECTION 3: NHẬT KÝ HỆ THỐNG (AUDIT TRAIL) -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🛡️ Nhật Ký Hoạt Động & Kiểm Toán Ràng Buộc Hệ Thống</span>
+        </div>
+        <span style="font-size: 0.8rem; color: #64748b;">Theo dõi minh bạch mọi thao tác chuyển đổi và khóa lead</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table" style="font-size: 0.84rem;">
+            <thead>
+                <tr>
+                    <th>Mã Log</th>
+                    <th>Thời Điểm</th>
+                    <th>Người Thực Hiện</th>
+                    <th>Hành Động</th>
+                    <th>Đối Tượng</th>
+                    <th>Chi Tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in audit_logs %}
+                <tr>
+                    <td><code>{{ log.id }}</code></td>
+                    <td>{{ log.created_at|vi_datetime }}</td>
+                    <td>{{ all_users.get(log.user_id, {}).get('name', log.user_id) }}</td>
+                    <td>
+                        {% if log.action == 'CONVERT_LEAD' %}
+                        <span class="badge badge-purple">🚀 CONVERT_LEAD</span>
+                        {% elif log.action == 'UPDATE_LEAD' %}
+                        <span class="badge badge-blue">✏️ UPDATE_LEAD</span>
+                        {% elif log.action == 'CREATE_LEAD' %}
+                        <span class="badge badge-green">+ CREATE_LEAD</span>
+                        {% else %}
+                        <span class="badge badge-amber">{{ log.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ log.target_id }}</strong></td>
+                    <td style="color: #475569;">{{ log.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

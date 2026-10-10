@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo Lead Tiềm Năng Mới{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('leads_list') }}" style="color: #64748b; text-decoration: none; font-size: 0.9rem;">
+            &larr; Quay lại danh sách Lead
+        </a>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-top: 8px;">
+            + Thêm Lead Tiềm Năng Mới
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Nhập thông tin ban đầu để sau này có thể thực hiện chuyển đổi 1-click mà không cần nhập lại.
+        </p>
+    </div>
+
+    <div class="card">
+        <form action="{{ url_for('lead_new') }}" method="POST">
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                🏢 1. Thông Tin Doanh Nghiệp
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Tên Doanh Nghiệp / Công Ty *</label>
+                    <input type="text" name="company_name" class="form-control" placeholder="VD: Công ty Cổ phần Giải pháp Số Nam Việt" value="{{ form_data.company_name or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mã Số Thuế (MST)</label>
+                    <input type="text" name="tax_id" class="form-control" placeholder="VD: 0108765432" value="{{ form_data.tax_id or '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ngành Nghề</label>
+                    <input type="text" name="industry" class="form-control" placeholder="VD: Bán lẻ & Chuỗi cửa hàng" value="{{ form_data.industry or '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Địa Chỉ Trụ Sở</label>
+                    <input type="text" name="address" class="form-control" placeholder="VD: Tòa nhà Bitexco, Q.1" value="{{ form_data.address or '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tỉnh / Thành Phố</label>
+                    <input type="text" name="city" class="form-control" placeholder="VD: TP. Hồ Chí Minh" value="{{ form_data.city or 'Hà Nội' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Website</label>
+                    <input type="text" name="website" class="form-control" placeholder="https://..." value="{{ form_data.website or '' }}">
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-top: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                👤 2. Thông Tin Người Liên Hệ
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Họ Và Tên Người Liên Hệ *</label>
+                    <input type="text" name="contact_name" class="form-control" placeholder="VD: Nguyễn Văn Hưng" value="{{ form_data.contact_name or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chức Vụ</label>
+                    <input type="text" name="job_title" class="form-control" placeholder="VD: Giám Đốc Kinh Doanh (CCO)" value="{{ form_data.job_title or '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Số Điện Thoại *</label>
+                    <input type="text" name="phone" class="form-control" placeholder="VD: 0912 345 678" value="{{ form_data.phone or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Làm Việc</label>
+                    <input type="email" name="email" class="form-control" placeholder="VD: hung.nguyen@namviet.vn" value="{{ form_data.email or '' }}">
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-top: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                💼 3. Nhu Cầu & Tiềm Năng Bán Hàng
+            </h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Sản Phẩm Khách Quan Tâm</label>
+                    <input type="text" name="interested_product" class="form-control" placeholder="VD: Gói CRM Doanh Nghiệp Pro" value="{{ form_data.interested_product or 'Hệ Thống CRM Doanh Nghiệp' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Giá Trị Dự Kiến (VNĐ)</label>
+                    <input type="number" name="estimated_value" class="form-control" value="{{ form_data.estimated_value or '65000000' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng Thái Khởi Tạo</label>
+                    <select name="status" class="form-control">
+                        <option value="{{ STATUS_QUALIFIED }}" selected>⭐ Đủ điều kiện chuyển đổi (Sẵn sàng convert)</option>
+                        <option value="{{ STATUS_NEW }}">Mới tiếp nhận</option>
+                        <option value="{{ STATUS_CONTACTED }}">Đang chăm sóc</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nhân Viên Phụ Trách</label>
+                    <select name="assigned_to_id" class="form-control">
+                        {% for uid, u in all_users.items() %}
+                        <option value="{{ uid }}" {% if uid == current_user.id %}selected{% endif %}>
+                            {{ u.name }} ({{ u.role_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Yêu Cầu / Nhu Cầu Cụ Thể</label>
+                <textarea name="requirements" class="form-control" rows="3" placeholder="Ghi chú chi tiết nhu cầu tính năng, thời gian triển khai...">{{ form_data.requirements or '' }}</textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                <a href="{{ url_for('leads_list') }}" class="btn btn-outline">
+                    Hủy Bỏ
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    + Tạo Lead & Lưu Vào Hệ Thống
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

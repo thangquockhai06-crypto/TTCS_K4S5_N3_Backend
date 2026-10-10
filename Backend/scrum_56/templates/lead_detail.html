@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Chi Tiết Lead {{ lead.id }} - {{ lead.company_name }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('leads_list_view') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">
+        ← Quay lại Danh sách Lead
+    </a>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span class="ticket-tag" style="background: var(--primary); color: white;">{{ lead.id }}</span>
+                <span class="badge {{ TEMP_BADGE_CLASSES.get(lead.temperature, 'badge-gray') }}">
+                    {{ TEMP_LABELS.get(lead.temperature, lead.temperature) }}
+                </span>
+                <span class="badge {{ STATUS_BADGE_CLASSES.get(lead.status, 'badge-gray') }}">
+                    {{ STATUS_LABELS.get(lead.status, lead.status) }}
+                </span>
+            </div>
+            <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">{{ lead.company_name }}</h1>
+            <div style="font-size: 0.9rem; color: #64748b; margin-top: 4px;">
+                Tiếp nhận: {{ lead.created_at|vi_datetime }} • Nguồn: {{ lead.source }}
+            </div>
+        </div>
+        <div>
+            <button type="button"
+                    class="btn {% if lead.sla.is_overdue %}btn-call-urgent{% else %}btn-primary{% endif %} btn-quick-call"
+                    data-lead-id="{{ lead.id }}"
+                    data-lead-name="{{ lead.company_name }}"
+                    data-phone="{{ lead.phone }}"
+                    data-overdue="{{ 'true' if lead.sla.is_overdue else 'false' }}">
+                📞 Gọi Cho Khách Hàng
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SLA STATUS CARD (TIÊU CHÍ 2) -->
+<div class="card" style="{% if lead.sla.is_overdue %}background: #fff5f5; border: 2px solid #ef4444; box-shadow: var(--shadow-overdue);{% endif %} margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 2rem;">
+                {% if lead.sla.is_overdue %}🚩{% elif lead.contacted_at %}✅{% else %}⏳{% endif %}
+            </div>
+            <div>
+                <div style="font-weight: 800; font-size: 1.05rem; color: {% if lead.sla.is_overdue %}#b91c1c{% else %}#0f172a{% endif %};">
+                    Cam Kết Thời Gian Phản Hồi (SLA Target): 4 Giờ
+                </div>
+                <div style="font-size: 0.85rem; color: {% if lead.sla.is_overdue %}#991b1b{% else %}#475569{% endif %}; margin-top: 2px;">
+                    Hạn chót SLA: <strong>{{ lead.sla_deadline|vi_datetime }}</strong>
+                    {% if lead.contacted_at %}
+                    • Đã gọi lúc: <strong>{{ lead.contacted_at|vi_datetime }}</strong>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {% if lead.sla.is_overdue %}
+            <span class="sla-overdue-tag" style="font-size: 0.9rem; padding: 6px 14px;">
+                <span>🚩</span>
+                <span>QUÁ HẠN: {{ lead.sla.delay_text }}</span>
+            </span>
+            {% else %}
+            <span class="badge {{ lead.sla.badge_class }}" style="font-size: 0.88rem; padding: 6px 14px;">
+                {{ lead.sla.label }} ({{ lead.sla.delay_text }})
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- THÔNG TIN CHI TIẾT LEAD -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+    <!-- Cột 1: Thông tin liên hệ -->
+    <div class="card">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px; color: #1e1b4b; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            👤 Thông Tin Người Đại Diện
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+            <div>
+                <span style="color: #64748b; font-weight: 600;">Họ và tên:</span>
+                <span style="font-weight: 700; color: #0f172a; margin-left: 6px;">{{ lead.contact_name }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; font-weight: 600;">Số điện thoại:</span>
+                <a href="tel:{{ lead.phone }}" style="font-weight: 700; color: #2563eb; margin-left: 6px; text-decoration: none;">
+                    {{ lead.phone }}
+                </a>
+            </div>
+            <div>
+                <span style="color: #64748b; font-weight: 600;">Email:</span>
+                <span style="font-weight: 600; color: #0f172a; margin-left: 6px;">{{ lead.email }}</span>
+            </div>
+            <div>
+                <span style="color: #64748b; font-weight: 600;">Nhân viên phụ trách:</span>
+                <span style="font-weight: 700; color: var(--primary); margin-left: 6px;">
+                    {{ lead.assigned_to_name }}
+                </span>
+            </div>
+            <div>
+                <span style="color: #64748b; font-weight: 600;">Giá trị đơn dự kiến:</span>
+                <span style="font-weight: 800; color: #059669; margin-left: 6px;">
+                    {{ lead.deal_value|vi_currency }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cột 2: Ghi chú & Lịch gọi tiếp theo -->
+    <div class="card">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px; color: #1e1b4b; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            📝 Ghi Chú & Kế Hoạch Chăm Sóc
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
+            <div>
+                <div style="color: #64748b; font-weight: 600; margin-bottom: 4px;">Nội dung trao đổi gần nhất:</div>
+                <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); color: #1e293b;">
+                    {{ lead.notes or "Chưa có ghi chú nào." }}
+                </div>
+            </div>
+            <div>
+                <div style="color: #64748b; font-weight: 600;">Lịch hẹn gọi lại:</div>
+                <div style="font-weight: 700; color: #2563eb; margin-top: 2px;">
+                    {% if lead.next_call_date %}
+                    📅 {{ lead.next_call_date }}
+                    {% else %}
+                    <span style="color: #94a3b8; font-weight: normal;">Chưa đặt lịch hẹn</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL GHI NHẬN CUỘC GỌI NHANH -->
+<div class="modal-overlay" id="modal-record-call">
+    <div class="modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e1b4b; display: flex; align-items: center; gap: 8px;">
+                <span>📞</span>
+                <span>Ghi Nhận Cuộc Gọi Khách Hàng</span>
+            </h3>
+            <button type="button" id="btn-close-record-call" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #94a3b8;">
+                ✕
+            </button>
+        </div>
+
+        <form action="{{ url_for('lead_record_call', lead_id=lead.id) }}" method="POST">
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">Nội Dung Trao Đổi / Ghi Chú *</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Khách hàng trao đổi về nhu cầu phần mềm..." required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label class="form-label">Hẹn Lịch Gọi Lại (Nếu có)</label>
+                <input type="date" name="next_call_date" class="form-control" value="{{ (now).strftime('%Y-%m-%d') }}">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-record-call">Đóng</button>
+                <button type="submit" class="btn btn-primary">
+                    Hoàn Tất Cuộc Gọi & Cập Nhật SLA
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
