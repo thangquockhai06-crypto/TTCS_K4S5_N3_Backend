@@ -22,9 +22,12 @@ class Lead(Base):
     status = Column(String(50), default="NEW", nullable=False, index=True)
     notes = Column(Text, nullable=True)
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    campaign_id = Column(String(36), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Quan hệ với người dùng tạo
+    # Quan hệ
     creator = relationship("User", foreign_keys=[created_by])
+    campaign = relationship("Campaign", back_populates="leads")
+

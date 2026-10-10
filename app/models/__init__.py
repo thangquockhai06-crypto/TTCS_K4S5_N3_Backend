@@ -17,6 +17,7 @@ from app.models.pipeline_stage import PipelineStage
 from app.models.win_loss import WinLossReason, Competitor
 from app.models.user_import_job import UserImportJob
 from app.models.lead import Lead
+from app.models.campaign import Campaign
 
 __all__ = [
     "Base",
@@ -44,4 +45,5 @@ __all__ = [
     "Competitor",
     "UserImportJob",
     "Lead",
+    "Campaign",
 ]

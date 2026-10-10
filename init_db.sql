@@ -69,9 +69,11 @@ CREATE TABLE IF NOT EXISTS deals (
     probability INT NOT NULL DEFAULT 20,
     customer_id VARCHAR(36) NOT NULL,
     owner_id VARCHAR(36) NOT NULL,
+    campaign_id VARCHAR(36) DEFAULT NULL,
     expected_close_date DATE DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_deals_campaign_id (campaign_id),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -165,7 +167,27 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. BẢNG KHÁCH HÀNG TIỀM NĂNG (LEADS) - SPRINT 4 (SCRUM-40)
+-- 11. BẢNG CHIẾN DỊCH TIẾP THỊ (CAMPAIGNS) - SPRINT 4 (SCRUM-44)
+CREATE TABLE IF NOT EXISTS campaigns (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    channel VARCHAR(100) NOT NULL,
+    budget DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+    description TEXT DEFAULT NULL,
+    created_by VARCHAR(36) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_campaigns_name (name),
+    INDEX idx_campaigns_channel (channel),
+    INDEX idx_campaigns_status (status),
+    INDEX idx_campaigns_created_by (created_by),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. BẢNG KHÁCH HÀNG TIỀM NĂNG (LEADS) - SPRINT 4 (SCRUM-40 / SCRUM-44)
 CREATE TABLE IF NOT EXISTS leads (
     id VARCHAR(36) PRIMARY KEY,
     full_name VARCHAR(150) NOT NULL,
@@ -177,6 +199,7 @@ CREATE TABLE IF NOT EXISTS leads (
     status VARCHAR(50) NOT NULL DEFAULT 'NEW',
     notes TEXT DEFAULT NULL,
     created_by VARCHAR(36) DEFAULT NULL,
+    campaign_id VARCHAR(36) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_leads_phone (phone),
@@ -184,7 +207,9 @@ CREATE TABLE IF NOT EXISTS leads (
     INDEX idx_leads_source (source),
     INDEX idx_leads_status (status),
     INDEX idx_leads_created_by (created_by),
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_leads_campaign_id (campaign_id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================================

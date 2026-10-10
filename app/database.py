@@ -119,15 +119,42 @@ def run_ep03_migrations(target_engine=None):
 
 def run_sprint4_migrations(target_engine=None):
     """
-    Tự động nâng cấp CSDL cho Sprint 4 (Lead Management - SCRUM-40).
-    Đảm bảo bảng leads tồn tại đầy đủ chỉ mục.
+    Tự động nâng cấp CSDL cho Sprint 4:
+    - Lead Management (SCRUM-40)
+    - Campaign Management & Tracking Attribution (SCRUM-44)
+    Đảm bảo bảng leads, campaigns và các khóa ngoại campaign_id tồn tại.
     """
     eng = target_engine or engine
     inspector = inspect(eng)
     table_names = inspector.get_table_names()
 
-    if "leads" not in table_names:
+    # 1. Tạo các bảng mới nếu chưa có
+    if "campaigns" not in table_names or "leads" not in table_names:
         Base.metadata.create_all(bind=eng)
+        inspector = inspect(eng)
+        table_names = inspector.get_table_names()
+
+    with eng.connect() as conn:
+        # 2. Bổ sung campaign_id vào bảng leads nếu chưa có
+        if "leads" in table_names:
+            lead_cols = {c["name"] for c in inspector.get_columns("leads")}
+            if "campaign_id" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN campaign_id VARCHAR(36) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+        # 3. Bổ sung campaign_id vào bảng deals nếu chưa có
+        if "deals" in table_names:
+            deal_cols = {c["name"] for c in inspector.get_columns("deals")}
+            if "campaign_id" not in deal_cols:
+                try:
+                    conn.execute(text("ALTER TABLE deals ADD COLUMN campaign_id VARCHAR(36) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+
 
 
 def get_db() -> Generator:

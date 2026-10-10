@@ -18,6 +18,7 @@ class Deal(Base):
     probability = Column(Integer, default=20, nullable=False)
     customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
     owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    campaign_id = Column(String(36), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
     expected_close_date = Column(Date, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -26,3 +27,4 @@ class Deal(Base):
     # Relationships
     customer = relationship("Customer", back_populates="deals")
     owner = relationship("User", back_populates="deals")
+    campaign = relationship("Campaign", back_populates="deals")
