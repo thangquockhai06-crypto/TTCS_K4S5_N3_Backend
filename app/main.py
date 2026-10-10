@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
-from app.database import engine, Base, run_ep03_migrations
+from app.database import engine, Base, run_ep03_migrations, run_sprint4_migrations
 from app.routers import (
     auth_router,
     users_router,
@@ -32,6 +32,7 @@ from app.routers import (
     pipelines_router,
     win_loss_router,
     user_import_router,
+    leads_router,
 )
 
 @asynccontextmanager
@@ -40,7 +41,8 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         run_ep03_migrations(engine)
-        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03 san sang).")
+        run_sprint4_migrations(engine)
+        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03 & Sprint 4 san sang).")
         try:
             import seed
             seed.seed_database()
@@ -112,6 +114,7 @@ app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
+app.include_router(leads_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")
 def root():
@@ -120,10 +123,11 @@ def root():
         "service": settings.PROJECT_NAME,
         "docsUrl": "/docs",
         "version": "1.0.0",
-        "sprint": "Sprint 3 (EP-03 Customer Management)",
+        "sprint": "Sprint 4 (Epic Lead - SCRUM-40)",
         "scrum_stories": [
             "SCRUM-32 (Login & 15m Lockout)",
             "SCRUM-34 (Session & Logout Revocation)",
             "S3-01 -> S3-09 (Full Customer Management)",
+            "SCRUM-40 (Create Manual Lead & Bulk Import via Excel - Sprint 4)",
         ],
     }
