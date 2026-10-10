@@ -155,6 +155,7 @@ def execute_lead_import(
 def get_leads(
     search: Optional[str] = Query(None, description="Tìm theo tên, điện thoại, email, công ty"),
     source: Optional[str] = Query(None, description="Lọc theo nguồn lead"),
+    campaign_id: Optional[str] = Query(None, description="Lọc theo chiến dịch tiếp thị"),
     status_filter: Optional[str] = Query(None, alias="status", description="Lọc theo trạng thái"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -173,6 +174,8 @@ def get_leads(
         )
     if source:
         query = query.filter(Lead.source == source)
+    if campaign_id:
+        query = query.filter(Lead.campaign_id == campaign_id)
     if status_filter:
         query = query.filter(Lead.status == status_filter)
 

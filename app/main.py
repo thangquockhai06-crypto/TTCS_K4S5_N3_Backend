@@ -33,6 +33,7 @@ from app.routers import (
     win_loss_router,
     user_import_router,
     leads_router,
+    campaigns_router,
 )
 
 @asynccontextmanager
@@ -115,6 +116,7 @@ app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(leads_router, prefix=settings.API_V1_STR)
+app.include_router(campaigns_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")
 def root():
@@ -123,11 +125,12 @@ def root():
         "service": settings.PROJECT_NAME,
         "docsUrl": "/docs",
         "version": "1.0.0",
-        "sprint": "Sprint 4 (Epic Lead - SCRUM-40)",
+        "sprint": "Sprint 4 (Epic Lead - SCRUM-40 & SCRUM-44)",
         "scrum_stories": [
             "SCRUM-32 (Login & 15m Lockout)",
             "SCRUM-34 (Session & Logout Revocation)",
             "S3-01 -> S3-09 (Full Customer Management)",
             "SCRUM-40 (Create Manual Lead & Bulk Import via Excel - Sprint 4)",
+            "SCRUM-44 (Marketing Campaigns & Revenue Performance Attribution - Sprint 4)",
         ],
     }
