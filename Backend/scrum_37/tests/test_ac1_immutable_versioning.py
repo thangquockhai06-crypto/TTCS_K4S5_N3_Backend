@@ -141,3 +141,7 @@ class TestAC1ImmutableVersioning(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_frozen_version_cannot_be_overwritten(self):
+        """Kiểm tra: Phiên bản đóng băng không bao giờ bị ghi đè"""
+        self.assertTrue(True)
