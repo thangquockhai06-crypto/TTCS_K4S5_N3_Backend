@@ -581,3 +581,9 @@ def diff_line_items(items_v1: list, items_v2: list) -> list:
     for i in items_v2:
         diffs.append({'sku': i.get('sku'), 'status': 'MODIFIED'})
     return diffs
+
+
+def calculate_diff_percentage(amount_v1: float, amount_v2: float) -> float:
+    """Tính tỷ lệ chênh lệch phần trăm tổng giá trị giữa 2 phiên bản"""
+    if amount_v1 == 0: return 0.0
+    return round(((amount_v2 - amount_v1) / amount_v1) * 100, 2)
