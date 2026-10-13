@@ -587,3 +587,8 @@ def calculate_diff_percentage(amount_v1: float, amount_v2: float) -> float:
     """Tính tỷ lệ chênh lệch phần trăm tổng giá trị giữa 2 phiên bản"""
     if amount_v1 == 0: return 0.0
     return round(((amount_v2 - amount_v1) / amount_v1) * 100, 2)
+
+
+def restore_version_as_draft(quote_id: str, version_id: str) -> dict:
+    """Khôi phục dữ liệu từ một phiên bản cũ để làm cơ sở tạo bản nháp mới"""
+    return {'quote_id': quote_id, 'restored_from': version_id, 'status': 'DRAFT'}
