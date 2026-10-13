@@ -26,6 +26,7 @@ from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.lead_import import (
     LeadCreateManualRequest,
+    LeadUpdateRequest,
     LeadResponse,
     LeadImportRowValidation,
     LeadImportPreviewResponse,
@@ -34,6 +35,8 @@ from app.schemas.lead_import import (
     clean_phone_number,
     VN_PHONE_REGEX,
 )
+from app.models.lead_scoring import LeadScoringRule
+from app.services.lead_scoring_service import LeadScoringService
 
 # Email Regex chuẩn
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -145,9 +148,65 @@ class LeadService:
             status="NEW",
             created_by=current_user.id,
             campaign_id=request.campaign_id,
+            industry=request.industry.strip() if request.industry else None,
+            company_size=request.company_size.strip() if request.company_size else None,
+            interest_level=request.interest_level.strip().upper() if request.interest_level else None,
         )
 
+        # SCRUM-48: Tự động chấm điểm thời gian thực khi tạo Lead
+        LeadScoringService.apply_scoring_to_lead(db, lead, commit=False)
+
         db.add(lead)
+        db.commit()
+        db.refresh(lead)
+        return lead
+
+    @staticmethod
+    def update_lead(
+        db: Session,
+        lead_id: str,
+        request: LeadUpdateRequest,
+        current_user: User,
+    ) -> Lead:
+        """
+        Cập nhật thông tin Lead (SCRUM-48).
+        Tự động tính lại điểm số và nhiệt độ thời gian thực sau khi cập nhật.
+        """
+        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not lead:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Không tìm thấy Lead với ID: {lead_id}",
+            )
+
+        if request.full_name is not None:
+            lead.full_name = request.full_name.strip()
+        if request.phone is not None:
+            lead.phone = clean_phone_number(request.phone)
+        if request.email is not None:
+            lead.email = str(request.email).strip().lower() if request.email else None
+        if request.company is not None:
+            lead.company = request.company.strip() if request.company else None
+        if request.interest_need is not None:
+            lead.interest_need = request.interest_need.strip() if request.interest_need else None
+        if request.source is not None:
+            lead.source = request.source.strip()
+        if request.notes is not None:
+            lead.notes = request.notes.strip() if request.notes else None
+        if request.status is not None:
+            lead.status = request.status.strip()
+        if request.campaign_id is not None:
+            lead.campaign_id = request.campaign_id
+        if request.industry is not None:
+            lead.industry = request.industry.strip() if request.industry else None
+        if request.company_size is not None:
+            lead.company_size = request.company_size.strip() if request.company_size else None
+        if request.interest_level is not None:
+            lead.interest_level = request.interest_level.strip().upper() if request.interest_level else None
+
+        # SCRUM-48: Tự động tính lại điểm và nhiệt độ thời gian thực
+        LeadScoringService.apply_scoring_to_lead(db, lead, commit=False)
+
         db.commit()
         db.refresh(lead)
         return lead
@@ -485,6 +544,9 @@ class LeadService:
         details: List[Dict[str, Any]] = []
 
         try:
+            scoring_rules = db.query(LeadScoringRule).filter(LeadScoringRule.is_active == True).all()
+            scoring_settings = LeadScoringService.get_or_create_settings(db)
+
             for row in rows:
                 # Nếu dòng không hợp lệ
                 if not row.is_valid:
@@ -530,6 +592,10 @@ class LeadService:
                     created_by=current_user.id,
                     campaign_id=row.campaign_id or request.campaign_id,
                 )
+                score, temp = LeadScoringService.calculate_lead_score(lead, scoring_rules, scoring_settings)
+                lead.score = score
+                lead.temperature = temp
+
                 db.add(lead)
                 imported_count += 1
                 details.append({

@@ -26,6 +26,7 @@ from app.schemas.lead_duplicate import (
     LeadMergeRequest,
     LeadAttachToCustomerRequest,
 )
+from app.services.lead_scoring_service import LeadScoringService
 
 
 class LeadDuplicateService:
@@ -256,6 +257,9 @@ class LeadDuplicateService:
                     "source",
                     "interest_need",
                     "notes",
+                    "industry",
+                    "company_size",
+                    "interest_level",
                 }
                 for field_name, field_val in request.selected_fields.items():
                     if (
@@ -318,6 +322,9 @@ class LeadDuplicateService:
                 created_at=now,
             )
             db.add(audit)
+
+            # 7. Tự động tính lại điểm số và nhiệt độ thời gian thực cho Lead chính sau khi gộp
+            LeadScoringService.apply_scoring_to_lead(db, primary, commit=False)
 
             db.commit()
             db.refresh(primary)
