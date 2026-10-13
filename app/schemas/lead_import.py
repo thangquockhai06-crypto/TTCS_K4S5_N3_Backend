@@ -70,6 +70,8 @@ class LeadResponse(BaseModel):
     notes: Optional[str] = None
     created_by: Optional[str] = None
     campaign_id: Optional[str] = None
+    merged_into_lead_id: Optional[str] = None
+    converted_customer_id: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
