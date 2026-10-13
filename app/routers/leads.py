@@ -24,9 +24,17 @@ from app.schemas.lead_import import (
     LeadImportExecuteRequest,
     LeadImportExecuteResponse,
 )
+from app.schemas.lead_duplicate import (
+    LeadDuplicateCheckRequest,
+    LeadDuplicateCheckResponse,
+    LeadMergeRequest,
+    LeadAttachToCustomerRequest,
+    LeadAttachToCustomerResponse,
+)
 from app.services.lead_service import LeadService
+from app.services.lead_duplicate_service import LeadDuplicateService
 
-router = APIRouter(prefix="/leads", tags=["Lead Management (SCRUM-40 / Sprint 4)"])
+router = APIRouter(prefix="/leads", tags=["Lead Management (SCRUM-40 / SCRUM-46 / Sprint 4)"])
 
 LEAD_ALLOWED_ROLES = {
     "marketing",
@@ -40,8 +48,29 @@ LEAD_ALLOWED_ROLES = {
     "employee",
     "sales manager",
     "team leader",
+    "team_lead",
     "trưởng nhóm kinh doanh",
     "sales director",
+    "director",
+    "vp of sales",
+    "giám đốc kinh doanh",
+    "admin",
+    "super admin",
+    "quản trị viên",
+    "revops",
+    "revops lead",
+}
+
+LEAD_MERGE_ROLES = {
+    "marketing",
+    "marketing staff",
+    "nhân viên marketing",
+    "sales manager",
+    "team leader",
+    "team_lead",
+    "trưởng nhóm kinh doanh",
+    "sales director",
+    "director",
     "vp of sales",
     "giám đốc kinh doanh",
     "admin",
@@ -59,6 +88,17 @@ def require_lead_role(current_user: User = Depends(get_current_user)) -> User:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền thao tác quản lý Lead (Yêu cầu quyền Marketing, Sales hoặc Quản trị viên).",
+        )
+    return current_user
+
+
+def require_lead_merge_role(current_user: User = Depends(get_current_user)) -> User:
+    """Xác thực người dùng có quyền gộp Lead (Marketing, Trưởng nhóm kinh doanh, Quản trị viên)."""
+    role = (current_user.role or "").strip().lower()
+    if role and role not in LEAD_MERGE_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thực hiện gộp Lead (Yêu cầu vai trò Marketing, Trưởng nhóm kinh doanh hoặc Quản trị viên).",
         )
     return current_user
 
@@ -181,6 +221,75 @@ def get_leads(
 
     leads = query.order_by(Lead.created_at.desc()).offset(skip).limit(limit).all()
     return [LeadResponse.model_validate(l) for l in leads]
+
+
+@router.post(
+    "/duplicates/check",
+    response_model=LeadDuplicateCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Kiểm tra và cảnh báo Lead trùng lặp (SCRUM-175 / SCRUM-46)",
+)
+def check_lead_duplicates(
+    request: LeadDuplicateCheckRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_lead_role),
+) -> LeadDuplicateCheckResponse:
+    """
+    Quét và phát hiện trùng lặp đa tiêu chí:
+    - Email, Số điện thoại (chuẩn VN), Tên công ty (đối soát tương đồng, bỏ qua tiền tố/hậu tố pháp nhân).
+    - Đối soát trên cả 2 nguồn: Leads và Customers.
+    - Trả về gợi ý hành động: MERGE_LEADS, ATTACH_TO_CUSTOMER hoặc NO_DUPLICATE.
+    """
+    return LeadDuplicateService.check_duplicates(db=db, request=request, current_user=current_user)
+
+
+@router.post(
+    "/duplicates/merge",
+    response_model=LeadResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Thực thi gộp 2 Lead trùng lặp và bảo toàn lịch sử (SCRUM-175 / SCRUM-46)",
+)
+def merge_duplicate_leads(
+    request: LeadMergeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_lead_merge_role),
+) -> LeadResponse:
+    """
+    Gộp Lead phụ vào Lead chính trong một Database Transaction:
+    - Chuyển toàn bộ hoạt động (Activities) sang Lead chính.
+    - Cập nhật thông tin được chỉ định hoặc nối tiếp ghi chú.
+    - Chuyển trạng thái Lead phụ thành 'MERGED'.
+    - Tạo Activity và AuditLog ghi vết hệ thống.
+    """
+    merged_lead = LeadDuplicateService.merge_leads(db=db, request=request, current_user=current_user)
+    return LeadResponse.model_validate(merged_lead)
+
+
+@router.post(
+    "/attach-to-customer",
+    response_model=LeadAttachToCustomerResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Gắn Lead trùng vào Khách hàng đã có trong CRM (SCRUM-175 / SCRUM-46)",
+)
+def attach_lead_to_customer(
+    request: LeadAttachToCustomerRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_lead_role),
+) -> LeadAttachToCustomerResponse:
+    """
+    Gắn Lead vào Khách hàng hiện hữu:
+    - Chuyển toàn bộ hoạt động (Activities) sang Khách hàng.
+    - Cập nhật Lead thành 'CONVERTED' và lưu converted_customer_id.
+    - Ghi nhận Activity và AuditLog trên Khách hàng.
+    """
+    res = LeadDuplicateService.attach_to_customer(db=db, request=request, current_user=current_user)
+    return LeadAttachToCustomerResponse(
+        message=res["message"],
+        lead_id=res["lead_id"],
+        customer_id=res["customer_id"],
+        status=res["status"],
+        lead=LeadResponse.model_validate(res["lead"]),
+    )
 
 
 @router.get(
