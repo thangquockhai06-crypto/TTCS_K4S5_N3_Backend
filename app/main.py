@@ -32,6 +32,7 @@ from app.routers import (
     pipelines_router,
     win_loss_router,
     user_import_router,
+    lead_scoring_router,
     leads_router,
     campaigns_router,
 )
@@ -115,6 +116,7 @@ app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 app.include_router(user_import_router, prefix=settings.API_V1_STR)
+app.include_router(lead_scoring_router, prefix=settings.API_V1_STR)
 app.include_router(leads_router, prefix=settings.API_V1_STR)
 app.include_router(campaigns_router, prefix=settings.API_V1_STR)
 

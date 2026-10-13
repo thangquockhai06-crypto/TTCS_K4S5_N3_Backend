@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.lead import Lead
 from app.schemas.lead_import import (
     LeadCreateManualRequest,
+    LeadUpdateRequest,
     LeadResponse,
     LeadImportPreviewResponse,
     LeadImportExecuteRequest,
@@ -190,13 +191,16 @@ def execute_lead_import(
 @router.get(
     "",
     response_model=List[LeadResponse],
-    summary="Lấy danh sách Lead có tìm kiếm và phân trang",
+    summary="Lấy danh sách Lead có tìm kiếm, phân loại nhiệt độ và sắp xếp ưu tiên (SCRUM-48 AC4)",
 )
 def get_leads(
     search: Optional[str] = Query(None, description="Tìm theo tên, điện thoại, email, công ty"),
     source: Optional[str] = Query(None, description="Lọc theo nguồn lead"),
     campaign_id: Optional[str] = Query(None, description="Lọc theo chiến dịch tiếp thị"),
     status_filter: Optional[str] = Query(None, alias="status", description="Lọc theo trạng thái"),
+    temperature: Optional[str] = Query(None, description="Lọc theo nhiệt độ: HOT, WARM, COLD (SCRUM-48)"),
+    sort_by: Optional[str] = Query(None, description="Sắp xếp theo trường (ví dụ: score, created_at)"),
+    sort_order: Optional[str] = Query("desc", description="Thứ tự sắp xếp: desc hoặc asc (mặc định: desc)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -218,8 +222,24 @@ def get_leads(
         query = query.filter(Lead.campaign_id == campaign_id)
     if status_filter:
         query = query.filter(Lead.status == status_filter)
+    if temperature:
+        query = query.filter(Lead.temperature == temperature.strip().upper())
 
-    leads = query.order_by(Lead.created_at.desc()).offset(skip).limit(limit).all()
+    # Xử lý sắp xếp ưu tiên (SCRUM-48 AC4: hỗ trợ sort_by=score&sort_order=desc)
+    if sort_by == "score":
+        if sort_order and sort_order.lower() == "asc":
+            query = query.order_by(Lead.score.asc(), Lead.created_at.desc())
+        else:
+            query = query.order_by(Lead.score.desc(), Lead.created_at.desc())
+    elif sort_by == "created_at":
+        if sort_order and sort_order.lower() == "asc":
+            query = query.order_by(Lead.created_at.asc())
+        else:
+            query = query.order_by(Lead.created_at.desc())
+    else:
+        query = query.order_by(Lead.created_at.desc())
+
+    leads = query.offset(skip).limit(limit).all()
     return [LeadResponse.model_validate(l) for l in leads]
 
 
@@ -308,4 +328,24 @@ def get_lead_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy Lead trong hệ thống.",
         )
+    return LeadResponse.model_validate(lead)
+
+
+@router.put(
+    "/{lead_id}",
+    response_model=LeadResponse,
+    summary="Cập nhật thông tin Lead và tự động tính lại điểm số (SCRUM-48 AC3)",
+)
+def update_lead(
+    lead_id: str,
+    request: LeadUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_lead_role),
+) -> LeadResponse:
+    """
+    Cập nhật thông tin Lead:
+    - Cho phép sửa đổi thông tin: full_name, phone, email, company, industry, company_size, source, interest_level, notes, status.
+    - Hệ thống tự động tính lại điểm số (score) và cập nhật phân loại nhiệt độ (temperature) thời gian thực.
+    """
+    lead = LeadService.update_lead(db=db, lead_id=lead_id, request=request, current_user=current_user)
     return LeadResponse.model_validate(lead)
