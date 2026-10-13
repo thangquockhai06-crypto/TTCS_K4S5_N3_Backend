@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Dòng thời gian · {{ customer.name }}{% endblock %}
+{% block meta_description %}Dòng thời gian tương tác của {{ customer.name }}: hoạt động, thay đổi cơ hội và báo giá đã gửi theo thứ tự thời gian.{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('customers_view') }}" class="back-link" id="back-to-customers">← Danh sách khách hàng</a>
+
+<!-- ================= HỒ SƠ KHÁCH HÀNG ================= -->
+<section class="card profile">
+    <div class="profile-main">
+        <div class="avatar-xl">{{ customer.name[0] }}</div>
+        <div>
+            <h1>{{ customer.name }}</h1>
+            <div class="profile-meta">
+                <span>👤 {{ customer.contact_name }} · {{ customer.contact_title }}</span>
+                <span>📱 {{ customer.phone }}</span>
+                <span>✉️ {{ customer.email }}</span>
+                <span>📍 {{ customer.address }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="profile-owners">
+        <div class="owner-chip"><span class="muted small">CSKH phụ trách</span><strong>{{ summary.cs_owner.avatar }} {{ summary.cs_owner.name }}</strong></div>
+        <div class="owner-chip"><span class="muted small">Kinh doanh</span><strong>{{ summary.sales_owner.avatar }} {{ summary.sales_owner.name }}</strong></div>
+        <div class="owner-chip"><span class="muted small">Khách hàng từ</span><strong>{{ customer.customer_since | vi_date }}</strong></div>
+    </div>
+</section>
+
+<div class="layout">
+    <!-- ================= CỘT TRÁI: BỐI CẢNH 5 PHÚT ================= -->
+    <aside class="sidebar" aria-label="Tóm tắt bàn giao">
+        <div class="card summary-card">
+            <div class="card-title"><span>⏱</span> Bối cảnh trong 5 phút</div>
+            <div class="stat-row">
+                <div class="stat"><div class="stat-value">{{ summary.total_events }}</div><div class="stat-label">Sự kiện</div></div>
+                <div class="stat"><div class="stat-value">{{ summary.open_opportunities | length }}</div><div class="stat-label">Cơ hội mở</div></div>
+                <div class="stat"><div class="stat-value">{{ summary.pending_follow_ups | length }}</div><div class="stat-label">Việc tồn</div></div>
+            </div>
+            <div class="kv"><span>Liên hệ gần nhất</span>
+                <strong>{% if summary.last_contact %}{{ summary.last_contact.icon }} {{ summary.last_contact.occurred_at | relative }}{% else %}Chưa có{% endif %}</strong>
+            </div>
+            {% if summary.last_contact %}
+            <div class="muted small last-contact-title">“{{ summary.last_contact.title }}” — {{ summary.last_contact.performer.name }}</div>
+            {% endif %}
+            <div class="kv"><span>Doanh thu đã thắng</span><strong>{{ summary.won_value | vi_currency }}</strong></div>
+        </div>
+
+        {% if summary.pinned_notes %}
+        <div class="card summary-card accent-amber">
+            <div class="card-title"><span>📌</span> Lưu ý quan trọng</div>
+            {% for n in summary.pinned_notes %}
+            <div class="pinned-note">
+                <div class="pinned-head">{{ n.performer.avatar }} <strong>{{ n.performer.name }}</strong> · <span class="muted small">{{ n.occurred_at | relative }}</span></div>
+                <p>{{ n.summary }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card summary-card">
+            <div class="card-title"><span>✅</span> Việc cần làm tiếp</div>
+            {% for p in summary.pending_follow_ups %}
+            <div class="todo {% if p.is_overdue %}todo-overdue{% endif %}">
+                <div>{{ p.text }}</div>
+                <div class="muted small">{% if p.is_overdue %}🚩 Quá hạn{% else %}⏳ Hạn{% endif %} {{ p.due | vi_datetime }} · giao bởi {{ p.owner.name }}</div>
+            </div>
+            {% else %}
+            <p class="muted small">Không có việc tồn đọng.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card summary-card">
+            <div class="card-title"><span>📈</span> Cơ hội đang mở</div>
+            {% for o in summary.open_opportunities %}
+            <div class="opp">
+                <div class="opp-head"><strong>{{ o.name }}</strong><span class="pill pill-opp">{{ o.stage_label }}</span></div>
+                <div class="muted small">{{ o.amount | vi_currency }} · {{ o.probability }}% · {{ o.owner.name }}</div>
+                <div class="progress"><span style="width: {{ o.probability }}%"></span></div>
+            </div>
+            {% else %}
+            <p class="muted small">Không có cơ hội đang mở.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card summary-card">
+            <div class="card-title"><span>🧾</span> Báo giá gần nhất</div>
+            {% if summary.latest_quote %}
+            {% set q = summary.latest_quote %}
+            <div class="kv"><span>{{ q.code }}</span><strong>{{ q.amount | vi_currency }}</strong></div>
+            <div class="muted small">{{ q.title }}</div>
+            <div class="quote-status qs-{{ q.status | lower }}">{{ q.status_label }} · gửi {{ q.sent_at | relative }}</div>
+            {% else %}
+            <p class="muted small">Chưa gửi báo giá nào.</p>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- ================= CỘT PHẢI: DÒNG THỜI GIAN ================= -->
+    <section class="timeline-col" aria-labelledby="timeline-heading">
+        <!-- BỘ LỌC (TIÊU CHÍ 2) -->
+        <form method="get" action="{{ url_for('customer_timeline_view', customer_id=customer.id) }}" class="card filter-card" id="timeline-filter-form">
+            <div class="filter-head">
+                <h2 id="timeline-heading">Dòng thời gian tương tác</h2>
+                <div class="order-toggle" role="radiogroup" aria-label="Thứ tự">
+                    <label class="{% if order == 'desc' %}active{% endif %}">
+                        <input type="radio" name="order" value="desc" id="order-desc" {% if order == 'desc' %}checked{% endif %}> Mới nhất trước
+                    </label>
+                    <label class="{% if order == 'asc' %}active{% endif %}">
+                        <input type="radio" name="order" value="asc" id="order-asc" {% if order == 'asc' %}checked{% endif %}> Cũ nhất trước
+                    </label>
+                </div>
+            </div>
+
+            <fieldset class="filter-group">
+                <legend>Loại hoạt động</legend>
+                <div class="chips">
+                    {% for t in EVENT_TYPES %}
+                    <label class="chip {{ EVENT_TYPE_COLORS[t] }} {% if t in selected_types %}chip-on{% endif %}">
+                        <input type="checkbox" name="type" value="{{ t }}" id="filter-type-{{ t | lower }}" {% if t in selected_types %}checked{% endif %}>
+                        <span>{{ EVENT_TYPE_ICONS[t] }} {{ EVENT_TYPE_LABELS[t] }}</span>
+                        <em>{{ type_counts[t] }}</em>
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <fieldset class="filter-group">
+                <legend>Người thực hiện</legend>
+                <div class="chips">
+                    {% for u in performers %}
+                    <label class="chip chip-user {% if u.id in selected_performers %}chip-on{% endif %}">
+                        <input type="checkbox" name="performer" value="{{ u.id }}" id="filter-performer-{{ u.id }}" {% if u.id in selected_performers %}checked{% endif %}>
+                        <span>{{ u.avatar }} {{ u.name }}</span>
+                        <em>{{ u.count }}</em>
+                    </label>
+                    {% else %}
+                    <span class="muted small">Chưa có ai tương tác với khách hàng này.</span>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <div class="filter-foot">
+                <span class="muted small" id="timeline-count">Hiển thị <strong>{{ total_shown }}</strong> / {{ total_all }} sự kiện</span>
+                <div class="filter-buttons">
+                    {% if has_filter %}
+                    <a href="{{ url_for('customer_timeline_view', customer_id=customer.id, order=order) }}" class="btn btn-ghost btn-sm" id="filter-clear">✕ Xóa bộ lọc</a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary btn-sm js-hide" id="filter-apply">Áp dụng</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- GHI NHẬN HOẠT ĐỘNG -->
+        <details class="card add-card">
+            <summary id="add-activity-toggle">➕ Ghi nhận hoạt động / ghi chú tiếp nhận</summary>
+            <form method="post" action="{{ url_for('customer_add_activity', customer_id=customer.id) }}" class="add-form" id="add-activity-form">
+                <div class="form-row">
+                    <label for="add-type">Loại</label>
+                    <select name="type" id="add-type">
+                        {% for t in ACTIVITY_TYPES %}
+                        <option value="{{ t }}" {% if t == 'NOTE' %}selected{% endif %}>{{ EVENT_TYPE_ICONS[t] }} {{ EVENT_TYPE_LABELS[t] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="add-subject">Tiêu đề</label>
+                    <input type="text" name="subject" id="add-subject" required maxlength="150" placeholder="VD: Đã tiếp nhận khách từ Minh Tâm">
+                </div>
+                <div class="form-row">
+                    <label for="add-content">Nội dung</label>
+                    <textarea name="content" id="add-content" rows="3" placeholder="Tóm tắt nội dung trao đổi..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <span class="muted small">Người thực hiện: {{ current_user.avatar }} {{ current_user.name }}</span>
+                    <button type="submit" class="btn btn-primary btn-sm" id="add-activity-submit">Lưu vào dòng thời gian</button>
+                </div>
+            </form>
+        </details>
+
+        <!-- DÒNG THỜI GIAN (TIÊU CHÍ 1) -->
+        {% if day_groups %}
+        <div class="timeline" id="timeline">
+            {% for group in day_groups %}
+            <div class="day-group">
+                <div class="day-heading"><span>{{ group.date | day_heading }}</span></div>
+                {% for e in group.events %}
+                <article class="event {{ e.color }} {% if e.pinned %}event-pinned{% endif %} {% if e.is_won %}event-won{% endif %}" id="event-{{ e.id }}">
+                    <div class="event-node" aria-hidden="true">{{ e.icon }}</div>
+                    <div class="event-card">
+                        <header class="event-head">
+                            <span class="event-type">{{ e.type_label }}</span>
+                            {% if e.pinned %}<span class="pill pill-amber">📌 Ghim</span>{% endif %}
+                            {% if e.quote_status_label %}<span class="quote-status qs-{{ e.quote_status | lower }}">{{ e.quote_status_label }}</span>{% endif %}
+                            <time class="event-time" datetime="{{ e.occurred_at.isoformat() }}" title="{{ e.occurred_at | vi_datetime }}">{{ e.occurred_at | vi_time }}</time>
+                        </header>
+                        <h3 class="event-title">{{ e.title }}</h3>
+                        {% if e.summary %}<p class="event-summary">{{ e.summary }}</p>{% endif %}
+                        {% if e.details %}
+                        <dl class="event-details">
+                            {% for label, value in e.details %}
+                            <div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+                            {% endfor %}
+                        </dl>
+                        {% endif %}
+                        <footer class="event-foot">
+                            <span>{{ e.performer.avatar }} <strong>{{ e.performer.name }}</strong> · {{ e.performer.role_name }}</span>
+                            <span class="muted small">{{ e.occurred_at | relative }} · {{ e.id }}</span>
+                        </footer>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card empty-state" id="timeline-empty">
+            <div class="empty-icon">🗂</div>
+            {% if has_filter %}
+            <h3>Không có sự kiện nào khớp bộ lọc</h3>
+            <p class="muted">Hãy bỏ bớt điều kiện lọc hoặc <a href="{{ url_for('customer_timeline_view', customer_id=customer.id) }}">xem toàn bộ</a>.</p>
+            {% else %}
+            <h3>Khách hàng chưa có tương tác nào</h3>
+            <p class="muted">Hãy ghi nhận hoạt động đầu tiên ở phía trên.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
