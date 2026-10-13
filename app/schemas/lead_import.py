@@ -29,6 +29,9 @@ class LeadCreateManualRequest(BaseModel):
     source: str = Field(..., min_length=1, max_length=100, description="Nguồn lead bắt buộc (Hội thảo, Sự kiện, Danh thiếp, Giới thiệu...)")
     notes: Optional[str] = Field(None, description="Ghi chú thêm")
     campaign_id: Optional[str] = Field(None, description="ID chiến dịch liên kết (SCRUM-44)")
+    industry: Optional[str] = Field(None, description="Ngành nghề phù hợp (SCRUM-48)")
+    company_size: Optional[str] = Field(None, description="Quy mô doanh nghiệp (SCRUM-48)")
+    interest_level: Optional[str] = Field(None, description="Mức độ quan tâm: HIGH, MEDIUM, LOW (SCRUM-48)")
 
 
     @field_validator("full_name")
@@ -57,6 +60,32 @@ class LeadCreateManualRequest(BaseModel):
         return cleaned
 
 
+class LeadUpdateRequest(BaseModel):
+    """Dữ liệu yêu cầu cập nhật thông tin Lead (SCRUM-48)."""
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone: Optional[str] = Field(None, min_length=8, max_length=20)
+    email: Optional[EmailStr] = None
+    company: Optional[str] = Field(None, max_length=255)
+    interest_need: Optional[str] = Field(None, max_length=500)
+    source: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
+    status: Optional[str] = Field(None, max_length=50)
+    campaign_id: Optional[str] = None
+    industry: Optional[str] = Field(None, max_length=100)
+    company_size: Optional[str] = Field(None, max_length=50)
+    interest_level: Optional[str] = Field(None, max_length=50)
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            cleaned = clean_phone_number(v)
+            if not VN_PHONE_REGEX.match(cleaned):
+                raise ValueError("Số điện thoại không đúng định dạng Việt Nam.")
+            return cleaned
+        return v
+
+
 class LeadResponse(BaseModel):
     """Thông tin Lead trả về cho client."""
     id: str
@@ -72,6 +101,12 @@ class LeadResponse(BaseModel):
     campaign_id: Optional[str] = None
     merged_into_lead_id: Optional[str] = None
     converted_customer_id: Optional[str] = None
+    # SCRUM-48 Lead Scoring
+    score: int = 0
+    temperature: str = "COLD"
+    industry: Optional[str] = None
+    company_size: Optional[str] = None
+    interest_level: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
