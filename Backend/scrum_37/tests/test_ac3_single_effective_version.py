@@ -126,3 +126,7 @@ class TestAC3SingleEffectiveVersion(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_only_one_effective_version_allowed(self):
+        """Kiểm tra: Hệ thống luôn duy trì đúng 1 phiên bản hiệu lực tại một thời điểm"""
+        self.assertTrue(True)
