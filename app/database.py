@@ -156,6 +156,37 @@ def run_sprint4_migrations(target_engine=None):
                     conn.commit()
                 except Exception:
                     pass
+            # SCRUM-48: Các cột chấm điểm Lead & phân loại nhiệt độ
+            if "score" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN score INT NOT NULL DEFAULT 0"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "temperature" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN temperature VARCHAR(20) NOT NULL DEFAULT 'COLD'"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "industry" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN industry VARCHAR(100) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "company_size" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN company_size VARCHAR(50) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "interest_level" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN interest_level VARCHAR(50) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
 
         # 3. Bổ sung campaign_id vào bảng deals nếu chưa có
         if "deals" in table_names:
@@ -176,6 +207,22 @@ def run_sprint4_migrations(target_engine=None):
                     conn.commit()
                 except Exception:
                     pass
+
+        # 5. SCRUM-48: Đảm bảo bảng lead_scoring_settings có bản ghi mặc định ID=1
+        if "lead_scoring_settings" not in table_names:
+            Base.metadata.create_all(bind=eng)
+            table_names = inspect(eng).get_table_names()
+
+        if "lead_scoring_settings" in table_names:
+            try:
+                res = conn.execute(text("SELECT COUNT(*) FROM lead_scoring_settings")).scalar()
+                if res == 0:
+                    conn.execute(text(
+                        "INSERT INTO lead_scoring_settings (id, hot_threshold, warm_threshold) VALUES (1, 70, 40)"
+                    ))
+                    conn.commit()
+            except Exception:
+                pass
 
 
 

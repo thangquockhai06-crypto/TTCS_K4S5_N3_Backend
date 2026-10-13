@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -25,6 +25,13 @@ class Lead(Base):
     campaign_id = Column(String(36), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
     merged_into_lead_id = Column(String(36), ForeignKey("leads.id", ondelete="SET NULL"), nullable=True, index=True)
     converted_customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Tiêu chí & Điểm số (SCRUM-48 Lead Scoring)
+    score = Column(Integer, default=0, nullable=False, index=True)
+    temperature = Column(String(20), default="COLD", nullable=False, index=True)  # HOT, WARM, COLD
+    industry = Column(String(100), nullable=True, index=True)
+    company_size = Column(String(50), nullable=True)
+    interest_level = Column(String(50), nullable=True)  # HIGH, MEDIUM, LOW
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

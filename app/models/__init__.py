@@ -18,6 +18,7 @@ from app.models.win_loss import WinLossReason, Competitor
 from app.models.user_import_job import UserImportJob
 from app.models.lead import Lead
 from app.models.campaign import Campaign
+from app.models.lead_scoring import LeadScoringRule, LeadScoringSettings
 
 __all__ = [
     "Base",
@@ -46,4 +47,6 @@ __all__ = [
     "UserImportJob",
     "Lead",
     "Campaign",
+    "LeadScoringRule",
+    "LeadScoringSettings",
 ]
