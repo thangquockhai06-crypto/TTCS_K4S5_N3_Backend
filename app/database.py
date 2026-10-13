@@ -135,12 +135,24 @@ def run_sprint4_migrations(target_engine=None):
         table_names = inspector.get_table_names()
 
     with eng.connect() as conn:
-        # 2. Bổ sung campaign_id vào bảng leads nếu chưa có
+        # 2. Bổ sung các cột mới vào bảng leads nếu chưa có
         if "leads" in table_names:
             lead_cols = {c["name"] for c in inspector.get_columns("leads")}
             if "campaign_id" not in lead_cols:
                 try:
                     conn.execute(text("ALTER TABLE leads ADD COLUMN campaign_id VARCHAR(36) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "merged_into_lead_id" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN merged_into_lead_id VARCHAR(36) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+            if "converted_customer_id" not in lead_cols:
+                try:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN converted_customer_id VARCHAR(36) NULL"))
                     conn.commit()
                 except Exception:
                     pass
@@ -151,6 +163,16 @@ def run_sprint4_migrations(target_engine=None):
             if "campaign_id" not in deal_cols:
                 try:
                     conn.execute(text("ALTER TABLE deals ADD COLUMN campaign_id VARCHAR(36) NULL"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+        # 4. Bổ sung lead_id vào bảng activities nếu chưa có
+        if "activities" in table_names:
+            act_cols = {c["name"] for c in inspector.get_columns("activities")}
+            if "lead_id" not in act_cols:
+                try:
+                    conn.execute(text("ALTER TABLE activities ADD COLUMN lead_id VARCHAR(36) NULL"))
                     conn.commit()
                 except Exception:
                     pass
