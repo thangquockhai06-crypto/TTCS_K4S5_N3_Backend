@@ -139,3 +139,7 @@ DELIVERY_TERMS_OPTIONS = [
 
 # Version changelog labels
 VERSION_CHANGE_TYPES = ['DISCOUNT_CHANGE', 'PRODUCT_CHANGE', 'TERMS_UPDATE']
+
+# Cache configuration for historical snapshots
+ENABLE_VERSION_CACHE = True
+VERSION_CACHE_TTL = 3600
