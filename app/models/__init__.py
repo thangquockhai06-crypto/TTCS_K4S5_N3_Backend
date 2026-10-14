@@ -6,10 +6,14 @@ from app.models.contact import Contact
 from app.models.support_ticket import SupportTicket
 from app.models.saved_filter import SavedFilterPreset
 from app.models.deal import Deal
+from app.models.deal_item import DealItem
+from app.models.campaign import Campaign
+from app.models.lead import Lead, LeadRoutingRule
 from app.models.activity import Activity, Note
 from app.models.quotation import Quotation
 from app.models.role import Role, user_roles
 from app.models.team import Team, user_teams
+from app.models.audit_log import AuditLog
 from app.models.product import Product, PriceList
 from app.models.category import Category
 from app.models.custom_field import CustomField
@@ -26,6 +30,10 @@ __all__ = [
     "SupportTicket",
     "SavedFilterPreset",
     "Deal",
+    "DealItem",
+    "Campaign",
+    "Lead",
+    "LeadRoutingRule",
     "Activity",
     "Note",
     "Quotation",

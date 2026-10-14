@@ -618,8 +618,10 @@ class ExcelImportService:
             successful_rows=0,
             failed_rows=0,
             duplicate_rows=0,
+            skipped_rows=0,
             status="pending",
             created_by_user_id=created_by_user_id,
+            started_at=datetime.utcnow(),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
@@ -752,11 +754,16 @@ class ExcelImportService:
                 job.successful_rows = successful_count
                 job.failed_rows = failed_count
                 job.duplicate_rows = duplicate_count
+                job.skipped_rows = duplicate_count
                 job.updated_at = datetime.utcnow()
                 db.commit()
 
             # Kết thúc công việc
-            job.status = "completed"
+            if failed_count == total_items and total_items > 0:
+                job.status = "failed"
+            else:
+                job.status = "completed"
+
             job.completed_at = datetime.utcnow()
             job.error_summary = json.dumps(failed_details, ensure_ascii=False)
             db.commit()
@@ -771,9 +778,21 @@ class ExcelImportService:
             db.close()
 
     @staticmethod
-    def generate_job_error_csv(job: UserImportJob) -> StreamingResponse:
+    def sanitize_csv_value(val: Any) -> str:
         """
-        Sinh báo cáo tệp lỗi (Failed rows) định dạng CSV tải về cho người dùng.
+        Bảo vệ chống Spreadsheet Formula Injection (CSV Injection):
+        Nếu giá trị bắt đầu bằng =, +, -, @, \t, \r, tự động thêm dấu nháy đơn '
+        để phần mềm bảng tính (Excel/Calc) hiểu là chuỗi văn bản thuần thay vì thực thi lệnh.
+        """
+        s = str(val if val is not None else "")
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return f"'{s}"
+        return s
+
+    @classmethod
+    def generate_job_error_csv(cls, job: UserImportJob) -> StreamingResponse:
+        """
+        Sinh báo cáo tệp lỗi (Failed rows) định dạng CSV tải về cho người dùng kèm chống Formula Injection.
         """
         output = io.BytesIO()
         output.write(b"\xef\xbb\xbf")  # UTF-8 BOM
@@ -789,11 +808,12 @@ class ExcelImportService:
                 pass
 
         for err in errors:
-            row_idx = err.get("row_index", "")
-            full_name = err.get("full_name") or ""
-            email = err.get("email") or ""
+            row_idx = cls.sanitize_csv_value(err.get("row_index", ""))
+            full_name = cls.sanitize_csv_value(err.get("full_name") or "")
+            email = cls.sanitize_csv_value(err.get("email") or "")
             err_list = err.get("errors", [])
-            err_msg = " | ".join(err_list) if isinstance(err_list, list) else str(err_list or err.get("error", ""))
+            raw_msg = " | ".join(err_list) if isinstance(err_list, list) else str(err_list or err.get("error", ""))
+            err_msg = cls.sanitize_csv_value(raw_msg)
             writer.writerow([row_idx, full_name, email, err_msg])
 
         text_stream.detach()

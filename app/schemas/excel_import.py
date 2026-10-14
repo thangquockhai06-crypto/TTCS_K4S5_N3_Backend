@@ -91,9 +91,11 @@ class UserImportJobResponse(BaseModel):
     successful_rows: int
     failed_rows: int
     duplicate_rows: int
+    skipped_rows: int = 0
     remaining_rows: int
-    status: str  # "pending", "processing", "completed", "failed"
+    status: str  # "pending", "processing", "completed", "partially_completed", "failed"
     created_by_user_id: Optional[str] = None
+    started_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

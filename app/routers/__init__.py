@@ -17,6 +17,8 @@ from app.routers.custom_fields import router as custom_fields_router
 from app.routers.pipelines import router as pipelines_router
 from app.routers.win_loss import router as win_loss_router
 from app.routers.user_import import router as user_import_router
+from app.routers.leads import router as leads_router
+from app.routers.campaigns import router as campaigns_router
 
 __all__ = [
     "auth_router",
@@ -38,4 +40,6 @@ __all__ = [
     "pipelines_router",
     "win_loss_router",
     "user_import_router",
+    "leads_router",
+    "campaigns_router",
 ]

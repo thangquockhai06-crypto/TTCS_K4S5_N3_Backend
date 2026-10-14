@@ -13,11 +13,29 @@ def create_robust_engine():
     """
     if settings.DATABASE_URL.startswith("mysql"):
         try:
+            # Fast socket check to immediately fallback if MySQL server is not running
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            host = "127.0.0.1"
+            port = 3306
+            if "@" in settings.DATABASE_URL:
+                hp = settings.DATABASE_URL.split("@")[1].split("/")[0]
+                if ":" in hp:
+                    host, p_str = hp.split(":")
+                    port = int(p_str)
+                else:
+                    host = hp
+            res = sock.connect_ex((host, port))
+            sock.close()
+            if res != 0:
+                raise ConnectionRefusedError(f"MySQL port not open at {host}:{port}")
+
             mysql_engine = create_engine(
                 settings.DATABASE_URL,
                 pool_pre_ping=True,
                 pool_recycle=3600,
-                connect_args={"connect_timeout": 2},
+                connect_args={"connect_timeout": 1},
                 echo=False,
             )
             with mysql_engine.connect() as conn:
@@ -116,6 +134,83 @@ def run_ep03_migrations(target_engine=None):
                 except Exception:
                     pass
 
+
+def run_ep04_ep05_migrations(target_engine=None):
+    """
+    Tự động nâng cấp lược đồ CSDL cho Sprint 4 & Sprint 5 (EP-04 Lead & EP-05 Deal Management):
+    - Đảm bảo các bảng mới: leads, campaigns, deal_items, lead_routing_rules đã được tạo.
+    - Bổ sung các cột mở rộng cho bảng deals: campaign_id, close_date, actual_value,
+      loss_reason, loss_competitor, is_stalled, last_activity_at, reassignment_reason, reassigned_from_id.
+    - Bổ sung các cột mở rộng cho bảng user_import_jobs: skipped_rows, started_at, duplicate_strategy.
+    - Thêm các chỉ mục tối ưu hóa tốc độ tìm kiếm.
+    """
+    eng = target_engine or engine
+    # Tạo các bảng mới nếu chưa tồn tại
+    Base.metadata.create_all(bind=eng)
+
+    inspector = inspect(eng)
+    table_names = inspector.get_table_names()
+
+    with eng.connect() as conn:
+        # 1. Bổ sung các cột mở rộng cho deals
+        if "deals" in table_names:
+            cols = {c["name"] for c in inspector.get_columns("deals")}
+            deals_cols_to_add = [
+                ("campaign_id", "VARCHAR(36)"),
+                ("close_date", "DATE"),
+                ("actual_value", "DECIMAL(15, 2)"),
+                ("loss_reason", "VARCHAR(255)"),
+                ("loss_competitor", "VARCHAR(255)"),
+                ("is_stalled", "BOOLEAN DEFAULT 0"),
+                ("last_activity_at", "DATETIME"),
+                ("reassignment_reason", "VARCHAR(255)"),
+                ("reassigned_from_id", "VARCHAR(36)"),
+            ]
+            for col_name, col_def in deals_cols_to_add:
+                if col_name not in cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE deals ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+        # 2. Bổ sung các cột mở rộng cho user_import_jobs
+        if "user_import_jobs" in table_names:
+            cols = {c["name"] for c in inspector.get_columns("user_import_jobs")}
+            jobs_cols_to_add = [
+                ("skipped_rows", "INTEGER DEFAULT 0"),
+                ("started_at", "DATETIME"),
+                ("duplicate_strategy", "VARCHAR(20) DEFAULT 'skip'"),
+            ]
+            for col_name, col_def in jobs_cols_to_add:
+                if col_name not in cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE user_import_jobs ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+        # 3. Tạo chỉ mục tối ưu hóa
+        indexes_to_create = [
+            ("idx_deals_campaign", "CREATE INDEX idx_deals_campaign ON deals(campaign_id)"),
+            ("idx_deals_is_stalled", "CREATE INDEX idx_deals_is_stalled ON deals(is_stalled)"),
+            ("idx_deals_last_activity", "CREATE INDEX idx_deals_last_activity ON deals(last_activity_at)"),
+            ("idx_leads_email", "CREATE INDEX idx_leads_email ON leads(email)"),
+            ("idx_leads_phone", "CREATE INDEX idx_leads_phone ON leads(phone)"),
+            ("idx_leads_status", "CREATE INDEX idx_leads_status ON leads(status)"),
+            ("idx_leads_score", "CREATE INDEX idx_leads_score ON leads(score)"),
+            ("idx_leads_sla_overdue", "CREATE INDEX idx_leads_sla_overdue ON leads(sla_overdue)"),
+            ("idx_leads_campaign", "CREATE INDEX idx_leads_campaign ON leads(campaign_id)"),
+            ("idx_leads_assigned", "CREATE INDEX idx_leads_assigned ON leads(assigned_user_id)"),
+        ]
+        for idx_name, idx_sql in indexes_to_create:
+            try:
+                conn.execute(text(idx_sql))
+                conn.commit()
+            except Exception:
+                pass
+
+
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
     db = SessionLocal()
@@ -123,3 +218,4 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+

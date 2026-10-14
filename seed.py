@@ -168,7 +168,12 @@ def seed_database():
                     admin = existing
                 print(f"  -> Tai khoan {u.email} da ton tai.")
 
-        print("[3/3] Nap du lieu mau khach hang & co hoi ban hang (Deals)...")
+        print("[3/3] Nap du lieu mau khach hang, co hoi ban hang & dau moi...")
+        from app.models.campaign import Campaign
+        from app.models.lead import Lead, LeadRoutingRule
+        from app.models.deal_item import DealItem
+        from datetime import date, datetime, timedelta
+
         if db.query(Customer).count() == 0:
             sample_customers = [
                 Customer(
@@ -207,7 +212,9 @@ def seed_database():
             ]
             db.add_all(sample_customers)
             db.commit()
+            print("  -> Da nap 3 khach hang mau.")
 
+        if db.query(Deal).count() == 0:
             sample_deals = [
                 Deal(
                     id="deal-01",
@@ -239,9 +246,177 @@ def seed_database():
             ]
             db.add_all(sample_deals)
             db.commit()
-            print("  -> Da nap thanh cong 3 khach hang & 3 co hoi ban hang mau.")
-        else:
-            print("  -> Du lieu khach hang da co san.")
+            print("  -> Da nap 3 co hoi ban hang mau.")
+
+        # Seed Campaigns
+        camp1 = db.query(Campaign).filter(Campaign.id == "camp-01").first()
+        if not camp1:
+            camp1 = Campaign(
+                id="camp-01",
+                name="Chiến dịch Chuyển đổi số Doanh nghiệp 2026",
+                code="CAMP-DX-2026",
+                type="Google Ads",
+                status="Active",
+                budget=50000000.0,
+                expected_revenue=300000000.0,
+                start_date=date(2026, 1, 1),
+                end_date=date(2026, 12, 31),
+                description="Chiến dịch quảng cáo tìm kiếm Google Ads và Hội thảo Chuyển đổi số B2B.",
+            )
+            camp2 = Campaign(
+                id="camp-02",
+                name="Email Marketing Khách hàng Doanh nghiệp Vừa & Nhỏ",
+                code="CAMP-EMAIL-SME",
+                type="Email",
+                status="Active",
+                budget=15000000.0,
+                expected_revenue=120000000.0,
+                start_date=date(2026, 6, 1),
+                end_date=date(2026, 12, 31),
+                description="Chuỗi bài viết giải pháp CRM tinh gọn cho doanh nghiệp vừa và nhỏ.",
+            )
+            db.add_all([camp1, camp2])
+            db.commit()
+            print("  -> Da nap 2 chien dich tiep thi mau.")
+
+        # Seed Routing Rules
+        if db.query(LeadRoutingRule).count() == 0:
+            r1 = LeadRoutingRule(
+                id="rule-01",
+                name="Ưu tiên Phụ trách Khu vực Miền Bắc",
+                priority=1,
+                rule_type="REGION",
+                criterion_value="Miền Bắc",
+                target_user_id=admin.id,
+                is_active=True,
+            )
+            r2 = LeadRoutingRule(
+                id="rule-02",
+                name="Phân bổ Xoay vòng Round-Robin Toàn quốc",
+                priority=3,
+                rule_type="ROUND_ROBIN",
+                target_user_id=None,
+                is_active=True,
+            )
+            db.add_all([r1, r2])
+            db.commit()
+            print("  -> Da nap 2 quy tac dinh tuyen lead mau.")
+
+        # Seed Sample Leads
+        if db.query(Lead).count() == 0:
+            now = datetime.utcnow()
+            camp_id = camp1.id if camp1 else None
+            sample_leads = [
+                Lead(
+                    id="lead-01",
+                    full_name="Nguyễn Văn Hùng",
+                    email="hung.nguyen@vinasupply.vn",
+                    phone="0912888999",
+                    company="Công ty CP Chuỗi Cung Ứng VinaSupply",
+                    job_title="Giám Đốc Công Nghệ (CTO)",
+                    source="Web Form",
+                    campaign_id=camp_id,
+                    region="Miền Bắc",
+                    industry="Công nghệ",
+                    company_size="51-200",
+                    annual_budget=80000000.0,
+                    score=85,
+                    score_grade="Hot",
+                    status="UNASSIGNED",
+                    sla_deadline=now + timedelta(hours=18),
+                    sla_overdue=False,
+                    notes="Cần tư vấn triển khai phần mềm CRM tích hợp phân hệ kho vận trong tháng tới.",
+                    created_at=now - timedelta(hours=6),
+                ),
+                Lead(
+                    id="lead-02",
+                    full_name="Phạm Thu Hương",
+                    email="huong.pham@fintrade.com",
+                    phone="0988776655",
+                    company="Tập đoàn Đầu tư FinTrade",
+                    job_title="Trưởng Phòng Kinh Doanh",
+                    source="Google Ads",
+                    campaign_id=camp_id,
+                    region="Miền Bắc",
+                    industry="Tài chính",
+                    company_size="201-500",
+                    annual_budget=150000000.0,
+                    score=90,
+                    score_grade="Hot",
+                    status="ASSIGNED",
+                    assigned_user_id=admin.id,
+                    assigned_at=now - timedelta(hours=4),
+                    sla_deadline=now + timedelta(hours=20),
+                    sla_overdue=False,
+                    notes="Quan tâm giải pháp CRM Cloud bảo mật và quản lý phễu cơ hội Kanban.",
+                    created_at=now - timedelta(hours=4),
+                ),
+                Lead(
+                    id="lead-03",
+                    full_name="Đặng Quốc Bảo",
+                    email="bao.dang@vietcargo.vn",
+                    phone="0909123456",
+                    company="Công ty Vận Tải VietCargo",
+                    job_title="Chuyên viên Điều phối",
+                    source="Excel Import",
+                    campaign_id=camp_id,
+                    region="Miền Nam",
+                    industry="Vận tải",
+                    company_size="11-50",
+                    annual_budget=30000000.0,
+                    score=55,
+                    score_grade="Warm",
+                    status="CONTACTED",
+                    assigned_user_id=admin.id,
+                    assigned_at=now - timedelta(days=1),
+                    sla_deadline=now - timedelta(hours=2),
+                    sla_overdue=True,
+                    notes="Đã gọi điện lần 1, khách hàng hẹn trao đổi lại vào thứ Sáu.",
+                    created_at=now - timedelta(days=2),
+                ),
+                Lead(
+                    id="lead-04",
+                    full_name="Trần Thị Lan",
+                    email="lan.tran@vietnamfresh.com",
+                    phone="0933221100",
+                    company="Nông Sản Sạch Vietnam Fresh",
+                    job_title="Giám Đốc Bán Hàng",
+                    source="Web Form",
+                    campaign_id=camp_id,
+                    region="Miền Trung",
+                    industry="Nông nghiệp",
+                    company_size="11-50",
+                    annual_budget=45000000.0,
+                    score=65,
+                    score_grade="Warm",
+                    status="QUALIFIED",
+                    assigned_user_id=admin.id,
+                    assigned_at=now - timedelta(days=2),
+                    sla_deadline=now + timedelta(hours=10),
+                    sla_overdue=False,
+                    notes="Đã thẩm định nhu cầu giải pháp, chuẩn bị chuyển đổi thành cơ hội bán hàng.",
+                    created_at=now - timedelta(days=3),
+                ),
+            ]
+            db.add_all(sample_leads)
+            db.commit()
+            print("  -> Da nap 4 dau moi (Leads) mau.")
+
+        # Seed Deal Items for deal-01
+        if db.query(DealItem).count() == 0:
+            item1 = DealItem(
+                id="item-01",
+                deal_id="deal-01",
+                product_name="Gói NexusCRM Enterprise 50 Người dùng",
+                quantity=1,
+                unit_price=150000000.0,
+                discount_percent=0.0,
+                billing_cycle="annual",
+                subtotal=150000000.0,
+            )
+            db.add(item1)
+            db.commit()
+            print("  -> Da nap san pham co hoi ban hang (Deal Items) mau.")
 
         print("\n=======================================================")
         print(" THANH CONG: Co so du lieu nexuscrm_db da san sang! ")

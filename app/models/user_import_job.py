@@ -4,6 +4,10 @@ from sqlalchemy import Column, String, Integer, DateTime, Text
 from app.database import Base
 
 class UserImportJob(Base):
+    """
+    Model theo dõi tiến trình Nhập người dùng hàng loạt (EP Bulk Import: 4.1 -> 4.5).
+    Trạng thái hỗ trợ: pending, processing, completed, partially_completed, failed.
+    """
     __tablename__ = "user_import_jobs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -17,14 +21,17 @@ class UserImportJob(Base):
     successful_rows = Column(Integer, default=0)
     failed_rows = Column(Integer, default=0)
     duplicate_rows = Column(Integer, default=0)
+    skipped_rows = Column(Integer, default=0)
 
-    # Trạng thái: pending, processing, completed, failed
+    # Trạng thái: pending, processing, completed, partially_completed, failed
     status = Column(String(30), nullable=False, default="pending", index=True)
+    duplicate_strategy = Column(String(20), default="skip", nullable=False)
     
     # Chi tiết danh sách lỗi (JSON string) để xuất báo cáo CSV
     error_summary = Column(Text, nullable=True)
 
     created_by_user_id = Column(String(36), nullable=True, index=True)
+    started_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
