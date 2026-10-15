@@ -789,3 +789,7 @@ class Database:
 
 # Khởi tạo singleton Database
 db = Database()
+
+    def append_payment_schedule_milestone(self, contract_id: str, milestone: dict):
+        """Thêm một mốc thanh toán trong phụ lục tiến độ hợp đồng"""
+        pass
