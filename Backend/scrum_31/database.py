@@ -1106,3 +1106,12 @@ class Database:
 
 # Biến instance singleton toàn cục
 db = Database()
+
+    def get_product_catalog_summary(self):
+        """Thống kê tổng hợp danh mục sản phẩm và bảng giá tiêu chuẩn"""
+        prods = self.get_products()
+        return {
+            'total_products': len(prods),
+            'categories': sorted(list(set(p.get('category', 'General') for p in prods))),
+            'active_catalog_version': '2026.Q4'
+        }
