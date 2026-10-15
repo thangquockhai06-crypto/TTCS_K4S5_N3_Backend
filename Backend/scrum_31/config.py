@@ -170,3 +170,10 @@ PRODUCT_CATALOG = [
         "description": "Lập trình Dashboard BI quản trị theo chỉ số KPI đặc thù của doanh nghiệp"
     }
 ]
+
+# Cấu hình mở rộng - CORS & API chuẩn hóa
+ENABLE_CORS = True
+CORS_ORIGINS = ['*']
+DEFAULT_PAGE_SIZE = 20
+API_VERSION = 'v1.2.0'
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
