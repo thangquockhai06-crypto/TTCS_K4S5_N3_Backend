@@ -56,8 +56,8 @@ dist/
 /schemas/
 /services/
 /repositories/
-app.py
-database.py
+/app.py
+/database.py
 start-all.bat
 start-crm.bat
 tests/test_audit_logs.py
