@@ -43,3 +43,22 @@ def create_campaign(
     current_user: User = Depends(get_current_user),
 ) -> CampaignDTO:
     return CampaignService.create_campaign(db=db, dto=dto)
+
+
+@router.put("/{campaign_id}", response_model=CampaignDTO, summary="Cập nhật thông tin chiến dịch tiếp thị")
+def update_campaign(
+    campaign_id: str,
+    dto: UpdateCampaignDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CampaignDTO:
+    return CampaignService.update_campaign(db=db, campaign_id=campaign_id, dto=dto)
+
+
+@router.delete("/{campaign_id}", summary="Xóa chiến dịch tiếp thị")
+def delete_campaign(
+    campaign_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return CampaignService.delete_campaign(db=db, campaign_id=campaign_id)

@@ -44,6 +44,11 @@ class CampaignRepository:
         return campaign
 
     @staticmethod
+    def delete(db: Session, campaign: Campaign) -> None:
+        db.delete(campaign)
+        db.commit()
+
+    @staticmethod
     def get_campaign_metrics(db: Session, campaign_id: str) -> dict:
         lead_count = db.query(func.count(Lead.id)).filter(Lead.campaign_id == campaign_id).scalar() or 0
         deal_count = db.query(func.count(Deal.id)).filter(Deal.campaign_id == campaign_id).scalar() or 0
