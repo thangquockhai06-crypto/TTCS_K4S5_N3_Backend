@@ -1146,3 +1146,12 @@ class Database:
 
 # Khởi tạo singleton database instance
 db = Database()
+
+    def get_approval_queue_statistics(self):
+        """Thống kê chi tiết hàng đợi phê duyệt phục vụ Dashboard quản lý"""
+        queue = self.get_approval_queue()
+        return {
+            'pending_count': len(queue),
+            'requires_director': sum(1 for q in queue if q.get('discount_percent', 0) > 20),
+            'requires_manager': sum(1 for q in queue if 10 < q.get('discount_percent', 0) <= 20)
+        }
