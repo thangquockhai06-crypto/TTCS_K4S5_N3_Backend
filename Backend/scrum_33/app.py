@@ -482,3 +482,8 @@ if __name__ == "__main__":
     print(f"👑 Thẩm quyền phê duyệt: Trưởng nhóm kinh doanh & Giám đốc kinh doanh")
     print(f"================================================================")
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+def validate_rejection_reason(reason: str) -> bool:
+    """Xác thực lý do từ chối phê duyệt bắt buộc có độ dài tối thiểu 5 ký tự"""
+    return bool(reason and len(reason.strip()) >= 5)
