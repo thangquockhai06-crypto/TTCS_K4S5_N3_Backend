@@ -564,3 +564,12 @@ if __name__ == "__main__":
     print(f"  Khởi chạy máy chủ tại: http://127.0.0.1:{port}")
     print("=" * 70)
     app.run(host="127.0.0.1", port=port, debug=True)
+
+
+@app.template_filter('format_vnd')
+def format_vnd_filter(amount):
+    """Template filter định dạng số tiền VND chuẩn tài chính"""
+    try:
+        return f"{int(amount):,} ₫".replace(',', '.')
+    except (ValueError, TypeError):
+        return str(amount)
