@@ -12,6 +12,7 @@ from app.models.customer import Customer
 from app.models.product import Product
 from app.models.pipeline_stage import PipelineStage
 from app.models.audit_log import AuditLog
+from app.models.deal_history import DealHistory
 from app.schemas.deal import (
     CreateDealDTO,
     UpdateDealDTO,
@@ -23,6 +24,13 @@ from app.schemas.deal import (
     SalesForecastDTO,
     ForecastPeriodSummary,
 )
+from app.schemas.deal_history import (
+    DealHistoryItemResponse,
+    DealHistoryListResponse,
+    FIELD_LABEL_MAP,
+    get_field_label,
+)
+from app.core.scope import get_user_data_scope, DataScope
 from app.repositories.deal_repository import DealRepository
 
 
@@ -204,26 +212,147 @@ class DealService:
         dto: UpdateDealDTO,
         user: User,
     ) -> Deal:
+        """
+        SCRUM-91 / S5-01: Cập nhật thông tin cơ hội bán hàng.
+        Tự động ghi nhận lịch sử thay đổi (DealHistory / Audit Log) cho 4 trường trọng yếu:
+        - 'stage': Giai đoạn pipeline
+        - 'amount': Giá trị cơ hội (so sánh theo số thực chuẩn)
+        - 'expected_close_date': Ngày dự kiến chốt hợp đồng
+        - 'assigned_to': Người phụ trách thương vụ
+        Chỉ lưu log khi giá trị thực tế có sự thay đổi (old_value != new_value).
+        Toàn bộ thao tác cập nhật Deal và DealHistory được thực hiện trong cùng Database Transaction.
+        """
         deal = cls.get_deal_by_id(db, deal_id, user)
         if not deal:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
 
-        if dto.title:
+        now = datetime.utcnow()
+        histories: List[DealHistory] = []
+
+        # 1. So sánh 'stage'
+        new_stage = dto.stage.strip().lower() if dto.stage is not None and dto.stage.strip() else None
+        if new_stage is not None and new_stage != deal.stage:
+            old_stage_val = str(deal.stage) if deal.stage else ""
+            new_stage_val = str(new_stage)
+            if old_stage_val != new_stage_val:
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="stage",
+                    old_value=old_stage_val,
+                    new_value=new_stage_val,
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
+            deal.stage = new_stage
+
+        # 2. So sánh 'amount' / 'value'
+        new_amount = None
+        if dto.amount is not None:
+            new_amount = float(dto.amount)
+        elif dto.value is not None:
+            new_amount = float(dto.value)
+
+        if new_amount is not None:
+            old_num = float(deal.value or 0.0)
+            new_num = float(new_amount)
+            if round(old_num, 2) != round(new_num, 2):
+                def format_amount(n: float) -> str:
+                    return str(int(n)) if n.is_integer() else f"{n:.2f}".rstrip("0").rstrip(".")
+                old_amt_val = format_amount(old_num)
+                new_amt_val = format_amount(new_num)
+                if old_amt_val != new_amt_val:
+                    histories.append(DealHistory(
+                        id=str(uuid.uuid4()),
+                        deal_id=deal.id,
+                        field_name="amount",
+                        old_value=old_amt_val,
+                        new_value=new_amt_val,
+                        changed_by=user.id,
+                        changed_at=now,
+                    ))
+            deal.value = new_amount
+
+        # 3. So sánh 'expected_close_date'
+        close_date_raw = dto.expected_close_date if dto.expected_close_date is not None else dto.expectedCloseDate
+        if close_date_raw is not None:
+            new_close_date = None
+            if isinstance(close_date_raw, str):
+                if close_date_raw.strip():
+                    try:
+                        new_close_date = date.fromisoformat(close_date_raw.strip())
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Định dạng ngày dự kiến đóng không hợp lệ (chuẩn YYYY-MM-DD).",
+                        )
+            elif isinstance(close_date_raw, date):
+                new_close_date = close_date_raw
+
+            old_close_date = deal.expected_close_date
+            if old_close_date != new_close_date:
+                old_date_val = old_close_date.isoformat() if old_close_date else None
+                new_date_val = new_close_date.isoformat() if new_close_date else None
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="expected_close_date",
+                    old_value=old_date_val,
+                    new_value=new_date_val,
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
+            deal.expected_close_date = new_close_date
+
+        # 4. So sánh 'assigned_to' / 'owner_id'
+        new_assigned_to = None
+        if dto.assigned_to is not None and dto.assigned_to.strip():
+            new_assigned_to = dto.assigned_to.strip()
+        elif dto.assignedTo is not None and dto.assignedTo.strip():
+            new_assigned_to = dto.assignedTo.strip()
+        elif dto.owner_id is not None and dto.owner_id.strip():
+            new_assigned_to = dto.owner_id.strip()
+        elif dto.ownerId is not None and dto.ownerId.strip():
+            new_assigned_to = dto.ownerId.strip()
+
+        if new_assigned_to is not None and new_assigned_to != deal.owner_id:
+            old_assigned_val = str(deal.owner_id) if deal.owner_id else None
+            new_assigned_val = str(new_assigned_to)
+            histories.append(DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="assigned_to",
+                old_value=old_assigned_val,
+                new_value=new_assigned_val,
+                changed_by=user.id,
+                changed_at=now,
+            ))
+            deal.owner_id = new_assigned_to
+
+        # Cập nhật các trường phụ khác
+        if dto.title is not None and dto.title.strip():
             deal.title = dto.title.strip()
-        if dto.value is not None:
-            deal.value = dto.value
-        if dto.stage:
-            deal.stage = dto.stage.lower()
         if dto.probability is not None:
             deal.probability = dto.probability
-        if dto.customerId:
+        if dto.customerId is not None:
             deal.customer_id = dto.customerId
-        if dto.expectedCloseDate:
-            deal.expected_close_date = date.fromisoformat(dto.expectedCloseDate)
         if dto.campaignId is not None:
             deal.campaign_id = dto.campaignId
 
-        return DealRepository.update(db, deal)
+        deal.updated_at = now
+        deal.last_activity_at = now
+
+        # Lưu Deal và DealHistories trong cùng một Database Transaction
+        try:
+            for h in histories:
+                db.add(h)
+            db.commit()
+            db.refresh(deal)
+        except Exception:
+            db.rollback()
+            raise
+
+        return deal
 
     # =========================================================================
     # S5-03: PRODUCTS AND DEAL ITEMS
@@ -360,7 +489,7 @@ class DealService:
                 missing_requirements.append("Phải nhập lý do thất bại (Loss Reason).")
 
         if missing_requirements:
-            msg = "Điều kiện thoát giai đoạn (Exit Conditions) chưa đáp ứng: " + " | ".join(missing_requirements)
+            msg = "Chưa đáp ứng điều kiện thoát giai đoạn (Exit Conditions): " + " | ".join(missing_requirements)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=msg,
@@ -383,11 +512,26 @@ class DealService:
         cls.validate_stage_exit_conditions(deal, new_stage, override=override, user=user)
 
         target_stage = new_stage.lower()
+        old_stage = deal.stage
         deal.stage = target_stage
         deal.probability = STAGE_PROBABILITY_MAP.get(target_stage, deal.probability)
         if target_stage == "won":
             deal.close_date = date.today()
             deal.actual_value = deal.value
+
+        # Ghi lịch sử thay đổi stage
+        if old_stage != target_stage:
+            now = datetime.utcnow()
+            history = DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="stage",
+                old_value=str(old_stage) if old_stage else "",
+                new_value=str(target_stage),
+                changed_by=user.id if user else None,
+                changed_at=now,
+            )
+            db.add(history)
 
         updated_deal = DealRepository.update_stage(db, deal, target_stage)
         return updated_deal
@@ -638,3 +782,100 @@ class DealService:
             "newOwnerId": new_owner.id,
             "newOwnerName": new_owner.full_name,
         }
+
+    # =========================================================================
+    # SCRUM-91: DEAL CHANGE HISTORY / AUDIT LOG
+    # =========================================================================
+
+    @classmethod
+    def get_deal_history(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+        field_name: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> DealHistoryListResponse:
+        """
+        SCRUM-91: Truy xuất lịch sử thay đổi của Deal có phân quyền:
+        - DIRECTOR: Xem toàn bộ lịch sử cơ hội trong hệ thống.
+        - TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
+        - SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
+        """
+        # 1. Kiểm tra tồn tại của deal_id (unscoped)
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        # 2. Kiểm tra quyền truy cập theo vai trò (Record-level Security)
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        # SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        # TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+        # DIRECTOR / ALL: Xem toàn bộ cơ hội
+
+        # 3. Phân trang
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 20
+        skip = (page - 1) * page_size
+
+        # 4. Query DealHistories
+        histories, total = DealRepository.get_deal_histories(
+            db=db,
+            deal_id=deal.id,
+            field_name=field_name,
+            skip=skip,
+            limit=page_size,
+        )
+
+        # 5. Format lại nhãn trường tiếng Việt thân thiện
+        items: List[DealHistoryItemResponse] = []
+        for h in histories:
+            operator_name = h.user.full_name if h.user else "Hệ thống"
+            label = FIELD_LABEL_MAP.get(h.field_name, get_field_label(h.field_name))
+            items.append(
+                DealHistoryItemResponse(
+                    id=h.id,
+                    deal_id=h.deal_id,
+                    field_name=h.field_name,
+                    field_label=label,
+                    old_value=h.old_value,
+                    new_value=h.new_value,
+                    changed_by_id=h.changed_by or "",
+                    changed_by_name=operator_name,
+                    changed_at=h.changed_at,
+                )
+            )
+
+        return DealHistoryListResponse(
+            deal_id=deal.id,
+            total_changes=total,
+            items=items,
+            page=page,
+            page_size=page_size,
+        )

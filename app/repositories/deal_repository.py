@@ -1,10 +1,11 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, desc
 
 from app.models.deal import Deal
 from app.models.deal_item import DealItem
+from app.models.deal_history import DealHistory
 from app.models.user import User
 from app.models.pipeline_stage import PipelineStage
 from app.repositories.base_repository import BaseRepository
@@ -175,3 +176,44 @@ class DealRepository(BaseRepository):
             db.refresh(deal)
             return float(deal.value)
         return 0.0
+
+    # =========================================================================
+    # SCRUM-91: DEAL CHANGE HISTORY / AUDIT LOG
+    # =========================================================================
+
+    @staticmethod
+    def add_history(db: Session, history: DealHistory) -> DealHistory:
+        """Thêm một bản ghi lịch sử thay đổi (Chỉ INSERT, bất biến)."""
+        db.add(history)
+        db.commit()
+        db.refresh(history)
+        return history
+
+    @staticmethod
+    def get_deal_histories(
+        db: Session,
+        deal_id: str,
+        field_name: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> Tuple[List[DealHistory], int]:
+        """
+        Lấy danh sách lịch sử thay đổi của cơ hội bán hàng.
+        Sắp xếp mặc định: ORDER BY changed_at DESC.
+        """
+        query = db.query(DealHistory).filter(DealHistory.deal_id == deal_id)
+
+        if field_name and field_name.strip():
+            fn = field_name.strip().lower()
+            if fn in ("amount", "value"):
+                query = query.filter(DealHistory.field_name.in_(["amount", "value"]))
+            elif fn in ("assigned_to", "owner_id", "assignedto", "ownerid"):
+                query = query.filter(DealHistory.field_name.in_(["assigned_to", "owner_id", "assignedTo", "ownerId"]))
+            elif fn in ("expected_close_date", "expectedclosedate"):
+                query = query.filter(DealHistory.field_name.in_(["expected_close_date", "expectedCloseDate"]))
+            else:
+                query = query.filter(DealHistory.field_name == fn)
+
+        total = query.count()
+        histories = query.order_by(desc(DealHistory.changed_at)).offset(skip).limit(limit).all()
+        return histories, total

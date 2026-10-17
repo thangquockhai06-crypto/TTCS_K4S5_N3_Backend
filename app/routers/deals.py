@@ -16,6 +16,7 @@ from app.schemas.deal import (
     BulkReassignDealsDTO,
     SalesForecastDTO,
 )
+from app.schemas.deal_history import DealHistoryListResponse
 from app.services.deal_service import DealService
 from app.core.export import export_to_excel
 
@@ -160,6 +161,7 @@ def get_deal_detail(
 
 
 @router.put("/{deal_id}", response_model=DealDTO, summary="Cập nhật thông tin cơ hội bán hàng (S5-01)")
+@router.patch("/{deal_id}", response_model=DealDTO, summary="Cập nhật thông tin cơ hội bán hàng (PATCH alias)")
 def update_deal(
     deal_id: str,
     dto: UpdateDealDTO,
@@ -168,6 +170,32 @@ def update_deal(
 ) -> DealDTO:
     updated = DealService.update_deal(db=db, deal_id=deal_id, dto=dto, user=current_user)
     return DealService.map_to_dto(updated)
+
+
+@router.get("/{deal_id}/history", response_model=DealHistoryListResponse, summary="Lấy danh sách lịch sử thay đổi của một cơ hội (SCRUM-91)")
+def get_deal_history(
+    deal_id: str,
+    field_name: Optional[str] = Query(None, description="Tùy chọn lọc riêng theo: 'stage', 'amount', 'expected_close_date', 'assigned_to'"),
+    page: int = Query(1, ge=1, description="Trang hiện tại (bắt đầu từ 1)"),
+    page_size: int = Query(20, ge=1, le=100, description="Số lượng bản ghi mỗi trang"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealHistoryListResponse:
+    """
+    SCRUM-91 (Sprint 5 / EP-05): Truy xuất lịch sử thay đổi của Cơ hội bán hàng (Deal Change History / Audit Log).
+    - Phân quyền theo vai trò (Record-level Security):
+      + DIRECTOR: Xem lịch sử của toàn bộ cơ hội trong hệ thống.
+      + TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
+      + SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
+    """
+    return DealService.get_deal_history(
+        db=db,
+        deal_id=deal_id,
+        user=current_user,
+        field_name=field_name,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post("/{deal_id}/stage", response_model=DealDTO, summary="Di chuyển stage của deal trên bảng Kanban (POST alias)")
