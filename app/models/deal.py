@@ -50,3 +50,9 @@ class Deal(Base):
     reassigned_from = relationship("User", foreign_keys=[reassigned_from_id])
     campaign = relationship("Campaign", back_populates="deals")
     deal_items = relationship("DealItem", back_populates="deal", cascade="all, delete-orphan")
+    deal_histories = relationship(
+        "DealHistory",
+        back_populates="deal",
+        cascade="all, delete-orphan",
+        order_by="desc(DealHistory.changed_at)",
+    )

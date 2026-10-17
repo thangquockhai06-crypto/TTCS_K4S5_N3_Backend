@@ -7,6 +7,7 @@ from app.models.support_ticket import SupportTicket
 from app.models.saved_filter import SavedFilterPreset
 from app.models.deal import Deal
 from app.models.deal_item import DealItem
+from app.models.deal_history import DealHistory
 from app.models.campaign import Campaign
 from app.models.lead import Lead, LeadRoutingRule
 from app.models.activity import Activity, Note
@@ -31,6 +32,7 @@ __all__ = [
     "SavedFilterPreset",
     "Deal",
     "DealItem",
+    "DealHistory",
     "Campaign",
     "Lead",
     "LeadRoutingRule",

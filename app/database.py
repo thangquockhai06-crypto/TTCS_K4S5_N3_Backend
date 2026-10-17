@@ -202,6 +202,9 @@ def run_ep04_ep05_migrations(target_engine=None):
             ("idx_leads_sla_overdue", "CREATE INDEX idx_leads_sla_overdue ON leads(sla_overdue)"),
             ("idx_leads_campaign", "CREATE INDEX idx_leads_campaign ON leads(campaign_id)"),
             ("idx_leads_assigned", "CREATE INDEX idx_leads_assigned ON leads(assigned_user_id)"),
+            ("idx_deal_histories_deal", "CREATE INDEX idx_deal_histories_deal ON deal_histories(deal_id)"),
+            ("idx_deal_histories_field", "CREATE INDEX idx_deal_histories_field ON deal_histories(field_name)"),
+            ("idx_deal_histories_changed_at", "CREATE INDEX idx_deal_histories_changed_at ON deal_histories(changed_at)"),
         ]
         for idx_name, idx_sql in indexes_to_create:
             try:
