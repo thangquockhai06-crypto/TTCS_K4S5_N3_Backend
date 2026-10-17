@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Cơ Hội CRM & Pipeline - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="badge badge-opp-won">🏆 TIÊU CHÍ 3 (AC3)</span>
+                <h2 class="card-title" style="margin: 0;">Pipeline Cơ Hội Kinh Doanh & Tự Động Đóng Thắng</h2>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Theo dõi quá trình chuyển trạng thái tự động: Ngay khi Kế toán tạo hợp đồng từ báo giá, Cơ hội tương ứng tự động chuyển sang <strong style="color: var(--success);">Đóng thắng (CLOSED_WON)</strong> với giá trị đúng bằng giá trị hợp đồng đã chốt.
+            </p>
+        </div>
+        <div style="text-align: right;">
+            <span style="font-size: 12px; color: var(--text-muted); display: block;">Doanh số Đóng thắng (Closed Won):</span>
+            <strong style="font-size: 20px; color: var(--success);">{{ stats.won_opps_value | currency }}</strong>
+        </div>
+    </div>
+
+    <!-- PIPELINE KANBAN VIEW TRỰC QUAN -->
+    <h3 style="font-size: 14.5px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">
+        📊 Trực Quan Hóa Các Giai Đoạn Bán Hàng (CRM Pipeline Stages)
+    </h3>
+
+    <div class="pipeline-container">
+        <!-- CỘT 1: TIỀM NĂNG -->
+        <div class="pipeline-col">
+            <div class="pipeline-col-header">
+                <span>🎯 Tiềm Năng (Qualified)</span>
+                <span>{% set count1 = opportunities | selectattr("stage", "equalto", "QUALIFIED") | list | length %}{{ count1 }}</span>
+            </div>
+            {% for opp in opportunities if opp.stage == 'QUALIFIED' %}
+                <div class="opp-card">
+                    <h4>{{ opp.name }}</h4>
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ opp.customer_name }}</div>
+                    <div class="opp-card-val">{{ opp.value | currency }}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">NVKD: {{ opp.assigned_sales_rep }}</div>
+                </div>
+            {% else %}
+                <div style="font-size: 12px; color: var(--text-light); text-align: center; padding: 20px 0;">Không có cơ hội</div>
+            {% endfor %}
+        </div>
+
+        <!-- CỘT 2: GỬI BÁO GIÁ -->
+        <div class="pipeline-col">
+            <div class="pipeline-col-header">
+                <span>📨 Báo Giá (Proposal)</span>
+                <span>{% set count2 = opportunities | selectattr("stage", "equalto", "PROPOSAL") | list | length %}{{ count2 }}</span>
+            </div>
+            {% for opp in opportunities if opp.stage == 'PROPOSAL' %}
+                <div class="opp-card">
+                    <h4>{{ opp.name }}</h4>
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ opp.customer_name }}</div>
+                    <div class="opp-card-val">{{ opp.value | currency }}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Báo giá: <strong>{{ opp.quote_id }}</strong></div>
+                </div>
+            {% else %}
+                <div style="font-size: 12px; color: var(--text-light); text-align: center; padding: 20px 0;">Không có cơ hội</div>
+            {% endfor %}
+        </div>
+
+        <!-- CỘT 3: ĐANG ĐÀM PHÁN (CHỜ LẬP HỢP ĐỒNG) -->
+        <div class="pipeline-col">
+            <div class="pipeline-col-header">
+                <span>💬 Đàm Phán (Negotiation)</span>
+                <span>{% set count3 = opportunities | selectattr("stage", "equalto", "NEGOTIATION") | list | length %}{{ count3 }}</span>
+            </div>
+            {% for opp in opportunities if opp.stage == 'NEGOTIATION' %}
+                <div class="opp-card" style="border-left: 3px solid var(--warning);">
+                    <h4>{{ opp.name }}</h4>
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ opp.customer_name }}</div>
+                    <div class="opp-card-val" style="color: var(--warning);">{{ opp.value | currency }}</div>
+                    <div style="margin-top: 6px;">
+                        <a href="{{ url_for('convert_quote', quote_id=opp.quote_id) }}" class="btn btn-success" style="padding: 4px 8px; font-size: 11.5px; width: 100%;">
+                            ⚡ Chuyển HĐ Ngay ➔
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div style="font-size: 12px; color: var(--text-light); text-align: center; padding: 20px 0;">Không có cơ hội</div>
+            {% endfor %}
+        </div>
+
+        <!-- CỘT 4: ĐÓNG THẮNG (TIÊU CHÍ 3: CLOSED_WON) -->
+        <div class="pipeline-col col-won">
+            <div class="pipeline-col-header">
+                <span>🏆 ĐÓNG THẮNG (AC3)</span>
+                <span>{% set count4 = opportunities | selectattr("stage", "equalto", "CLOSED_WON") | list | length %}{{ count4 }}</span>
+            </div>
+            {% for opp in opportunities if opp.stage == 'CLOSED_WON' %}
+                <div class="opp-card opp-won" style="border-left: 4px solid var(--success);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <h4>{{ opp.name }}</h4>
+                        <span style="font-size: 16px;">🎉</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ opp.customer_name }}</div>
+                    <div class="opp-card-val">{{ opp.value | currency }}</div>
+                    
+                    <div style="background: #f0fdf4; border: 1px dashed #86efac; border-radius: var(--radius-sm); padding: 6px; font-size: 11.5px; color: #166534; margin-top: 6px;">
+                        <div>✓ Đã đồng bộ HĐ: <strong>{{ opp.contract_id }}</strong></div>
+                        <div>✓ Ngày chốt: {{ opp.win_date | date }}</div>
+                    </div>
+                </div>
+            {% else %}
+                <div style="font-size: 12px; color: var(--text-light); text-align: center; padding: 20px 0;">Chưa có cơ hội đóng thắng</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- SECTION: BẢNG CHI TIẾT TẤT CẢ CƠ HỘI CRM -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><span>📋</span> Chi Tiết Danh Sách Cơ Hội Bán Hàng</h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Mã Cơ Hội</th>
+                    <th>Tên Dự Án / Khách Hàng</th>
+                    <th>NVKD Phụ Trách</th>
+                    <th>Giai Đoạn (Stage)</th>
+                    <th>Giá Trị Hiện Tại</th>
+                    <th>Hợp Đồng Liên Kết (AC3)</th>
+                    <th>Ngày Thắng (Win Date)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opp in opportunities %}
+                <tr {% if opp.stage == 'CLOSED_WON' %}style="background: #f0fdf4;"{% endif %}>
+                    <td>
+                        <strong style="color: var(--primary);">{{ opp.opp_id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">{{ opp.name }}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">{{ opp.customer_name }}</div>
+                    </td>
+                    <td style="font-size: 13px;">{{ opp.assigned_sales_rep }}</td>
+                    <td>
+                        <span class="badge {{ OPP_STAGE_BADGES.get(opp.stage, '') }}">
+                            {{ OPP_STAGE_LABELS.get(opp.stage, opp.stage) }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong style="font-size: 14.5px; {% if opp.stage == 'CLOSED_WON' %}color: var(--success);{% else %}color: var(--text-main);{% endif %}">
+                            {{ opp.value | currency }}
+                        </strong>
+                    </td>
+                    <td>
+                        {% if opp.contract_id %}
+                            <a href="{{ url_for('contract_detail', contract_id=opp.contract_id) }}" style="font-weight: 700; color: var(--primary);">
+                                📝 {{ opp.contract_id }}
+                            </a>
+                        {% else %}
+                            <span style="color: var(--text-light); font-size: 12px;">Chưa ký HĐ</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 12.5px;">
+                        {% if opp.win_date %}
+                            <span style="color: var(--success); font-weight: 600;">{{ opp.win_date | date }}</span>
+                        {% else %}
+                            <span style="color: var(--text-light);">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

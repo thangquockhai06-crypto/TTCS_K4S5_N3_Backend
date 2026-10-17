@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dòng Thời Gian Khách Hàng{% endblock %} - CareTrack CRM ({{ TICKET_ID }})</title>
+    <meta name="description" content="{% block meta_description %}Dòng thời gian tương tác đầy đủ của khách hàng: hoạt động, thay đổi cơ hội và báo giá đã gửi - giúp CSKH tiếp nhận khách trong 5 phút.{% endblock %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <div class="topbar">
+        <div class="container topbar-inner">
+            <div class="topbar-story">
+                <span class="pulse-dot"></span>
+                <span><strong>CSKH tiếp nhận khách:</strong> nắm trọn bối cảnh trong 5 phút với dòng thời gian hợp nhất</span>
+            </div>
+            <div class="topbar-tags">
+                <span class="ticket-tag ticket-epic">⚡ {{ PARENT_EPIC }}</span>
+                <span class="ticket-tag">☑ {{ TICKET_ID }}</span>
+            </div>
+        </div>
+    </div>
+
+    <header class="navbar">
+        <div class="container navbar-inner">
+            <a href="{{ url_for('customers_view') }}" class="brand" id="brand-home">
+                <div class="brand-icon">⏱</div>
+                <div>
+                    <div class="brand-name">CareTrack CRM</div>
+                    <div class="brand-sub">Customer Interaction Timeline</div>
+                </div>
+            </a>
+
+            <nav class="nav-actions">
+                <a href="{{ url_for('customers_view') }}" class="btn btn-ghost btn-sm" id="nav-customers">👥 Khách hàng</a>
+                <label class="persona" for="persona-select">
+                    <span class="persona-avatar">{{ current_user.avatar }}</span>
+                    <select id="persona-select" class="persona-select" onchange="window.location.href='/switch-user/' + this.value">
+                        {% for uid, u in all_users.items() %}
+                        <option value="{{ uid }}" {% if uid == current_user.id %}selected{% endif %}>{{ u.name }} · {{ u.role_name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <a href="{{ url_for('reset_data') }}" class="btn btn-ghost btn-sm" id="nav-reset" title="Đặt lại dữ liệu mẫu">🔄 Reset</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-stack">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="status">
+                    <span>{% if category == 'success' %}✅{% elif category in ['danger', 'warning'] %}⚠️{% else %}ℹ️{% endif %}</span>
+                    <div>{{ message }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div><strong>CareTrack CRM</strong> © 2026 · Ticket {{ PARENT_EPIC }} / {{ TICKET_ID }}</div>
+            <div class="footer-ac">
+                <span>🧩 TC1: Gộp hoạt động · cơ hội · báo giá theo thời gian</span>
+                <span>🔎 TC2: Lọc theo loại hoạt động & người thực hiện</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

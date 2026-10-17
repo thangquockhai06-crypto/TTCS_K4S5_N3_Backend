@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách khách hàng{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <div>
+        <h1>Khách hàng cần tiếp nhận</h1>
+        <p class="muted">Chọn một khách hàng để xem toàn bộ dòng thời gian tương tác và bối cảnh bàn giao.</p>
+    </div>
+    <form method="get" action="{{ url_for('customers_view') }}" class="search-box" role="search">
+        <span aria-hidden="true">🔍</span>
+        <input type="search" name="search" id="customer-search" value="{{ search }}"
+               placeholder="Tên công ty, người liên hệ, SĐT, email...">
+        <button type="submit" class="btn btn-primary btn-sm" id="customer-search-btn">Tìm</button>
+    </form>
+</section>
+
+{% if customers %}
+<div class="customer-grid">
+    {% for c in customers %}
+    <a href="{{ url_for('customer_timeline_view', customer_id=c.id) }}" class="card customer-card" id="customer-card-{{ c.id }}">
+        <div class="customer-card-head">
+            <div class="avatar-lg">{{ c.name[0] if c.name else '?' }}</div>
+            <div class="customer-card-title">
+                <h2>{{ c.name }}</h2>
+                <div class="muted small">{{ c.id }} · {{ c.segment }}</div>
+            </div>
+        </div>
+        <div class="customer-card-body">
+            <div class="kv"><span>Liên hệ</span><strong>{{ c.contact_name }}</strong></div>
+            <div class="kv"><span>CSKH phụ trách</span><strong>{{ c.cs_owner.avatar }} {{ c.cs_owner.name }}</strong></div>
+            <div class="kv"><span>Tương tác gần nhất</span>
+                <strong>
+                    {% if c.last_event %}{{ c.last_event.icon }} {{ c.last_event.occurred_at | relative }}{% else %}Chưa có{% endif %}
+                </strong>
+            </div>
+        </div>
+        <div class="customer-card-foot">
+            <span class="pill">{{ c.total_events }} sự kiện</span>
+            <span class="link-arrow">Xem dòng thời gian →</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-icon">🔎</div>
+    <h2>Không tìm thấy khách hàng phù hợp</h2>
+    <p class="muted">Thử từ khóa khác hoặc <a href="{{ url_for('customers_view') }}">xem tất cả</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

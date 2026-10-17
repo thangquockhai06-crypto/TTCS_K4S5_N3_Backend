@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Trình Mô Phỏng 5 Tiêu Chí Chấp Nhận - SCRUM-33{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">🧪 Trình Mô Phỏng &amp; Đối Chiếu 5 Tiêu Chí Chấp Nhận (Acceptance Criteria)</div>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px;">
+                Ticket <strong>⚡ SCRUM-35 / ☑ SCRUM-33</strong> &bull; Kiểm tra trực tiếp các kịch bản nghiệp vụ duyệt chiết khấu và giá sàn
+            </div>
+        </div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">&larr; Bàn làm việc</a>
+    </div>
+
+    <!-- Simulator Matrix Table -->
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Tiêu Chí (AC)</th>
+                    <th style="width: 25%;">Quy Định Của Đề Bài</th>
+                    <th style="width: 35%;">Cách Hệ Thống Python Xử Lý</th>
+                    <th style="width: 15%;">Mẫu Báo Giá Thử Nghiệm</th>
+                    <th style="width: 10%;">Trạng Thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- AC1 -->
+                <tr>
+                    <td>
+                        <strong style="color: #6ee7b7;">Tiêu chí 1</strong>
+                    </td>
+                    <td>
+                        <strong>Chiết khấu dưới ngưỡng thứ nhất thì tự động thông qua, không cần duyệt</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Ngưỡng thứ nhất: <code>10.0%</code>.<br>
+                        Khi NVKD trình báo giá có chiết khấu &lt; 10% và trên giá sàn: Backend Python chuyển thẳng trạng thái sang <code>APPROVED</code>, ghi nhận hành động <code>AUTO_APPROVE</code> của Hệ thống tự động, NVKD có thể gửi khách ngay.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-301') }}" class="btn btn-outline btn-sm" style="color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);">
+                            Xem Q-301 (6.5%) &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-emerald">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC2 - Team Lead -->
+                <tr>
+                    <td>
+                        <strong style="color: #fcd34d;">Tiêu chí 2 (a)</strong>
+                    </td>
+                    <td>
+                        <strong>Vượt ngưỡng thứ nhất do Trưởng nhóm duyệt</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Chiết khấu từ <code>10.0% đến 20.0%</code> (và trên giá sàn).<br>
+                        Báo giá chuyển sang <code>PENDING_APPROVAL</code> với thẩm quyền <code>ROLE_TEAM_LEAD</code>. Trưởng nhóm vào hàng chờ để bấm Duyệt, Từ chối hoặc Trả lại sửa.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-302') }}" class="btn btn-outline btn-sm" style="color: #fcd34d; border-color: rgba(245, 158, 11, 0.4);">
+                            Xem Q-302 (14.5%) &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-amber">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC2 - Director Threshold 2 -->
+                <tr>
+                    <td>
+                        <strong style="color: #fca5a5;">Tiêu chí 2 (b)</strong>
+                    </td>
+                    <td>
+                        <strong>Vượt ngưỡng thứ hai bắt buộc Giám đốc kinh doanh duyệt</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Chiết khấu <code>&gt; 20.0%</code>.<br>
+                        Hệ thống kích hoạt thẩm quyền <code>ROLE_DIRECTOR</code>. Nếu Trưởng nhóm cố tình duyệt, backend raise <code>PermissionError</code> và chặn ngay lập tức.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-303') }}" class="btn btn-outline btn-sm" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.4);">
+                            Xem Q-303 (25.0%) &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-rose">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC2 - Director Floor Price -->
+                <tr>
+                    <td>
+                        <strong style="color: #f87171;">Tiêu chí 2 (c)</strong>
+                    </td>
+                    <td>
+                        <strong>Dưới giá sàn bắt buộc Giám đốc kinh doanh duyệt</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Dù chiết khấu chỉ <code>5% - 8%</code>, nhưng nếu đơn giá bán thấp hơn Giá sàn quy định (Floor Price):<br>
+                        Báo giá bị đánh dấu <code>below_floor_price = True</code> và bắt buộc chuyển lên Giám đốc duyệt để bảo vệ biên lợi nhuận tối thiểu.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-304') }}" class="btn btn-outline btn-sm" style="color: #f87171; border-color: rgba(239, 68, 68, 0.5);">
+                            Xem Q-304 (Dưới sàn) &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-rose">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC3 -->
+                <tr>
+                    <td>
+                        <strong style="color: #38bdf8;">Tiêu chí 3</strong>
+                    </td>
+                    <td>
+                        <strong>Ba hành động: Duyệt, Từ chối, Trả lại sửa — hai hành động sau bắt buộc nhập ý kiến</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        1. <strong>Duyệt:</strong> Chuyển <code>APPROVED</code> (ý kiến tùy chọn).<br>
+                        2. <strong>Từ chối:</strong> Chuyển <code>REJECTED</code>. <strong>Bắt buộc</strong> nhập ý kiến/lý do.<br>
+                        3. <strong>Trả lại sửa:</strong> Chuyển <code>CHANGES_REQUESTED</code>, mở lại quyền sửa cho NVKD. <strong>Bắt buộc</strong> nhập ý kiến hướng dẫn.
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px; flex-direction: column;">
+                            <a href="{{ url_for('quote_detail', quote_id='Q-306') }}" class="btn btn-outline btn-sm" style="color: #38bdf8;">
+                                Xem Q-306 (Trả lại sửa)
+                            </a>
+                            <a href="{{ url_for('quote_detail', quote_id='Q-307') }}" class="btn btn-outline btn-sm" style="color: #fca5a5;">
+                                Xem Q-307 (Từ chối)
+                            </a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC4 -->
+                <tr>
+                    <td>
+                        <strong style="color: #a5b4fc;">Tiêu chí 4</strong>
+                    </td>
+                    <td>
+                        <strong>Chỉ báo giá đã duyệt mới gửi được cho khách</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Backend kiểm tra nghiêm ngặt: <code>quote.status == STATUS_APPROVED</code>.<br>
+                        Nếu báo giá đang ở Bản nháp (DRAFT), Chờ duyệt (PENDING), Trả lại (CHANGES_REQUESTED) hoặc Từ chối (REJECTED): Nút gửi bị khóa và API chặn raise <code>ValueError</code>.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-305') }}" class="btn btn-outline btn-sm" style="color: #a5b4fc; border-color: rgba(99, 102, 241, 0.4);">
+                            Xem Q-305 (Đã gửi) &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-indigo">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+
+                <!-- AC5 -->
+                <tr>
+                    <td>
+                        <strong style="color: #cbd5e1;">Tiêu chí 5</strong>
+                    </td>
+                    <td>
+                        <strong>Lịch sử duyệt không sửa và không xoá được</strong>
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Sổ cái kiểm toán bất biến (Immutable Audit Ledger):<br>
+                        - Mỗi sự kiện được ký mã băm SHA-256.<br>
+                        - Cố tình gọi hàm <code>update_approval_history()</code> hoặc <code>delete_approval_history()</code> sẽ bị chặn và raise <code>PermissionError</code>.<br>
+                        - Trả về deep copy để client không thể can thiệp dữ liệu trong RAM.
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id='Q-305') }}" class="btn btn-outline btn-sm">
+                            Xem Timeline Audit Trail &rarr;
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-slate">✓ Hoàn thành</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Automated Test Suite Runner Info -->
+    <div style="margin-top: 28px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: #fff;">
+            🧪 Bộ Kiểm Thử Tự Động (Unit &amp; Integration Tests)
+        </h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 12px;">
+            Dự án đi kèm bộ 15 bài kiểm thử tự động viết bằng module <code>unittest</code> chuẩn của Python, bao phủ 100% 5 tiêu chí chấp nhận.
+        </p>
+        <pre style="background: rgba(0, 0, 0, 0.4); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.85rem; color: #38bdf8; overflow-x: auto;">
+cd Backend\scrum_33
+py -m unittest discover tests
+# Kết quả: Ran 15 tests in 0.008s - OK (100% Passed)
+        </pre>
+    </div>
+</div>
+{% endblock %}

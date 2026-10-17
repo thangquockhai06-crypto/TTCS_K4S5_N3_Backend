@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Làm Việc NVKD - Quản lý phiên bản báo giá{% endblock %}
+
+{% block content %}
+<!-- KPI METRICS GRID -->
+<div class="kpi-grid">
+    <div class="kpi-card kpi-blue">
+        <div class="kpi-icon">📁</div>
+        <div class="kpi-info">
+            <h4>Họ Báo Giá Gốc</h4>
+            <div class="kpi-value">{{ kpi.total_quotes }}</div>
+            <div class="kpi-subtext">Khách hàng doanh nghiệp</div>
+        </div>
+    </div>
+
+    <div class="kpi-card kpi-purple">
+        <div class="kpi-icon">📑</div>
+        <div class="kpi-info">
+            <h4>Tổng Số Phiên Bản</h4>
+            <div class="kpi-value">{{ kpi.total_versions }}</div>
+            <div class="kpi-subtext">Lưu vết cam kết đầy đủ</div>
+        </div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+        <div class="kpi-icon">🌟</div>
+        <div class="kpi-info">
+            <h4>Đang Hiệu Lực (AC3)</h4>
+            <div class="kpi-value">{{ kpi.effective_quotes }}</div>
+            <div class="kpi-subtext">Chính xác 1 bản / báo giá</div>
+        </div>
+    </div>
+
+    <div class="kpi-card kpi-amber">
+        <div class="kpi-icon">🔄</div>
+        <div class="kpi-info">
+            <h4>Đã Qua Đàm Phán Sửa Đổi</h4>
+            <div class="kpi-value">{{ kpi.multi_version_quotes }}</div>
+            <div class="kpi-subtext">≥ 2 phiên bản (AC1 & AC2)</div>
+        </div>
+    </div>
+</div>
+
+<!-- DANH SÁCH BÁO GIÁ & CÂY PHIÊN BẢN -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📋</span>
+            <span>Quản Lý Phiên Bản Báo Giá & Trạng Thái Cam Kết Khách Hàng</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('quote_create') }}" class="btn btn-primary btn-sm">
+                ➕ Soạn Báo Giá Mới (v1)
+            </a>
+            <a href="{{ url_for('simulator') }}" class="btn btn-outline btn-sm">
+                🧪 Chạy Test 3 Tiêu Chí
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">Mã Báo Giá</th>
+                        <th>Khách Hàng & Tiêu Đề</th>
+                        <th style="width: 220px;">Cây Phiên Bản (AC1)</th>
+                        <th style="width: 180px;">Bản Đang Hiệu Lực (AC3)</th>
+                        <th style="width: 160px; text-align: right;">Giá Trị Hiện Tại</th>
+                        <th style="width: 240px; text-align: center;">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in summaries %}
+                    <tr>
+                        <td>
+                            <strong style="color: var(--primary); font-size: 14px;">{{ s.quote_code }}</strong>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                {{ s.version_count }} phiên bản đã lưu
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">
+                                {{ s.customer_name }}
+                            </div>
+                            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                                {{ s.title }}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                                {% for v in s.versions %}
+                                    <span class="badge {% if v.is_effective %}badge-effective{% elif v.is_sent %}badge-sent{% else %}badge-draft{% endif %}"
+                                          title="Trạng thái: {{ STATUS_LABELS[v.status] }} | Tạo: {{ v.created_at }}">
+                                        {{ v.version_tag }}
+                                        {% if v.is_effective %}🌟{% elif v.is_sent %}📤{% else %}📝{% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if s.effective_version and s.effective_version.is_effective %}
+                                <span class="badge badge-effective" style="font-size: 12.5px;">
+                                    🌟 {{ s.effective_version.version_tag }} (Đang hiệu lực)
+                                </span>
+                                <div style="font-size: 11px; color: #059669; margin-top: 4px; font-weight: 500;">
+                                    Gửi lúc: {{ s.effective_version.sent_at | datetime }}
+                                </div>
+                            {% else %}
+                                <span class="badge badge-draft">Chưa kích hoạt hiệu lực</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <strong style="color: var(--text-main); font-size: 14.5px;">
+                                {{ s.latest_version.grand_total | currency }}
+                            </strong>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Gồm VAT 10%
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                <a href="{{ url_for('quote_detail', quote_code=s.quote_code) }}" class="btn btn-outline btn-sm" title="Xem chi tiết các cam kết trong từng phiên bản">
+                                    👁️ Chi tiết
+                                </a>
+                                {% if s.version_count >= 2 %}
+                                    <a href="{{ url_for('quote_compare', quote_code=s.quote_code) }}" class="btn btn-outline btn-sm" style="color: #8b5cf6; border-color: #ddd6fe;" title="So sánh cạnh nhau (AC2)">
+                                        🔍 So sánh diff
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('quote_edit', quote_code=s.quote_code, version_id=s.latest_version.version_id) }}" class="btn btn-outline btn-sm" title="Chỉnh sửa (Nếu đã gửi sẽ tạo phiên bản mới - AC1)">
+                                    ✏️ Sửa đổi
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SỔ CÁI KIỂM TOÁN LỊCH SỬ THAY ĐỔI GẦN ĐÂY -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📜</span>
+            <span>Nhật Ký Kiểm Toán Phiên Bản & Ràng Buộc Hiệu Lực (Audit Trail)</span>
+        </div>
+        <span class="badge badge-draft">Bất biến & Tự động ghi nhận</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 170px;">Thời Gian</th>
+                        <th style="width: 130px;">Mã Báo Giá</th>
+                        <th style="width: 180px;">Hành Động</th>
+                        <th>Nội Dung Chi Tiết Nghiệp Vụ</th>
+                        <th style="width: 160px;">Người Thực Hiện</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in audit_logs %}
+                    <tr>
+                        <td style="color: var(--text-muted); font-size: 12.5px;">{{ log.timestamp_formatted }}</td>
+                        <td><strong style="color: var(--primary);">{{ log.quote_code }}</strong></td>
+                        <td>
+                            <span class="badge {% if 'CREATE_NEW_VERSION' in log.action %}badge-accepted{% elif 'SET_EFFECTIVE' in log.action or 'SEND' in log.action %}badge-effective{% else %}badge-draft{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td style="font-size: 13.5px; color: var(--text-main);">
+                            {{ log.details }}
+                        </td>
+                        <td style="font-size: 12.5px; color: var(--secondary);">
+                            👨‍💼 {{ log.actor }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

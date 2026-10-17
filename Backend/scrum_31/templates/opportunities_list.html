@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Cơ Hội Bán Hàng B2B{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <span class="ticket-tag">TIÊU CHÍ 1 (AC1): KẾ THỪA DÒNG SẢN PHẨM TỪ CƠ HỘI</span>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 6px;">
+            💼 Danh Sách Cơ Hội Bán Hàng (Opportunities)
+        </h1>
+        <p style="color: #64748b; font-size: 0.9rem;">
+            Chọn một cơ hội khách hỏi để tạo báo giá. Hệ thống sẽ tự động kế thừa toàn bộ danh sách sản phẩm sang báo giá mới để bạn sửa tiếp.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã Cơ Hội</th>
+                    <th>Tên Cơ Hội & Doanh Nghiệp</th>
+                    <th>Người Liên Hệ</th>
+                    <th>Thời Điểm Khách Hỏi</th>
+                    <th>Dòng Sản Phẩm Sẽ Kế Thừa (AC1)</th>
+                    <th>Giai Đoạn</th>
+                    <th>NVKD Phụ Trách</th>
+                    <th style="text-align: right;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opp in opportunities %}
+                <tr>
+                    <td>
+                        <strong style="color: var(--primary);">{{ opp.id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ opp.title }}</div>
+                        <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                            🏢 <strong>{{ opp.account_name }}</strong> &bull; MST: {{ opp.tax_id }}
+                        </div>
+                        <div style="font-size: 0.78rem; color: #94a3b8;">
+                            📍 {{ opp.address }}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #1e293b;">{{ opp.contact_name }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ opp.contact_title }}</div>
+                        <div style="font-size: 0.78rem; color: var(--primary);">📞 {{ opp.contact_phone }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-amber" style="font-size: 0.8rem;">
+                            🕒 {{ opp.inquiry_time }}
+                        </span>
+                        <div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-top: 2px;">
+                            Gửi trong chiều nay!
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: #1d4ed8; margin-bottom: 4px;">
+                            📦 {{ opp.line_items|length }} sản phẩm đã gắn:
+                        </div>
+                        <ul style="font-size: 0.78rem; color: #475569; padding-left: 18px; margin: 0;">
+                            {% for itm in opp.line_items %}
+                            <li>
+                                <strong>{{ itm.quantity }} {{ itm.unit }}</strong> x {{ itm.product_name[:32] }}...
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ opp.stage }}</span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.88rem; font-weight: 600;">{{ opp.sales_rep_name }}</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('quote_create', opp_id=opp.id) }}" class="btn btn-primary btn-sm" style="font-weight: 700;">
+                            ⚡ Soạn Báo Giá Ngay
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Hợp Đồng Số {{ contract.contract_number }} - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <a href="{{ url_for('contracts_list') }}" style="text-decoration: none; color: var(--text-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 4px;">
+        ← Quay lại Danh sách Hợp đồng
+    </a>
+
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('opportunities_list') }}" class="btn btn-secondary" style="font-size: 13px;">
+            🏆 Xem Cơ Hội Đóng Thắng ({{ contract.opportunity_id }})
+        </a>
+        <button type="button" class="btn btn-primary" id="btnPrintContract" style="font-size: 13px;">
+            🖨️ In / Xuất Bản Pháp Lý
+        </button>
+    </div>
+</div>
+
+<!-- THẺ TRẠNG THÁI TỔNG QUAN -->
+<div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <span class="badge {{ CONTRACT_STATUS_BADGES.get(contract.status, '') }}" style="font-size: 13px; padding: 6px 14px;">
+            {{ CONTRACT_STATUS_LABELS.get(contract.status, contract.status) }}
+        </span>
+        <div>
+            <h3 style="font-size: 16px; font-weight: 800; color: #0f172a;">
+                Hợp Đồng Số: <span style="color: var(--primary);">{{ contract.contract_number }}</span>
+            </h3>
+            <span style="font-size: 12.5px; color: var(--text-muted);">
+                Chuyển từ Báo giá: <strong>{{ contract.quote_id }}</strong> | Ngày lập: {{ contract.created_at | datetime }} bởi {{ contract.created_by }}
+            </span>
+        </div>
+    </div>
+
+    <div style="text-align: right;">
+        <span style="font-size: 12px; color: var(--text-muted); display: block;">Tổng giá trị hợp đồng:</span>
+        <strong style="font-size: 20px; color: var(--success);">{{ contract.grand_total | currency }}</strong>
+    </div>
+</div>
+
+<!-- BẢN PHÁP LÝ HỢP ĐỒNG (PRINT-READY DOCUMENT VIEW) -->
+<div class="contract-document-wrapper">
+    <div class="contract-paper">
+        <!-- QUỐC HIỆU TIÊU NGỮ -->
+        <div class="contract-national-header">
+            <h2>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h2>
+            <h3>Độc lập – Tự do – Hạnh phúc</h3>
+            <div style="margin-top: 6px; font-size: 13px;">-------------------------------</div>
+        </div>
+
+        <!-- TIÊU ĐỀ HỢP ĐỒNG -->
+        <div class="contract-main-title">
+            <h1>HỢP ĐỒNG CUNG CẤP PHẦN MỀM & DỊCH VỤ TRIỂN KHAI</h1>
+            <span>Số: <strong>{{ contract.contract_number }}</strong> / HĐKT-ALC</span>
+            <div style="margin-top: 6px; font-size: 13px; color: #475569;">
+                (Căn cứ theo Báo giá được chấp nhận mã số: <strong>{{ contract.quote_id }}</strong>)
+            </div>
+        </div>
+
+        <p style="font-size: 13px; font-style: italic; margin-bottom: 16px;">
+            - Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015 của Quốc hội Nước CHXHCN Việt Nam;<br>
+            - Căn cứ Luật Thương mại số 36/2005/QH11 ngày 14/06/2005;<br>
+            - Căn cứ vào nhu cầu và khả năng thực tế của hai Bên.
+        </p>
+
+        <p style="font-size: 13.5px; margin-bottom: 20px;">
+            Hôm nay, ngày <strong>{{ contract.signed_date | date }}</strong>, tại văn phòng Công ty CP Công nghệ AutoLead CRM Việt Nam, chúng tôi gồm có:
+        </p>
+
+        <!-- THÔNG TIN HAI BÊN KÝ KẾT -->
+        <div class="parties-grid">
+            <!-- BÊN BÁN (BÊN A) -->
+            {% set seller = contract.get('seller_info') or SELLER_INFO %}
+            <div class="party-col">
+                <h4>BÊN A (BÊN CUNG CẤP):</h4>
+                <div class="party-info">
+                    <p><strong>{{ seller.company_name }}</strong></p>
+                    <p><span style="color: #64748b;">Mã số thuế:</span> {{ seller.tax_code }}</p>
+                    <p><span style="color: #64748b;">Địa chỉ:</span> {{ seller.address }}</p>
+                    <p><span style="color: #64748b;">Đại diện:</span> {{ seller.representative }} - {{ seller.position }}</p>
+                    <p><span style="color: #64748b;">Điện thoại:</span> {{ seller.phone }}</p>
+                    <p><span style="color: #64748b;">Số tài khoản:</span> {{ seller.bank_account }} tại {{ seller.bank_name }}</p>
+                </div>
+            </div>
+
+            <!-- BÊN MUA (BÊN B - KẾ THỪA TỪ BÁO GIÁ) -->
+            <div class="party-col">
+                <h4>BÊN B (BÊN MUA):</h4>
+                <div class="party-info">
+                    <p><strong>{{ contract.customer_name }}</strong></p>
+                    <p><span style="color: #64748b;">Mã số thuế:</span> {{ contract.tax_code or 'Đang cập nhật' }}</p>
+                    <p><span style="color: #64748b;">Địa chỉ:</span> {{ contract.address }}</p>
+                    <p><span style="color: #64748b;">Người đại diện:</span> {{ contract.contact_person }} {% if contract.position %}- {{ contract.position }}{% endif %}</p>
+                    <p><span style="color: #64748b;">Điện thoại:</span> {{ contract.phone or 'Chưa cập nhật' }}</p>
+                    <p><span style="color: #64748b;">Email:</span> {{ contract.email or 'Chưa cập nhật' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ĐIỀU 1: PHẠM VI CUNG CẤP & BẢNG SẢN PHẨM (TIÊU CHÍ 1: KẾ THỪA 100%) -->
+        <div style="margin-top: 24px;">
+            <h4 style="font-size: 14.5px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">
+                ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG & DANH MỤC DỊCH VỤ (KẾ THỪA 100% TỪ BÁO GIÁ)
+            </h4>
+            <p style="font-size: 13px; margin-bottom: 10px;">
+                Bên A đồng ý cung cấp và Bên B đồng ý mua bản quyền phần mềm và gói dịch vụ triển khai theo danh mục và đơn giá đã chốt tại Báo giá [{{ contract.quote_id }}], chi tiết như sau:
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 14px;" border="1" cellpadding="6" cellspacing="0">
+                <thead style="background: #f1f5f9;">
+                    <tr>
+                        <th style="width: 30px; text-align: center;">STT</th>
+                        <th>Tên Sản Phẩm / Dịch Vụ</th>
+                        <th style="text-align: center;">ĐVT</th>
+                        <th style="text-align: center;">SL</th>
+                        <th style="text-align: right;">Đơn Giá Chốt</th>
+                        <th style="text-align: right;">Chiết Khấu</th>
+                        <th style="text-align: right;">Thành Tiền (VNĐ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in contract['items'] %}
+                    <tr>
+                        <td style="text-align: center;">{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ item.product_name }}</strong>
+                            <div style="font-size: 11px; color: #64748b;">Mã: {{ item.product_id }}</div>
+                        </td>
+                        <td style="text-align: center;">{{ item.unit }}</td>
+                        <td style="text-align: center; font-weight: 700;">{{ item.quantity }}</td>
+                        <td style="text-align: right;">{{ item.unit_price | currency }}</td>
+                        <td style="text-align: right;">
+                            {% if item.discount_percent > 0 %}
+                                -{{ item.discount_percent }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right; font-weight: 700;">{{ item.line_total | currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ĐIỀU 2: GIÁ TRỊ VÀ ĐIỀU KHOẢN THANH TOÁN (TIÊU CHÍ 1 & 2) -->
+        <div style="margin-top: 24px;">
+            <h4 style="font-size: 14.5px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">
+                ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG & ĐIỀU KHOẢN THANH TOÁN
+            </h4>
+            <div style="font-size: 13px; line-height: 1.6;">
+                <p><strong>2.1. Tổng giá trị hợp đồng:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 8px;">
+                    <li>Tổng tiền hàng trước chiết khấu: <strong>{{ contract.subtotal | currency }}</strong></li>
+                    <li>Tổng chiết khấu thương mại đã duyệt: <strong style="color: var(--danger);">-{{ contract.discount_total | currency }}</strong></li>
+                    <li>Thuế giá trị gia tăng (VAT {{ contract.vat_percent }}%): <strong>{{ contract.vat_amount | currency }}</strong></li>
+                    <li><strong>TỔNG GIÁ TRỊ THANH TOÁN:</strong> <span style="font-size: 15px; font-weight: 800; color: #047857;">{{ contract.grand_total | currency }}</span></li>
+                </ul>
+                <p><strong>2.2. Điều khoản thanh toán (Tiêu chí 2):</strong></p>
+                <div style="background: #f8fafc; border-left: 3px solid var(--primary); padding: 8px 14px; margin: 6px 0 10px 0;">
+                    <strong>{{ contract.payment_terms }}</strong>
+                    {% if contract.payment_terms_notes %}
+                        <div style="font-size: 12px; color: #475569; margin-top: 4px;">{{ contract.payment_terms_notes }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ĐIỀU 3: THỜI HẠN HIỆU LỰC (TIÊU CHÍ 2) -->
+        <div style="margin-top: 24px;">
+            <h4 style="font-size: 14.5px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">
+                ĐIỀU 3: THỜI HẠN VÀ HIỆU LỰC HỢP ĐỒNG (TIÊU CHÍ 2)
+            </h4>
+            <div style="font-size: 13px; line-height: 1.6;">
+                <p>- Ngày ký kết: <strong>{{ contract.signed_date | date }}</strong>.</p>
+                <p>- Hợp đồng có hiệu lực từ ngày: <strong>{{ contract.effective_date | date }}</strong> đến hết ngày: <strong>{{ contract.expiration_date | date }}</strong>.</p>
+                <p>- Hợp đồng được lập thành 04 (bốn) bản có giá trị pháp lý như nhau, mỗi bên giữ 02 (hai) bản để thực hiện.</p>
+            </div>
+        </div>
+
+        <!-- KHU VỰC ĐẠI DIỆN KÝ TÊN VÀ ĐÓNG DẤU SỐ -->
+        <div class="stamp-seal-area">
+            <div class="sign-col">
+                <h5>ĐẠI DIỆN BÊN A (BÊN BÁN)</h5>
+                <span>(Ký, ghi rõ họ tên và đóng dấu)</span>
+                <div class="stamp-badge">
+                    AUTOLEAD CRM SOLUTIONS<br>
+                    ĐÃ KÝ ĐIỆN TỬ BỞI CEO
+                </div>
+                <div style="font-weight: 700; margin-top: 10px; font-size: 13px;">{{ contract.seller_info.representative }}</div>
+            </div>
+
+            <div class="sign-col">
+                <h5>ĐẠI DIỆN BÊN B (BÊN MUA)</h5>
+                <span>(Ký, ghi rõ họ tên và đóng dấu)</span>
+                <div class="stamp-badge" style="border-color: #0284c7; color: #0284c7;">
+                    {{ contract.customer_name }}<br>
+                    XÁC NHẬN CHẤP THUẬN
+                </div>
+                <div style="font-weight: 700; margin-top: 10px; font-size: 13px;">{{ contract.contact_person }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

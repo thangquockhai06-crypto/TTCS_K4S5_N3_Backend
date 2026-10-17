@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Soạn Báo Giá Mới - Kiểm Tra Mức Chiết Khấu{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h1 class="card-title">📝 Soạn Báo Giá Mới &amp; Đánh Giá Ngưỡng Chiết Khấu</h1>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px;">
+                Nhập thông tin sản phẩm và chiết khấu. Hệ thống sẽ tự động đối chiếu giá sàn và dự báo cấp duyệt theo thời gian thực.
+            </div>
+        </div>
+        <a href="{{ url_for('quotes_list') }}" class="btn btn-outline btn-sm">&larr; Danh sách báo giá</a>
+    </div>
+
+    <form method="POST" action="{{ url_for('quote_create') }}">
+        <!-- Customer Info -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="form-group">
+                <label class="form-label">Tiêu Đề Báo Giá: <span class="required-star">*</span></label>
+                <input type="text" name="title" class="form-control" value="Báo giá AutoLead CRM &amp; Dịch vụ triển khai" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tên Doanh Nghiệp Khách Hàng: <span class="required-star">*</span></label>
+                <input type="text" name="account_name" class="form-control" value="Công ty Cổ phần Thương mại Sao Việt" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Người Nhận / Chức Vụ: <span class="required-star">*</span></label>
+                <input type="text" name="contact_name" class="form-control" value="Ông Lê Văn Tuấn - Giám đốc Công nghệ" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Người Nhận:</label>
+                <input type="email" name="contact_email" class="form-control" value="tuan.le@saoviet.vn">
+            </div>
+        </div>
+
+        <!-- Add Product Control -->
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <label class="form-label">Chọn Sản Phẩm Từ Danh Mục Chuẩn:</label>
+                <select id="productCatalogSelect" class="form-control">
+                    {% for p in products %}
+                    <option value="{{ p.id }}" data-name="{{ p.name }}" data-list-price="{{ p.list_price }}" data-floor-price="{{ p.floor_price }}" data-unit="{{ p.unit }}">
+                        {{ p.name }} &bull; Niêm yết: {{ p.list_price|vi_currency }} &bull; Sàn: {{ p.floor_price|vi_currency }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" id="btnAddProductRow" class="btn btn-outline" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                ➕ Thêm Vào Báo Giá
+            </button>
+        </div>
+
+        <!-- Products Line Items Table -->
+        <div class="table-responsive" style="margin-bottom: 24px;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Sản Phẩm</th>
+                        <th style="width: 10%;">Số Lượng</th>
+                        <th style="width: 10%;">Đơn Vị</th>
+                        <th style="width: 15%;">Đơn Giá (VNĐ)</th>
+                        <th style="width: 12%;">Chiết Khấu (%)</th>
+                        <th style="width: 15%;">Thành Tiền Sau Giảm</th>
+                        <th style="width: 15%;">So Sánh Giá Sàn</th>
+                        <th style="width: 5%;">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody">
+                    <tr class="item-row" data-floor-price="18000000">
+                        <td>
+                            <strong>Bản quyền AutoLead CRM Enterprise (Gói 1 năm / 20 users)</strong>
+                            <input type="hidden" name="product_id[]" value="PRD-001">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control item-qty" name="quantity[]" value="1" min="1" style="width: 75px;">
+                        </td>
+                        <td>Gói / Năm</td>
+                        <td>
+                            <input type="number" class="form-control item-price" name="unit_price[]" value="24000000" step="500000" style="width: 140px;">
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <input type="number" class="form-control item-disc" name="discount_percent[]" value="8" min="0" max="100" step="0.5" style="width: 75px;">
+                                <span>%</span>
+                            </div>
+                        </td>
+                        <td class="item-subtotal-after font-bold" style="color: #60a5fa;">22.080.000 đ</td>
+                        <td class="item-floor-badge">
+                            <span class="badge badge-slate">✓ Đạt sàn (18.000.000 đ)</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-outline btn-sm btn-remove-row" style="color: #f87171;">🗑️</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Real-time Authority Estimate Card & Financial Summary -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+            <!-- Live Authority Estimate Box -->
+            <div id="calcAuthorityCard" class="card metric-card emerald" style="margin-bottom: 0;">
+                <div class="metric-label">⚡ THẨM QUYỀN DUYỆT DỰ KIẾN</div>
+                <div class="metric-value" style="font-size: 1.3rem; color: #34d399;">TỰ ĐỘNG THÔNG QUA</div>
+                <div class="metric-subtitle">✓ Chiết khấu dưới 10% và đảm bảo giá sàn -> Tự động duyệt ngay khi lưu!</div>
+            </div>
+
+            <!-- Financial Summary Box -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 24px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">Tổng tiền hàng:</span>
+                    <strong id="calcTotalBefore">0 đ</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">Tổng tiền chiết khấu:</span>
+                    <strong id="calcTotalDiscount" style="color: #f87171;">0 đ</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 4px 0; border-top: 1px dashed var(--border-color); border-bottom: 1px dashed var(--border-color);">
+                    <span style="font-weight: 700; color: #fff;">CHIẾT KHẤU TỔNG:</span>
+                    <span id="calcDiscountRate" style="font-size: 1.2rem; font-weight: 800; color: #34d399;">0.0%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">Tiền sau chiết khấu:</span>
+                    <strong id="calcTotalAfter">0 đ</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">Thuế VAT (8%):</span>
+                    <span id="calcVatAmount">0 đ</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border-color); font-size: 1.1rem;">
+                    <strong style="color: #fff;">TỔNG THANH TOÁN:</strong>
+                    <strong id="calcFinalAmount" style="color: #38bdf8;">0 đ</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Options -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 16px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" name="auto_submit" checked style="width: 18px; height: 18px;">
+                <span><strong>Trình duyệt ngay sau khi tạo</strong> (Nếu chiết khấu &lt; 10% sẽ tự động duyệt)</span>
+            </label>
+
+            <div style="display: flex; gap: 12px;">
+                <a href="{{ url_for('quotes_list') }}" class="btn btn-outline">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    💾 Lưu Báo Giá &amp; Kích Hoạt Luồng Duyệt
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

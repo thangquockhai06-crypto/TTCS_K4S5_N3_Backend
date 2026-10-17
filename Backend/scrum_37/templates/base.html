@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quản lý nhiều phiên bản báo giá{% endblock %} - AutoLead CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- JIRA TICKET TOPBAR -->
+    <header class="jira-topbar">
+        <div class="jira-breadcrumb">
+            <span>⚡ {{ PARENT_EPIC }}</span>
+            <span>/</span>
+            <span>☑ <strong>{{ TICKET_ID }}</strong></span>
+            <span class="jira-badge">AutoLead CRM</span>
+        </div>
+        <div class="jira-subtasks">
+            <span class="subtask-tag">🌐 <strong>{{ SUBTASK_FE }}</strong>: FE Side-by-side & Versioning</span>
+            <span class="subtask-tag">⚙️ <strong>{{ SUBTASK_BE }}</strong>: BE Diff Engine & Invariants</span>
+        </div>
+    </header>
+
+    <!-- MAIN NAVBAR -->
+    <nav class="main-navbar">
+        <a href="{{ url_for('dashboard') }}" class="nav-brand">
+            <div class="brand-logo">📑</div>
+            <div class="brand-text">
+                <h1>AutoLead CRM CPQ</h1>
+                <span>Quản Lý Phiên Bản Báo Giá</span>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <a href="{{ url_for('dashboard') }}">📊 Bàn Làm Việc</a>
+            </li>
+            <li class="nav-item {% if request.endpoint in ['quotes_list', 'quote_detail', 'quote_edit'] %}active{% endif %}">
+                <a href="{{ url_for('quotes_list') }}">📁 Danh Sách Báo Giá</a>
+            </li>
+            <li class="nav-item {% if request.endpoint == 'quote_create' %}active{% endif %}">
+                <a href="{{ url_for('quote_create') }}">➕ Soạn Báo Giá Mới</a>
+            </li>
+            <li class="nav-item {% if request.endpoint == 'simulator' %}active{% endif %}">
+                <a href="{{ url_for('simulator') }}">🧪 Kiểm Thử 3 Tiêu Chí</a>
+            </li>
+        </ul>
+
+        <div class="user-profile-badge">
+            <span style="font-size: 18px;">{{ current_user.avatar }}</span>
+            <div>
+                <strong style="display: block; font-size: 13px; line-height: 1.1;">{{ current_user.name }}</strong>
+                <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.role_label }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- USER STORY & ACCEPTANCE CRITERIA BANNER -->
+    <section class="story-banner">
+        <div class="story-container">
+            <div class="story-content">
+                <h2>
+                    <span>🎯</span>
+                    <span>User Story: Là Nhân viên kinh doanh, tôi muốn quản lý nhiều phiên bản của một báo giá, để biết chính xác đã cam kết gì với khách ở lần gửi trước.</span>
+                </h2>
+                <div class="story-criteria">
+                    <span class="criteria-pill active">
+                        <strong>AC1:</strong> Sửa sau khi gửi -> Tạo phiên bản mới, bản cũ giữ nguyên
+                    </span>
+                    <span class="criteria-pill active">
+                        <strong>AC2:</strong> So sánh cạnh nhau 2 phiên bản để thấy đã thay đổi gì
+                    </span>
+                    <span class="criteria-pill active">
+                        <strong>AC3:</strong> Chỉ 1 phiên bản ở trạng thái Đang hiệu lực tại một thời điểm
+                    </span>
+                </div>
+            </div>
+            <div>
+                <a href="{{ url_for('simulator') }}" class="btn btn-primary btn-sm">
+                    ⚡ Chạy Kiểm Thử 3 AC
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="app-container">
+        <!-- FLASH NOTIFICATIONS -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; color: inherit;">✕</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <p>
+            Hệ Thống Quản Lý Phiên Bản Báo Giá (CPQ Engine) • Jira Ticket: <strong>{{ PARENT_EPIC }} / {{ TICKET_ID }}</strong> 
+            (FE: {{ SUBTASK_FE }} | BE: {{ SUBTASK_BE }}) • Phát triển bằng Python (Flask Framework) + Vanilla CSS/JS
+        </p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
