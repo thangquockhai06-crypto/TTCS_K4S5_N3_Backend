@@ -540,3 +540,11 @@ if __name__ == "__main__":
     print(f"  Khởi chạy máy chủ tại: http://127.0.0.1:{port}")
     print("=" * 70)
     app.run(host="127.0.0.1", port=port, debug=True)
+
+
+def validate_contract_dates(signed_date: str, effective_date: str, expiration_date: str) -> bool:
+    """Kiểm tra tính hợp lý của chuỗi ngày ký, ngày hiệu lực và ngày hết hạn hợp đồng"""
+    try:
+        return signed_date <= effective_date <= expiration_date
+    except Exception:
+        return False
