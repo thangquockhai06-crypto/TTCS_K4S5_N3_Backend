@@ -149,3 +149,7 @@ SELLER_INFO = {
 
 # Thuế suất VAT mặc định
 DEFAULT_VAT_PERCENT = 10.0
+
+# Legal signatories
+DEFAULT_LEGAL_REPRESENTATIVE = 'Nguyễn Văn Giám Đốc'
+DEFAULT_LEGAL_POSITION = 'Tổng Giám Đốc Điều Hành'
