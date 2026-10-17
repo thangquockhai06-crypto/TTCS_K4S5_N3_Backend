@@ -935,3 +935,6 @@ body {
         padding: 0 !important;
     }
 }
+
+/* Contract summary widget */
+.contract-summary-card { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1rem; }
