@@ -285,3 +285,16 @@ if __name__ == "__main__":
     print(f"  Khởi chạy máy chủ tại: http://127.0.0.1:{DEFAULT_PORT}")
     print("=" * 70)
     app.run(host="127.0.0.1", port=DEFAULT_PORT, debug=True)
+
+
+def paginate_timeline_events(events: list, page: int = 1, page_size: int = 15) -> dict:
+    """Phân trang danh sách sự kiện timeline tương tác khách hàng"""
+    total = len(events)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return {
+        'items': events[start:end],
+        'total': total,
+        'page': page,
+        'total_pages': (total + page_size - 1) // page_size if total > 0 else 1
+    }
