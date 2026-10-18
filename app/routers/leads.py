@@ -130,25 +130,30 @@ async def preview_lead_import(
                 if any(row_dict.values()):
                     rows.append(row_dict)
 
-    existing_emails = {l[0].lower() for l in db.query(Lead.email).all()}
+    existing_emails = {
+        l[0].lower()
+        for l in db.query(Lead.email).filter(Lead.email.isnot(None)).all()
+        if l[0]
+    }
     preview_details = []
     valid_count = 0
     error_count = 0
 
     for idx, r in enumerate(rows, start=2):
-        name = (r.get("full_name") or r.get("fullname") or r.get("name") or "").strip()
-        email = (r.get("email") or "").strip().lower()
-        phone = (r.get("phone") or "").strip()
-        company = (r.get("company") or "").strip()
+        norm = LeadService.normalize_lead_row(r)
+        name = norm["full_name"]
+        email = norm["email"]
+        phone = norm["phone"]
+        company = norm["company"]
         errors = []
 
         if not name:
             errors.append("Thiếu Họ và tên.")
-        if not email:
-            errors.append("Thiếu Email.")
-        elif "@" not in email:
+        if not email and not phone:
+            errors.append("Phải có ít nhất Email hoặc Số điện thoại.")
+        elif email and "@" not in email:
             errors.append("Định dạng Email không hợp lệ.")
-        elif email in existing_emails:
+        elif email and email in existing_emails:
             errors.append("Email đã tồn tại trong danh sách Đầu mối.")
 
         if errors:
@@ -161,7 +166,7 @@ async def preview_lead_import(
         preview_details.append({
             "rowIndex": idx,
             "fullName": name,
-            "email": email,
+            "email": email or (f"lead.{phone}@nexuscrm.vn" if phone else "N/A"),
             "phone": phone,
             "company": company,
             "status": status_val,
@@ -209,7 +214,10 @@ async def execute_lead_import(
                     row_dict = {}
                     for idx, val in enumerate(r_data):
                         if idx < len(headers):
-                            row_dict[headers[idx]] = str(val or "").strip()
+                            val_str = str(val if val is not None else "").strip()
+                            if isinstance(val, (int, float)) and val_str.endswith(".0"):
+                                val_str = str(int(val))
+                            row_dict[headers[idx]] = val_str
                     if any(row_dict.values()):
                         raw_rows.append(row_dict)
     else:

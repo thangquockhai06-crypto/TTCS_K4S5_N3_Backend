@@ -38,6 +38,13 @@ class CampaignDTO(CampaignBase):
     totalLeads: int = Field(0, serialization_alias="totalLeads", alias="totalLeads")
     totalDeals: int = Field(0, serialization_alias="totalDeals", alias="totalDeals")
     actualRevenue: float = Field(0.0, serialization_alias="actualRevenue", alias="actualRevenue")
+    leads_count: int = 0
+    deals_count: int = 0
+    actual_revenue: float = 0.0
+    expected_revenue: float = 0.0
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    created_at: Optional[str] = None
     createdAt: Optional[str] = Field(None, serialization_alias="createdAt", alias="createdAt")
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)

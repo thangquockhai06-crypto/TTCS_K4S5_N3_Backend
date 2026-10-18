@@ -712,6 +712,52 @@ class LeadService:
             headers={"Content-Disposition": 'attachment; filename="leads_import_template.xlsx"'},
         )
 
+    @staticmethod
+    def normalize_lead_row(raw: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Chuẩn hóa tên cột linh hoạt hỗ trợ cả tiếng Việt có dấu, không dấu và tiếng Anh.
+        """
+        clean_dict = {}
+        for k, v in raw.items():
+            if k is None or v is None:
+                continue
+            key = str(k).strip().lower()
+            val = str(v).strip()
+            if val.endswith(".0") and re.match(r"^\d+\.0$", val):
+                val = val[:-2]
+            clean_dict[key] = val
+
+        def get_any(*candidates):
+            for c in candidates:
+                for k, v in clean_dict.items():
+                    if k == c or k.replace(" ", "_") == c or c in k:
+                        if v:
+                            return v
+            return ""
+
+        name = get_any("full_name", "fullname", "họ và tên", "họ tên", "tên", "khách hàng", "name", "ho ten", "ho va ten")
+        email = get_any("email", "thư điện tử", "e-mail", "mail", "thu dien tu", "dia chi email")
+        phone = get_any("phone", "số điện thoại", "điện thoại", "sđt", "so dien thoai", "dien thoai", "sdt", "mobile", "tel")
+        company = get_any("company", "công ty", "tên công ty", "doanh nghiệp", "cong ty", "doanh nghiep", "company name")
+        job_title = get_any("job_title", "chức vụ", "chức danh", "vị trí", "title", "chuc vu", "position")
+        region = get_any("region", "khu vực", "vùng miền", "khu vuc", "tỉnh thành", "dia diem") or "Miền Bắc"
+        industry = get_any("industry", "ngành nghề", "lĩnh vực", "nganh nghe", "linh vuc") or "Công nghệ"
+        source = get_any("source", "nguồn", "nguon") or "Excel Import"
+
+        if phone and len(phone) == 9 and not phone.startswith("0"):
+            phone = "0" + phone
+
+        return {
+            "full_name": name,
+            "email": email.lower(),
+            "phone": phone,
+            "company": company,
+            "job_title": job_title,
+            "region": region,
+            "industry": industry,
+            "source": source,
+        }
+
     @classmethod
     def execute_bulk_import(cls, db: Session, raw_rows: List[Dict[str, Any]], user: User) -> Dict[str, Any]:
         """
@@ -721,31 +767,45 @@ class LeadService:
         error_count = 0
         errors = []
 
-        existing_emails = {l[0].lower() for l in db.query(Lead.email).all()}
+        existing_emails = {
+            l[0].lower()
+            for l in db.query(Lead.email).filter(Lead.email.isnot(None)).all()
+            if l[0]
+        }
 
         for idx, row in enumerate(raw_rows, start=2):
-            name = (row.get("full_name") or row.get("fullname") or row.get("name") or "").strip()
-            email = (row.get("email") or "").strip().lower()
-            phone = (row.get("phone") or "").strip()
-            company = (row.get("company") or "").strip()
-            job_title = (row.get("job_title") or row.get("title") or "").strip()
-            region = (row.get("region") or "Miền Bắc").strip()
-            industry = (row.get("industry") or "Công nghệ").strip()
-            source = (row.get("source") or "Excel Import").strip()
+            norm = cls.normalize_lead_row(row)
+            name = norm["full_name"]
+            email = norm["email"]
+            phone = norm["phone"]
+            company = norm["company"]
+            job_title = norm["job_title"]
+            region = norm["region"]
+            industry = norm["industry"]
+            source = norm["source"]
 
-            if not name or not email:
+            if not name:
                 error_count += 1
-                errors.append({"row": idx, "email": email, "reason": "Thiếu Họ tên hoặc Email bắt buộc."})
+                errors.append({"row": idx, "email": email or "N/A", "reason": "Thiếu Họ và tên bắt buộc."})
                 continue
 
-            if "@" not in email:
+            if not email and not phone:
+                error_count += 1
+                errors.append({"row": idx, "email": "N/A", "reason": "Phải có ít nhất Email hoặc Số điện thoại."})
+                continue
+
+            if not email and phone:
+                clean_p = re.sub(r"[^\d]", "", phone)
+                email = f"lead.{clean_p}@nexuscrm.vn"
+
+            if email and "@" not in email:
                 error_count += 1
                 errors.append({"row": idx, "email": email, "reason": "Định dạng Email không hợp lệ."})
                 continue
 
-            if email in existing_emails:
+            if email and email in existing_emails:
                 error_count += 1
-                errors.append({"row": idx, "email": email, "reason": "Email đã tồn tại trong danh sách Đầu mối."})
+                errors.append({"row": idx, "email": email, "reason": f"Email '{email}' đã tồn tại trong danh sách Đầu mối."})
                 continue
 
             score, grade = cls.calculate_score({

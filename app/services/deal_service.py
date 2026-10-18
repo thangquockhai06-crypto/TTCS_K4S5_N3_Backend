@@ -95,10 +95,16 @@ class DealService:
         stage: Optional[str] = None,
         is_stalled: Optional[bool] = None,
         campaign_id: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[Deal]:
-        """Lấy danh sách Deals thỏa mãn Data Scope của người dùng."""
+        """Lấy danh sách Deals thỏa mãn Data Scope của người dùng và bộ lọc Sprint 6."""
         return DealRepository.get_all(
             db=db,
             user=user,
@@ -106,6 +112,12 @@ class DealService:
             stage=stage,
             is_stalled=is_stalled,
             campaign_id=campaign_id,
+            min_value=min_value,
+            max_value=max_value,
+            close_date_from=close_date_from,
+            close_date_to=close_date_to,
+            owner_id=owner_id,
+            product_id=product_id,
             skip=skip,
             limit=limit,
         )
@@ -116,12 +128,26 @@ class DealService:
         user: User,
         search: Optional[str] = None,
         stage: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
+        deal_ids: Optional[List[str]] = None,
     ) -> List[Deal]:
         return DealRepository.get_all_for_export(
             db=db,
             user=user,
             search=search,
             stage=stage,
+            min_value=min_value,
+            max_value=max_value,
+            close_date_from=close_date_from,
+            close_date_to=close_date_to,
+            owner_id=owner_id,
+            product_id=product_id,
+            deal_ids=deal_ids,
         )
 
     @staticmethod

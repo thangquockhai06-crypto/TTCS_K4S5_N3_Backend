@@ -24,10 +24,16 @@ class DealRepository(BaseRepository):
         stage: Optional[str] = None,
         is_stalled: Optional[bool] = None,
         campaign_id: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[Deal]:
-        """Lấy danh sách deals thỏa mãn Data Scope của người dùng."""
+        """Lấy danh sách deals thỏa mãn Data Scope của người dùng và các bộ lọc Sprint 6 (S6-01, S6-02)."""
         query = db.query(Deal)
 
         # 1. Lọc theo Data Scope
@@ -50,6 +56,26 @@ class DealRepository(BaseRepository):
         if campaign_id:
             query = query.filter(Deal.campaign_id == campaign_id)
 
+        # 6. S6-01 & S6-02: Lọc theo khoảng giá trị Deal (deal value / value range)
+        if min_value is not None:
+            query = query.filter(Deal.value >= min_value)
+        if max_value is not None:
+            query = query.filter(Deal.value <= max_value)
+
+        # 7. S6-01 & S6-02: Lọc theo ngày đóng (closing date)
+        if close_date_from is not None:
+            query = query.filter(Deal.expected_close_date >= close_date_from)
+        if close_date_to is not None:
+            query = query.filter(Deal.expected_close_date <= close_date_to)
+
+        # 8. S6-01 & S6-02: Lọc theo người phụ trách (deal owner)
+        if owner_id and owner_id.lower() != "all":
+            query = query.filter(Deal.owner_id == owner_id)
+
+        # 9. S6-02: Lọc theo sản phẩm (product)
+        if product_id and product_id.lower() != "all":
+            query = query.join(Deal.deal_items).filter(DealItem.product_id == product_id).distinct()
+
         query = query.order_by(Deal.created_at.desc())
 
         if skip is not None:
@@ -65,16 +91,43 @@ class DealRepository(BaseRepository):
         user: User,
         search: Optional[str] = None,
         stage: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
+        deal_ids: Optional[List[str]] = None,
     ) -> List[Deal]:
-        """Xuất danh sách Deals ra file Excel tuân thủ Data Scope."""
+        """Xuất danh sách Deals ra file Excel tuân thủ Data Scope (S6-04)."""
         query = db.query(Deal)
         query = BaseRepository.apply_data_scope_filter(query, user, Deal)
+
+        # S6-04: Lọc theo danh sách ID được chọn nếu có
+        if deal_ids:
+            query = query.filter(Deal.id.in_(deal_ids))
 
         if search and search.strip():
             query = query.filter(Deal.title.ilike(f"%{search.strip()}%"))
 
         if stage and stage.lower() != "all":
             query = query.filter(Deal.stage == stage.lower())
+
+        if min_value is not None:
+            query = query.filter(Deal.value >= min_value)
+        if max_value is not None:
+            query = query.filter(Deal.value <= max_value)
+
+        if close_date_from is not None:
+            query = query.filter(Deal.expected_close_date >= close_date_from)
+        if close_date_to is not None:
+            query = query.filter(Deal.expected_close_date <= close_date_to)
+
+        if owner_id and owner_id.lower() != "all":
+            query = query.filter(Deal.owner_id == owner_id)
+
+        if product_id and product_id.lower() != "all":
+            query = query.join(Deal.deal_items).filter(DealItem.product_id == product_id).distinct()
 
         return query.order_by(Deal.created_at.desc()).all()
 

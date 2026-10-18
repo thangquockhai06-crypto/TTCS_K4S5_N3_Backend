@@ -28,13 +28,20 @@ class CampaignService:
                     status=c.status,
                     budget=float(c.budget or 0.0),
                     expectedRevenue=float(c.expected_revenue or 0.0),
+                    expected_revenue=float(c.expected_revenue or 0.0),
                     startDate=c.start_date.isoformat() if c.start_date else None,
                     endDate=c.end_date.isoformat() if c.end_date else None,
+                    start_date=c.start_date.isoformat() if c.start_date else None,
+                    end_date=c.end_date.isoformat() if c.end_date else None,
                     description=c.description,
                     totalLeads=metrics["total_leads"],
+                    leads_count=metrics["total_leads"],
                     totalDeals=metrics["total_deals"],
+                    deals_count=metrics["total_deals"],
                     actualRevenue=metrics["actual_revenue"],
+                    actual_revenue=metrics["actual_revenue"],
                     createdAt=c.created_at.isoformat() if c.created_at else None,
+                    created_at=c.created_at.isoformat() if c.created_at else None,
                 )
             )
         return results
@@ -56,13 +63,20 @@ class CampaignService:
             status=c.status,
             budget=float(c.budget or 0.0),
             expectedRevenue=float(c.expected_revenue or 0.0),
+            expected_revenue=float(c.expected_revenue or 0.0),
             startDate=c.start_date.isoformat() if c.start_date else None,
             endDate=c.end_date.isoformat() if c.end_date else None,
+            start_date=c.start_date.isoformat() if c.start_date else None,
+            end_date=c.end_date.isoformat() if c.end_date else None,
             description=c.description,
             totalLeads=metrics["total_leads"],
+            leads_count=metrics["total_leads"],
             totalDeals=metrics["total_deals"],
+            deals_count=metrics["total_deals"],
             actualRevenue=metrics["actual_revenue"],
+            actual_revenue=metrics["actual_revenue"],
             createdAt=c.created_at.isoformat() if c.created_at else None,
+            created_at=c.created_at.isoformat() if c.created_at else None,
         )
 
     @staticmethod
@@ -99,13 +113,20 @@ class CampaignService:
             status=saved.status,
             budget=float(saved.budget or 0.0),
             expectedRevenue=float(saved.expected_revenue or 0.0),
+            expected_revenue=float(saved.expected_revenue or 0.0),
             startDate=saved.start_date.isoformat() if saved.start_date else None,
             endDate=saved.end_date.isoformat() if saved.end_date else None,
+            start_date=saved.start_date.isoformat() if saved.start_date else None,
+            end_date=saved.end_date.isoformat() if saved.end_date else None,
             description=saved.description,
             totalLeads=0,
+            leads_count=0,
             totalDeals=0,
+            deals_count=0,
             actualRevenue=0.0,
+            actual_revenue=0.0,
             createdAt=saved.created_at.isoformat() if saved.created_at else None,
+            created_at=saved.created_at.isoformat() if saved.created_at else None,
         )
 
     @staticmethod
@@ -144,13 +165,20 @@ class CampaignService:
             status=saved.status,
             budget=float(saved.budget or 0.0),
             expectedRevenue=float(saved.expected_revenue or 0.0),
+            expected_revenue=float(saved.expected_revenue or 0.0),
             startDate=saved.start_date.isoformat() if saved.start_date else None,
             endDate=saved.end_date.isoformat() if saved.end_date else None,
+            start_date=saved.start_date.isoformat() if saved.start_date else None,
+            end_date=saved.end_date.isoformat() if saved.end_date else None,
             description=saved.description,
             totalLeads=metrics["total_leads"],
+            leads_count=metrics["total_leads"],
             totalDeals=metrics["total_deals"],
+            deals_count=metrics["total_deals"],
             actualRevenue=metrics["actual_revenue"],
+            actual_revenue=metrics["actual_revenue"],
             createdAt=saved.created_at.isoformat() if saved.created_at else None,
+            created_at=saved.created_at.isoformat() if saved.created_at else None,
         )
 
     @staticmethod

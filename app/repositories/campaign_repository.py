@@ -51,10 +51,27 @@ class CampaignRepository:
     @staticmethod
     def get_campaign_metrics(db: Session, campaign_id: str) -> dict:
         lead_count = db.query(func.count(Lead.id)).filter(Lead.campaign_id == campaign_id).scalar() or 0
-        deal_count = db.query(func.count(Deal.id)).filter(Deal.campaign_id == campaign_id).scalar() or 0
+        
+        # Count deals linked directly or through converted leads
+        deal_from_lead_ids = (
+            db.query(Lead.converted_deal_id)
+            .filter(Lead.campaign_id == campaign_id, Lead.converted_deal_id.isnot(None))
+            .subquery()
+        )
+        
+        deal_count = (
+            db.query(func.count(Deal.id))
+            .filter((Deal.campaign_id == campaign_id) | (Deal.id.in_(deal_from_lead_ids)))
+            .scalar()
+            or 0
+        )
+        
         actual_won_revenue = (
-            db.query(func.sum(Deal.value))
-            .filter(Deal.campaign_id == campaign_id, Deal.stage == "won")
+            db.query(func.sum(func.coalesce(Deal.actual_value, Deal.value)))
+            .filter(
+                (Deal.campaign_id == campaign_id) | (Deal.id.in_(deal_from_lead_ids)),
+                Deal.stage.ilike("won"),
+            )
             .scalar()
             or 0.0
         )

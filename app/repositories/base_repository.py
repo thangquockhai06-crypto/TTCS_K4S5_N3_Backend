@@ -74,6 +74,8 @@ def apply_data_scope_filter(
 
     # 2. Phạm vi OWN: Chỉ bản ghi do chính mình tạo / được phân công
     if scope == DataScope.OWN:
+        if hasattr(model, "assignee_id") and hasattr(model, "creator_id"):
+            return query.filter(or_(model.assignee_id == user.id, model.creator_id == user.id))
         return query.filter(owner_col == user.id)
 
     # 3. Phạm vi TEAM: Bản ghi thuộc thành viên trong cùng nhóm
@@ -89,6 +91,13 @@ def apply_data_scope_filter(
             .where(User.team_id == team_id)
             .scalar_subquery()
         )
+        if hasattr(model, "assignee_id") and hasattr(model, "creator_id"):
+            return query.filter(
+                or_(
+                    model.assignee_id.in_(team_users_subquery),
+                    model.creator_id.in_(team_users_subquery),
+                )
+            )
         return query.filter(owner_col.in_(team_users_subquery))
 
     # Mặc định an toàn

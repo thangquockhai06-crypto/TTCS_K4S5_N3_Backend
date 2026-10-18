@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -77,31 +78,65 @@ def bulk_reassign_deals(
     return DealService.bulk_reassign_deals(db=db, dto=dto, actor=current_user)
 
 
-@router.get("/export", summary="Xuất danh sách cơ hội bán hàng ra Excel (.xlsx)")
+@router.get("/export", summary="Xuất danh sách cơ hội bán hàng ra Excel (.xlsx) (S6-04)")
 def export_deals(
     search: Optional[str] = Query(None, description="Tìm kiếm theo tiêu đề"),
     stage: Optional[str] = Query(None, description="Lọc theo stage"),
+    min_value: Optional[float] = Query(None, description="Giá trị tối thiểu"),
+    max_value: Optional[float] = Query(None, description="Giá trị tối đa"),
+    close_date_from: Optional[date] = Query(None, description="Ngày dự kiến đóng từ ngày"),
+    close_date_to: Optional[date] = Query(None, description="Ngày dự kiến đóng đến ngày"),
+    owner_id: Optional[str] = Query(None, description="Lọc theo người phụ trách"),
+    product_id: Optional[str] = Query(None, description="Lọc theo sản phẩm"),
+    deal_ids: Optional[str] = Query(None, description="Danh sách ID các deal (phân cách bằng dấu phẩy)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Xuất danh sách deals ra Excel tuân thủ Data Scope."""
+    """Xuất danh sách deals ra Excel tuân thủ Data Scope (S6-04). Hỗ trợ xuất tất cả hoặc theo deal được chọn."""
+    selected_ids = [d.strip() for d in deal_ids.split(",") if d.strip()] if deal_ids else None
     deals = DealService.get_deals_for_export(
         db=db,
         user=current_user,
         search=search,
         stage=stage,
+        min_value=min_value,
+        max_value=max_value,
+        close_date_from=close_date_from,
+        close_date_to=close_date_to,
+        owner_id=owner_id,
+        product_id=product_id,
+        deal_ids=selected_ids,
     )
-    headers = ["Mã Deal", "Tiêu đề", "Giá trị (VNĐ)", "Giai đoạn (Stage)", "Xác suất (%)", "Mã KH", "Người phụ trách", "Ngày dự kiến đóng"]
+    headers = [
+        "Mã Deal",
+        "Tiêu đề",
+        "Giá trị (VNĐ)",
+        "Giai đoạn (Stage)",
+        "Xác suất (%)",
+        "Tên Khách Hàng",
+        "Người Phụ Trách",
+        "Ngày dự kiến đóng",
+        "Ngày đóng thực tế",
+        "Doanh thu thực tế (VNĐ)",
+        "Sản phẩm",
+        "Trạng thái ứ đọng",
+        "Ngày tạo",
+    ]
     rows = [
         [
             d.id,
             d.title,
-            float(d.value),
+            float(d.value) if d.value is not None else 0.0,
             d.stage,
             d.probability,
-            d.customer_id,
-            d.owner_id,
+            d.customer.full_name if d.customer else (d.customer_id or ""),
+            d.owner.full_name if d.owner else (d.owner_id or ""),
             d.expected_close_date.isoformat() if d.expected_close_date else "",
+            d.close_date.isoformat() if d.close_date else "",
+            float(d.actual_value) if d.actual_value is not None else "",
+            ", ".join([it.product_name for it in d.deal_items if it.product_name]) if d.deal_items else "",
+            "Có" if d.is_stalled else "Không",
+            d.created_at.strftime("%Y-%m-%d %H:%M:%S") if d.created_at else "",
         ]
         for d in deals
     ]
@@ -114,15 +149,21 @@ def export_deals(
 
 
 # ==============================================================================
-# S5-01 & S5-02: DEAL LIST & KANBAN CRUD
+# S5-01, S5-02, S6-01, S6-02, S6-03: DEAL LIST & KANBAN CRUD
 # ==============================================================================
 
-@router.get("", response_model=List[DealDTO], summary="Lấy danh sách các cơ hội bán hàng (S5-01 & S5-02)")
+@router.get("", response_model=List[DealDTO], summary="Lấy danh sách các cơ hội bán hàng (S6-01, S6-02, S6-03)")
 def get_deals(
     search: Optional[str] = Query(None, description="Tìm kiếm theo tiêu đề cơ hội"),
     stage: Optional[str] = Query(None, description="Lọc theo stage: lead, contact, proposal, negotiation, won, lost"),
     is_stalled: Optional[bool] = Query(None, description="Lọc deal ứ đọng"),
     campaign_id: Optional[str] = Query(None, description="Lọc theo chiến dịch"),
+    min_value: Optional[float] = Query(None, description="Lọc giá trị tối thiểu (S6-01, S6-02)"),
+    max_value: Optional[float] = Query(None, description="Lọc giá trị tối đa (S6-01, S6-02)"),
+    close_date_from: Optional[date] = Query(None, description="Lọc ngày đóng từ (S6-01, S6-02)"),
+    close_date_to: Optional[date] = Query(None, description="Lọc ngày đóng đến (S6-01, S6-02)"),
+    owner_id: Optional[str] = Query(None, description="Lọc theo người phụ trách (S6-01, S6-02, S6-03)"),
+    product_id: Optional[str] = Query(None, description="Lọc theo sản phẩm (S6-02)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[DealDTO]:
@@ -133,6 +174,12 @@ def get_deals(
         stage=stage,
         is_stalled=is_stalled,
         campaign_id=campaign_id,
+        min_value=min_value,
+        max_value=max_value,
+        close_date_from=close_date_from,
+        close_date_to=close_date_to,
+        owner_id=owner_id,
+        product_id=product_id,
     )
     return [DealService.map_to_dto(d) for d in deals]
 
