@@ -559,3 +559,8 @@ def verify_quote_ready_for_conversion(quote: dict) -> tuple[bool, str]:
 def sync_opportunity_to_closed_won(opportunity_id: str, contract_amount: float):
     """Tự động cập nhật cơ hội bán hàng thành Closed-Won khi ký hợp đồng"""
     return {'opportunity_id': opportunity_id, 'stage': 'Closed Won', 'amount': contract_amount}
+
+
+def export_contract_print_template(contract_data: dict) -> str:
+    """Xuất mẫu in hợp đồng kinh tế chuẩn doanh nghiệp"""
+    return f"HỢP ĐỒNG KINH TẾ: {contract_data.get('contract_number')}"
