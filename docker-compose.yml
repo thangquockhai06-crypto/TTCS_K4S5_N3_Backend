@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: nexuscrm_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./crm.db
+      - SECRET_KEY=crm_production_super_secret_jwt_key_2026
+    volumes:
+      - .:/app
+    restart: unless-stopped
