@@ -20,6 +20,9 @@ from app.database import engine, SessionLocal, Base
 from app.models.user import User
 from app.models.customer import Customer
 from app.models.deal import Deal
+from app.models.deal_item import DealItem
+from app.models.task import Task
+from app.models.activity import Activity
 from app.core.security import hash_password
 
 def seed_database():
@@ -417,6 +420,129 @@ def seed_database():
             db.add(item1)
             db.commit()
             print("  -> Da nap san pham co hoi ban hang (Deal Items) mau.")
+
+        # Seed Tasks (Sprint 6: S6-06, S6-07, S6-09)
+        if db.query(Task).count() == 0:
+            today = date.today()
+            sample_tasks = [
+                Task(
+                    id="task-01",
+                    title="Chuẩn bị hợp đồng dịch vụ CRM Enterprise Q4",
+                    description="Soạn thảo và rà soát các điều khoản thanh toán, bảo hành và phân quyền hệ thống.",
+                    priority="high",
+                    status="in_progress",
+                    is_completed=False,
+                    due_date=today + timedelta(days=3),
+                    assignee_id="usr-admin-01",
+                    creator_id="usr-admin-01",
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                ),
+                Task(
+                    id="task-02",
+                    title="Gọi điện tư vấn giải pháp tích hợp VoIP cho khách hàng",
+                    description="Liên hệ trực tiếp giám đốc CNTT để thống nhất kiến trúc kết nối API tổng đài.",
+                    priority="urgent",
+                    status="pending",
+                    is_completed=False,
+                    due_date=today,
+                    assignee_id="usr-sales-01",
+                    creator_id="usr-lead-01",
+                    customer_id="cust-01",
+                ),
+                Task(
+                    id="task-03",
+                    title="Gửi tài liệu kỹ thuật bảo mật & chứng chỉ ISO 27001",
+                    description="Đã hoàn tất gửi tài liệu qua email cho phòng thẩm định rủi ro.",
+                    priority="medium",
+                    status="completed",
+                    is_completed=True,
+                    due_date=today - timedelta(days=2),
+                    completed_at=now - timedelta(days=1),
+                    assignee_id="usr-sales-01",
+                    creator_id="usr-sales-01",
+                    customer_id="cust-01",
+                ),
+                Task(
+                    id="task-04",
+                    title="Theo dõi phản hồi đề xuất giá phần mềm kho vận",
+                    description="Nhắc nhở khách hàng về thời hạn hiệu lực của bảng chào giá ưu đãi.",
+                    priority="high",
+                    status="pending",
+                    is_completed=False,
+                    due_date=today - timedelta(days=4),
+                    assignee_id="usr-sales-01",
+                    creator_id="usr-lead-01",
+                    deal_id="deal-01",
+                ),
+                Task(
+                    id="task-05",
+                    title="Duyệt mức chiết khấu thương vụ cho khối Doanh nghiệp FDI",
+                    description="Kiểm tra tỷ suất lợi nhuận trước khi phê duyệt điều kiện chiết khấu 12%.",
+                    priority="urgent",
+                    status="in_progress",
+                    is_completed=False,
+                    due_date=today + timedelta(days=1),
+                    assignee_id="usr-lead-01",
+                    creator_id="usr-lead-01",
+                    deal_id="deal-01",
+                ),
+            ]
+            db.add_all(sample_tasks)
+            db.commit()
+            print("  -> Da nap 5 cong viec (Tasks) mau cho Sprint 6.")
+
+        # Seed Activities (Sprint 6: S6-05)
+        if db.query(Activity).count() == 0:
+            sample_activities = [
+                Activity(
+                    id="act-01",
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                    user_id="usr-admin-01",
+                    type="call",
+                    title="Cuộc gọi tư vấn quy mô 50 người dùng",
+                    description="Khách hàng đồng ý lịch hẹn demo trực tiếp tuần tới.",
+                    notes="Khách hàng yêu cầu hỗ trợ thêm tính năng báo cáo theo thời gian thực.",
+                    created_at=now - timedelta(hours=3),
+                ),
+                Activity(
+                    id="act-02",
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                    user_id="usr-admin-01",
+                    type="meeting",
+                    title="Họp đàm phán hợp đồng triển khai giai đoạn 2",
+                    description="Thống nhất phạm vi triển khai và tiến độ bàn giao trong vòng 45 ngày.",
+                    notes="Phía đối tác cần bổ sung cam kết SLA 99.9% trong phụ lục hợp đồng.",
+                    created_at=now - timedelta(days=1),
+                ),
+                Activity(
+                    id="act-03",
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                    user_id="usr-admin-01",
+                    type="email",
+                    title="Gửi dự thảo hợp đồng & phương án bảo mật dữ liệu",
+                    description="Đã chuyển email đính kèm file PDF bản thảo hợp đồng.",
+                    notes="Chờ xác nhận từ bộ phận pháp chế của khách hàng.",
+                    created_at=now - timedelta(days=2),
+                ),
+                Activity(
+                    id="act-04",
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                    user_id="usr-lead-01",
+                    type="deal_change",
+                    title="Chuyển trạng thái Deal sang Đàm phán hợp đồng",
+                    description="Giai đoạn được cập nhật sau buổi làm việc với Ban Giám đốc khách hàng.",
+                    notes="Xác suất thành công ước tính đạt 80%.",
+                    created_at=now - timedelta(days=3),
+                ),
+            ]
+            db.add_all(sample_activities)
+            db.commit()
+            print("  -> Da nap 4 hoat dong (Activities) mau cho Sprint 6.")
 
         print("\n=======================================================")
         print(" THANH CONG: Co so du lieu nexuscrm_db da san sang! ")
