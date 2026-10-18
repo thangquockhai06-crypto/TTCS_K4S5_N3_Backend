@@ -211,6 +211,51 @@ def run_ep04_ep05_migrations(target_engine=None):
                 pass
 
 
+def run_ep06_migrations(target_engine=None):
+    """
+    Tự động nâng cấp lược đồ CSDL cho Sprint 6:
+    - S6-05 & S6-08: Mở rộng bảng activities với deal_id và notes.
+    - S6-06, S6-07, S6-09: Đảm bảo bảng tasks đã được tạo kèm chỉ mục tối ưu hóa.
+    """
+    eng = target_engine or engine
+    Base.metadata.create_all(bind=eng)
+
+    inspector = inspect(eng)
+    table_names = inspector.get_table_names()
+
+    with eng.connect() as conn:
+        # 1. Bổ sung các cột mở rộng cho activities
+        if "activities" in table_names:
+            cols = {c["name"] for c in inspector.get_columns("activities")}
+            activities_cols = [
+                ("deal_id", "VARCHAR(36)"),
+                ("notes", "TEXT"),
+            ]
+            for col_name, col_def in activities_cols:
+                if col_name not in cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE activities ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+        # 2. Tạo chỉ mục tối ưu hóa cho Sprint 6
+        indexes_to_create = [
+            ("idx_activities_deal", "CREATE INDEX idx_activities_deal ON activities(deal_id)"),
+            ("idx_tasks_assignee", "CREATE INDEX idx_tasks_assignee ON tasks(assignee_id)"),
+            ("idx_tasks_status", "CREATE INDEX idx_tasks_status ON tasks(status)"),
+            ("idx_tasks_due_date", "CREATE INDEX idx_tasks_due_date ON tasks(due_date)"),
+            ("idx_tasks_is_completed", "CREATE INDEX idx_tasks_is_completed ON tasks(is_completed)"),
+            ("idx_tasks_creator", "CREATE INDEX idx_tasks_creator ON tasks(creator_id)"),
+        ]
+        for idx_name, idx_sql in indexes_to_create:
+            try:
+                conn.execute(text(idx_sql))
+                conn.commit()
+            except Exception:
+                pass
+
+
 def get_db() -> Generator:
     """Dependency injects SQLAlchemy database session into FastAPI routes."""
     db = SessionLocal()
