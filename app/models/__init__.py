@@ -18,6 +18,9 @@ from app.models.win_loss import WinLossReason, Competitor
 from app.models.audit_log import AuditLog
 from app.models.web_form import WebForm
 from app.models.lead import Lead
+from app.models.task import Task
+from app.models.reminder_setting import ReminderSetting
+from app.models.notification import Notification
 
 __all__ = [
     "Base",
@@ -44,4 +47,7 @@ __all__ = [
     "Competitor",
     "WebForm",
     "Lead",
+    "Task",
+    "ReminderSetting",
+    "Notification",
 ]

@@ -10,6 +10,7 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.deal_repository import DealRepository
+from app.repositories.notification_repository import NotificationRepository
 from app.services.kpi_service import KPIService
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard Statistics"])
@@ -68,10 +69,27 @@ def get_won_value(
         "periodRule": "Inclusive signed_date range; reopened deals are excluded until closed again.",
     }
 
+
 @router.get("/notifications", summary="Lấy danh sách thông báo")
 def get_notifications(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[Dict[str, Any]]:
+    real_notifs = NotificationRepository.get_user_notifications(db=db, user_id=current_user.id, limit=10)
+    if real_notifs:
+        return [
+            {
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "type": n.type,
+                "timestamp": n.created_at.strftime("%H:%M %d/%m") if n.created_at else "Vừa xong",
+                "isRead": n.is_read,
+                "taskId": n.task_id,
+            }
+            for n in real_notifs
+        ]
+
     return [
         {
             "id": "notif-01",

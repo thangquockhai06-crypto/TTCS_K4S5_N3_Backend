@@ -38,7 +38,11 @@ from app.routers import (
     customer_care_router,
     web_forms_router,
     public_forms_router,
+    tasks_router,
+    notifications_router,
 )
+
+from app.core.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
@@ -61,7 +65,21 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         print(f"[DATABASE WARNING] Khong the tu dong tao bang: {exc}")
         print("[DATABASE TIP] Hay chac chan MySQL Server dang chay hoac file CSDL co quyen ghi.")
+
+    # Khoi dong Background Scheduler quet nhac viec va qua han (moi 60s)
+    try:
+        start_scheduler(interval_seconds=60)
+    except Exception as sched_err:
+        print(f"[SCHEDULER WARNING] Khong the khoi dong worker quet nhac viec: {sched_err}")
+
     yield
+
+    # Dung Scheduler worker khi shutdown
+    try:
+        stop_scheduler()
+    except Exception:
+        pass
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -132,12 +150,15 @@ app.include_router(win_loss_router, prefix=settings.API_V1_STR)
 app.include_router(customer_care_router, prefix=settings.API_V1_STR)
 app.include_router(web_forms_router, prefix=settings.API_V1_STR)
 app.include_router(public_forms_router, prefix=settings.API_V1_STR)
+app.include_router(tasks_router, prefix=settings.API_V1_STR)
+app.include_router(notifications_router, prefix=settings.API_V1_STR)
 
 # Phục vụ file script tải form nhúng trực tiếp
 @app.get("/static/form-loader.js", tags=["Public Web-to-Lead Forms (SCRUM-24)"])
 def serve_form_loader_js(request: Request):
     from app.routers.public_forms import get_form_loader_script
     return get_form_loader_script(request)
+
 
 
 @app.get("/", summary="Health Check")

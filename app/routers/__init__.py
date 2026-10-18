@@ -15,13 +15,14 @@ from app.routers.pipelines import router as pipelines_router
 from app.routers.win_loss import router as win_loss_router
 from app.routers.user_import import router as user_import_router
 from app.routers.customer_hierarchy import router as customer_hierarchy_router
-
 from app.routers.catalog_items import router as catalog_items_router
 from app.routers.saved_filters import router as saved_filters_router
 from app.routers.customer_import import router as customer_import_router
 from app.routers.customer_care import router as customer_care_router
 from app.routers.web_forms import router as web_forms_router
 from app.routers.public_forms import router as public_forms_router
+from app.routers.tasks import router as tasks_router
+from app.routers.notifications import router as notifications_router
 
 __all__ = [
     "auth_router",
@@ -47,4 +48,6 @@ __all__ = [
     "win_loss_router",
     "web_forms_router",
     "public_forms_router",
+    "tasks_router",
+    "notifications_router",
 ]

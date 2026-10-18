@@ -11,6 +11,7 @@ from app.models.customer import Customer
 from app.models.deal import Deal
 from app.models.activity import Activity, Note
 from app.models.quotation import Quotation
+from app.models.task import Task
 from app.core.scope import DataScope, get_user_data_scope
 from fastapi import HTTPException, status
 
@@ -23,6 +24,7 @@ def get_model_owner_column(model: Type[Any]) -> Optional[Any]:
     - Activity -> user_id
     - Quotation -> owner_id
     - Note -> author_id
+    - Task -> assignee_id
     """
     owner_map = {
         Customer: Customer.assigned_user_id,
@@ -30,7 +32,9 @@ def get_model_owner_column(model: Type[Any]) -> Optional[Any]:
         Activity: Activity.user_id,
         Quotation: Quotation.owner_id,
         Note: Note.author_id,
+        Task: Task.assignee_id,
     }
+
     if model in owner_map:
         return owner_map[model]
 

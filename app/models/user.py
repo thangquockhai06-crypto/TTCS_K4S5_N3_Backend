@@ -36,3 +36,8 @@ class User(Base):
     deals = relationship("Deal", back_populates="owner", foreign_keys="Deal.owner_id")
     roles = relationship("Role", secondary="user_roles", back_populates="users")
     teams = relationship("Team", secondary="user_teams", back_populates="users")
+    assigned_tasks = relationship("Task", foreign_keys="Task.assignee_id", back_populates="assignee")
+    created_tasks = relationship("Task", foreign_keys="Task.creator_id", back_populates="creator")
+    reminder_setting = relationship("ReminderSetting", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+

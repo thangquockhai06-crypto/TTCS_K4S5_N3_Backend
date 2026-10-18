@@ -348,6 +348,64 @@ CREATE TABLE IF NOT EXISTS competitors (
     INDEX idx_competitor_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 13. BẢNG CÔNG VIỆC (TASKS)
+CREATE TABLE IF NOT EXISTS tasks (
+    id VARCHAR(36) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATETIME DEFAULT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    assignee_id VARCHAR(36) DEFAULT NULL,
+    creator_id VARCHAR(36) DEFAULT NULL,
+    customer_id VARCHAR(36) DEFAULT NULL,
+    deal_id VARCHAR(36) DEFAULT NULL,
+    reminded_milestones JSON DEFAULT NULL,
+    completed_at DATETIME DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_task_assignee (assignee_id),
+    INDEX idx_task_due_date (due_date),
+    INDEX idx_task_status (status),
+    FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. BẢNG CẤU HÌNH MỐC NHẮC VIỆC (REMINDER_SETTINGS)
+CREATE TABLE IF NOT EXISTS reminder_settings (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) UNIQUE DEFAULT NULL,
+    remind_before_minutes JSON DEFAULT NULL,
+    notify_on_overdue BOOLEAN NOT NULL DEFAULT TRUE,
+    enable_in_app BOOLEAN NOT NULL DEFAULT TRUE,
+    enable_email BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. BẢNG THÔNG BÁO TRONG ỨNG DỤNG (NOTIFICATIONS)
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    task_id VARCHAR(36) DEFAULT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'task_reminder',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at DATETIME DEFAULT NULL,
+    milestone VARCHAR(50) DEFAULT NULL,
+    metadata_json JSON DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notification_user (user_id),
+    INDEX idx_notification_is_read (is_read),
+    INDEX idx_notification_created (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =====================================================================
 -- DỮ LIỆU BAN ĐẦU: Tài khoản Admin mặc định & Danh mục cơ sở
 -- Mật khẩu mặc định: Admin@2026 (bcrypt hash: $2b$12$N2aF4GgA3Wl5O80S47ZZeepB5G3WJ1dM43hCgXzL9s3fKkYtTz8S2)

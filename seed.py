@@ -16,12 +16,17 @@ if sys.platform == "win32":
 # Them thu muc hien tai vao sys.path de import duoc app
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from datetime import datetime, timedelta
 from app.database import engine, SessionLocal, Base, run_auto_migrations
 from app.models.user import User
 from app.models.customer import Customer
 from app.models.deal import Deal
 from app.models.win_loss import WinLossReason, Competitor
+from app.models.task import Task
+from app.models.reminder_setting import ReminderSetting
+from app.models.notification import Notification
 from app.core.security import hash_password
+
 
 def seed_database():
     print("[1/4] Kiem tra cau truc bang CSDL & Auto-migration...")
@@ -245,7 +250,7 @@ def seed_database():
         else:
             print("  -> Du lieu khach hang da co san.")
 
-        print("[4/4] Nap du lieu danh muc Ly do Thang/Thua & Doi thu canh tranh (SCRUM-89)...")
+        print("[4/5] Nap du lieu danh muc Ly do Thang/Thua & Doi thu canh tranh (SCRUM-89)...")
         if db.query(WinLossReason).count() == 0:
             reasons = [
                 WinLossReason(
@@ -368,8 +373,110 @@ def seed_database():
         else:
             print("  -> Danh muc doi thu canh tranh da co san.")
 
+        # [5/5] Seed Reminder Setting & Tasks cho Nhân viên & Trưởng nhóm
+        print("[5/5] Nap du lieu cau hinh nhac viec & cong viec mau...")
+        has_tasks = db.query(Task).first()
+        if not has_tasks:
+            now = datetime.utcnow()
+            sales1 = db.query(User).filter(User.id == "usr-sales-01").first()
+            leader = db.query(User).filter(User.id == "usr-lead-01").first()
+            sales1_id = sales1.id if sales1 else admin.id
+            leader_id = leader.id if leader else admin.id
+
+            # Cấu hình nhắc nhở mẫu
+            setting_sales1 = ReminderSetting(
+                id="remind-usr-sales1",
+                user_id=sales1_id,
+                remind_before_minutes=[15, 60, 1440],
+                notify_on_overdue=True,
+                enable_in_app=True,
+                enable_email=False,
+            )
+            default_setting = ReminderSetting(
+                id="remind-default-sys",
+                user_id=None,
+                remind_before_minutes=[15, 60, 1440],
+                notify_on_overdue=True,
+                enable_in_app=True,
+                enable_email=False,
+            )
+            db.add_all([setting_sales1, default_setting])
+
+            # Danh sách việc mẫu (có việc quá hạn, việc sắp đến hạn trong 30p, việc ngày mai)
+            sample_tasks = [
+                Task(
+                    id="task-01",
+                    title="Gọi điện chốt hợp đồng CRM Enterprise với FPT",
+                    description="Liên hệ anh Nam giám đốc CNTT để thống nhất điều khoản bảo hành.",
+                    due_date=now - timedelta(days=1, hours=3),  # Quá hạn 1 ngày 3 giờ
+                    status="overdue",
+                    priority="urgent",
+                    assignee_id=sales1_id,
+                    creator_id=leader_id,
+                    customer_id="cust-01",
+                    deal_id="deal-01",
+                    reminded_milestones=["overdue"],
+                ),
+                Task(
+                    id="task-02",
+                    title="Gửi bảng báo giá chi tiết hệ thống VoIP",
+                    description="Hoàn thiện báo giá và gửi qua email cho chị Linh VNG.",
+                    due_date=now + timedelta(minutes=45),  # Sắp đến hạn trong 45 phút (chạm mốc 60m)
+                    status="in_progress",
+                    priority="high",
+                    assignee_id=sales1_id,
+                    creator_id=leader_id,
+                    customer_id="cust-02",
+                    deal_id="deal-02",
+                    reminded_milestones=["1440m"],
+                ),
+                Task(
+                    id="task-03",
+                    title="Khảo sát hạ tầng công nghệ tại VietLogistics",
+                    description="Họp trực tiếp tại văn phòng khách hàng để đánh giá khả năng tích hợp.",
+                    due_date=now + timedelta(days=2),  # Hạn 2 ngày tới
+                    status="pending",
+                    priority="medium",
+                    assignee_id=sales1_id,
+                    creator_id=leader_id,
+                    customer_id="cust-03",
+                    deal_id="deal-03",
+                    reminded_milestones=[],
+                ),
+                Task(
+                    id="task-04",
+                    title="Nộp báo cáo doanh thu tuần cho Ban Giám Đốc",
+                    description="Tổng hợp số liệu doanh thu các nhóm kinh doanh Miền Bắc.",
+                    due_date=now + timedelta(hours=4),
+                    status="pending",
+                    priority="urgent",
+                    assignee_id=leader_id,
+                    creator_id=admin.id,
+                    reminded_milestones=[],
+                ),
+            ]
+            db.add_all(sample_tasks)
+
+            # Thông báo mẫu trong ứng dụng
+            sample_notif = Notification(
+                id="notif-sample-01",
+                user_id=sales1_id,
+                task_id="task-01",
+                title="⚠️ Công việc quá hạn: Gọi điện chốt hợp đồng CRM Enterprise với FPT",
+                message="Công việc 'Gọi điện chốt hợp đồng CRM Enterprise với FPT' đã quá hạn. Vui lòng xử lý ngay!",
+                type="task_overdue",
+                milestone="overdue",
+                is_read=False,
+            )
+            db.add(sample_notif)
+            db.commit()
+            print("  -> Da nap thanh cong cau hinh nhac viec & 4 cong viec mau (qua han, sap den han).")
+        else:
+            print("  -> Du lieu cong viec & nhac viec da co san.")
+
         print("\n=======================================================")
         print(" THANH CONG: Co so du lieu nexuscrm_db da san sang! ")
+
         print(" Tai khoan test:")
         print("   - Email: admin@nexuscrm.vn")
         print("   - Mat khau: Admin@2026")
