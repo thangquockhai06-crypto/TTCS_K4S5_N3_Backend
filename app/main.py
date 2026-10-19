@@ -95,7 +95,19 @@ app = FastAPI(
 )
 
 Path(settings.AVATAR_STORAGE_DIR).mkdir(parents=True, exist_ok=True)
+Path(settings.DEAL_ATTACHMENTS_DIR).mkdir(parents=True, exist_ok=True)
 app.mount(settings.MEDIA_URL, StaticFiles(directory=settings.AVATAR_STORAGE_DIR), name="media")
+
+# Tuyệt đối không public thư mục chứa tệp đính kèm qua Static URL (SCRUM-208)
+@app.middleware("http")
+async def deal_attachments_security_middleware(request: Request, call_next):
+    if request.url.path.startswith(f"{settings.MEDIA_URL}/deals") or request.url.path.startswith("/media/deals"):
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Không được phép truy cập tài liệu qua URL tĩnh. Vui lòng tải xuống qua API bảo mật."},
+        )
+    return await call_next(request)
+
 
 # Cấu hình CORS (Cho phép Frontend React/Vite tại localhost:5173 truy cập)
 app.add_middleware(
