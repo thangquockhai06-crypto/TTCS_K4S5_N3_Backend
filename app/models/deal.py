@@ -130,6 +130,13 @@ class Deal(Base):
         order_by="DealHistory.changed_at.desc()",
         lazy="selectin",
     )
+    attachments = relationship(
+        "DealAttachment",
+        back_populates="deal",
+        cascade="all, delete-orphan",
+        order_by="DealAttachment.created_at.desc()",
+        lazy="selectin",
+    )
 
     @property
     def is_closed(self) -> bool:
