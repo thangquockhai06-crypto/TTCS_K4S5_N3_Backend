@@ -10,6 +10,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.routers.opportunities import _to_deal_dto, _validate_outcome
+from app.schemas.activity import ActivityDTO
 from app.schemas.deal import (
     CloseDealDTO,
     CreateDealDTO,
@@ -26,6 +27,14 @@ from app.schemas.deal_filter import (
     SavedDealFilterResponse,
     SavedDealFilterUpdate,
 )
+from app.schemas.deal_member import (
+    DealActivityCreateDTO,
+    DealHistoryResponse,
+    DealMemberCreate,
+    DealMemberResponse,
+    DealTransferOwnerRequest,
+)
+from app.services.deal_member_service import DealMemberService
 from app.services.deal_service import DealService
 from app.services.saved_filter_service import SavedFilterService
 
@@ -301,3 +310,115 @@ def move_stage(
     if deal is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy cơ hội bán hàng.")
     return _to_deal_dto(deal)
+
+
+# ==============================================================================
+# 3. CHIA SẺ CƠ HỘI BÁN HÀNG & PHÂN QUYỀN CỘNG TÁC (DEAL COLLABORATION - SCRUM-207)
+# ==============================================================================
+
+@router.get("/{deal_id}/members", response_model=List[DealMemberResponse], summary="Lấy danh sách toàn bộ thành viên phối hợp theo dõi Deal (SCRUM-207)")
+def get_deal_members(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[DealMemberResponse]:
+    return DealMemberService(db).get_members(deal_id=deal_id, current_user=current_user)
+
+
+@router.post("/{deal_id}/members", response_model=DealMemberResponse, status_code=status.HTTP_201_CREATED, summary="Thêm một nhân viên vào danh sách cùng tham gia (SCRUM-207)")
+def add_deal_member(
+    deal_id: str,
+    dto: DealMemberCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealMemberResponse:
+    return DealMemberService(db).add_member(deal_id=deal_id, dto=dto, current_user=current_user)
+
+
+@router.delete("/{deal_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa thành viên khỏi cơ hội bán hàng (SCRUM-207)")
+def remove_deal_member(
+    deal_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    DealMemberService(db).remove_member(deal_id=deal_id, user_id=user_id, current_user=current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ==============================================================================
+# 4. CHUYỂN QUYỀN SỞ HỮU CƠ HỘI & GHI NHẬT KÝ BẮT BUỘC (TRANSFER OWNER - SCRUM-207)
+# ==============================================================================
+
+@router.post("/{deal_id}/transfer-owner", response_model=DealDTO, summary="Chuyển quyền sở hữu cơ hội & Ghi nhật ký bắt buộc (SCRUM-207)")
+def transfer_deal_owner(
+    deal_id: str,
+    dto: DealTransferOwnerRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealDTO:
+    deal = DealMemberService(db).transfer_owner(deal_id=deal_id, request=dto, current_user=current_user)
+    return _to_deal_dto(deal)
+
+
+# ==============================================================================
+# 5. PHÂN QUYỀN GHI HOẠT ĐỘNG LIÊN QUAN ĐẾN CƠ HỘI (ACTIVITIES - SCRUM-207)
+# ==============================================================================
+
+@router.post("/{deal_id}/activities", response_model=ActivityDTO, status_code=status.HTTP_201_CREATED, summary="Ghi nhận hoạt động tương tác cho Deal (SCRUM-207)")
+def create_deal_activity(
+    deal_id: str,
+    dto: DealActivityCreateDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ActivityDTO:
+    activity = DealMemberService(db).create_deal_activity(deal_id=deal_id, dto=dto, current_user=current_user)
+    return ActivityDTO(
+        id=activity.id,
+        customerId=activity.customer_id,
+        userId=activity.user_id,
+        type=activity.type,
+        title=activity.title,
+        description=activity.description,
+        createdAt=activity.created_at.isoformat() if activity.created_at else None,
+    )
+
+
+@router.get("/{deal_id}/activities", response_model=List[ActivityDTO], summary="Lấy danh sách hoạt động tương tác của Deal (SCRUM-207)")
+def get_deal_activities(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[ActivityDTO]:
+    activities = DealMemberService(db).get_deal_activities(deal_id=deal_id, current_user=current_user)
+    return [
+        ActivityDTO(
+            id=a.id,
+            customerId=a.customer_id,
+            userId=a.user_id,
+            type=a.type,
+            title=a.title,
+            description=a.description,
+            createdAt=a.created_at.isoformat() if a.created_at else None,
+        )
+        for a in activities
+    ]
+
+
+@router.get("/{deal_id}/audit-history", response_model=List[DealHistoryResponse], summary="Lịch sử thay đổi cơ hội (Deal History / Audit Log - SCRUM-207)")
+def get_deal_audit_history(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[DealHistoryResponse]:
+    return DealMemberService(db).get_deal_history(deal_id=deal_id, current_user=current_user)
+
+
+@router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa cơ hội bán hàng (Chặn thành viên phối hợp)")
+def delete_deal(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    DealMemberService(db).delete_deal(deal_id=deal_id, current_user=current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
