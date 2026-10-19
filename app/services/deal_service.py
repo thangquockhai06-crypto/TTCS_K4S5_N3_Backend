@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select, update, false
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -13,6 +13,7 @@ from app.core.scope import DataScope, get_user_data_scope
 from app.models.audit_log import AuditLog
 from app.models.customer import Customer
 from app.models.deal import Deal, deal_products
+from app.models.deal_member import DealMember
 from app.models.deal_outcome_history import DealOutcomeHistory
 from app.models.saved_deal_filter import SavedDealFilter
 from app.models.team import Team
@@ -202,20 +203,38 @@ class DealService:
         req_owner_id = params.owner_id or params.assigned_to
 
         if scope == DataScope.OWN:
-            # SALES_REP: Chỉ được phép tìm kiếm và xem danh sách cơ hội do chính mình phụ trách.
-            # Nếu truyền owner_id/assigned_to của người khác, backend bắt buộc ghi đè về user.id.
-            query = query.filter(Deal.owner_id == user.id)
+            # SALES_REP: Được phép tìm kiếm và xem danh sách cơ hội do chính mình phụ trách hoặc tham gia phối hợp
+            if req_owner_id:
+                query = query.filter(
+                    Deal.owner_id == req_owner_id,
+                    or_(
+                        Deal.owner_id == user.id,
+                        Deal.members.any(DealMember.user_id == user.id),
+                    ),
+                )
+            else:
+                query = query.filter(
+                    or_(
+                        Deal.owner_id == user.id,
+                        Deal.members.any(DealMember.user_id == user.id),
+                    )
+                )
         elif scope == DataScope.TEAM:
-            # TEAM_LEAD: Xem và lọc được toàn bộ cơ hội thuộc phạm vi các nhân viên trong nhóm mình quản lý.
+            # TEAM_LEAD: Xem và lọc được toàn bộ cơ hội thuộc phạm vi các nhân viên trong nhóm mình quản lý
             team_member_ids = _get_team_member_ids(db, user)
             if req_owner_id:
                 if req_owner_id in team_member_ids:
                     query = query.filter(Deal.owner_id == req_owner_id)
                 else:
                     # Yêu cầu xem user ngoài nhóm -> fail closed (không có quyền xem)
-                    query = query.filter(Deal.owner_id.in_([]))
+                    query = query.filter(false())
             else:
-                query = query.filter(Deal.owner_id.in_(team_member_ids))
+                query = query.filter(
+                    or_(
+                        Deal.owner_id.in_(team_member_ids),
+                        Deal.members.any(DealMember.user_id.in_(team_member_ids)),
+                    )
+                )
         else:
             # DIRECTOR / ADMIN: Toàn quyền lọc và xem toàn bộ cơ hội trên toàn hệ thống
             if req_owner_id:
@@ -426,7 +445,10 @@ class DealService:
             deal.expected_close_date = values["expected_close_date"]
         if "owner_id" in values and values["owner_id"] is not None:
             if get_user_data_scope(user) != DataScope.ALL:
-                raise HTTPException(status_code=403, detail="Only users with global deal-management scope can change ownership.")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Thành viên phối hợp hoặc người dùng không có quyền quản lý không được phép thay đổi người sở hữu cơ hội.",
+                )
             deal.owner_id = values["owner_id"]
         return DealRepository.update(db, deal)
 
