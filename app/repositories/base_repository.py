@@ -4,11 +4,12 @@ Tuân thủ Clean Layered Architecture, PEP 8 và 100% Type Hints.
 """
 from typing import Type, Any, Optional
 from sqlalchemy.orm import Session, Query
-from sqlalchemy import select, false
+from sqlalchemy import select, false, or_
 
 from app.models.user import User
 from app.models.customer import Customer
 from app.models.deal import Deal
+from app.models.deal_member import DealMember
 from app.models.activity import Activity, Note
 from app.models.quotation import Quotation
 from app.models.task import Task
@@ -57,7 +58,7 @@ def apply_data_scope_filter(
 
     Nguyên tắc an toàn (Fail-Safe / Zero Trust):
     - Không có user hợp lệ -> Trả về truy vấn rỗng (false), không bao giờ mở toang dữ liệu.
-    - OWN: record.owner == user.id
+    - OWN: record.owner == user.id (Đối với Deal: mở rộng bao gồm DealMember).
     - TEAM: record.owner thuộc danh sách thành viên cùng team (user.team_id).
             Nếu user chưa được gán team -> trả về rỗng, không fail open.
     - ALL: Không giới hạn quyền sở hữu dữ liệu.
@@ -76,11 +77,18 @@ def apply_data_scope_filter(
         # Nếu model không có cột sở hữu -> bảo toàn query
         return query
 
-    # 2. Phạm vi OWN: Chỉ bản ghi do chính mình tạo / được phân công
+    # 2. Phạm vi OWN: Chỉ bản ghi do chính mình tạo / được phân công (hoặc tham gia phối hợp nếu là Deal)
     if scope == DataScope.OWN:
+        if model == Deal:
+            return query.filter(
+                or_(
+                    Deal.owner_id == user.id,
+                    Deal.members.any(DealMember.user_id == user.id),
+                )
+            )
         return query.filter(owner_col == user.id)
 
-    # 3. Phạm vi TEAM: Bản ghi thuộc thành viên trong cùng nhóm
+    # 3. Phạm vi TEAM: Bản ghi thuộc thành viên trong cùng nhóm (hoặc thành viên nhóm tham gia phối hợp nếu là Deal)
     if scope == DataScope.TEAM:
         team_id = getattr(user, "team_id", None)
         if not team_id or not str(team_id).strip():
@@ -93,6 +101,13 @@ def apply_data_scope_filter(
             .where(User.team_id == team_id)
             .scalar_subquery()
         )
+        if model == Deal:
+            return query.filter(
+                or_(
+                    Deal.owner_id.in_(team_users_subquery),
+                    Deal.members.any(DealMember.user_id.in_(team_users_subquery)),
+                )
+            )
         return query.filter(owner_col.in_(team_users_subquery))
 
     # Mặc định an toàn
