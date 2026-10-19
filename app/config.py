@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     AVATAR_THUMBNAIL_SIZE: int = 128
     MAX_SAVED_CUSTOMER_FILTERS: int = 20
 
+    # Deal Attachments storage (SCRUM-208)
+    DEAL_ATTACHMENTS_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "deals")
+    MAX_DEAL_ATTACHMENT_BYTES: int = 20 * 1024 * 1024  # 20 MB
+
     # Brute-force protection (SCRUM-32 / SCRUM-101)
     MAX_FAILED_ATTEMPTS: int = 5
     LOCKOUT_DURATION_MINUTES: int = 15
