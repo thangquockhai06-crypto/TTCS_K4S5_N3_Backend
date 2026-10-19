@@ -1,8 +1,10 @@
+import urllib.parse
 from datetime import date
 from decimal import Decimal
 from typing import Any, List, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.export import export_to_excel
@@ -20,6 +22,10 @@ from app.schemas.deal import (
     ReopenDealDTO,
     UpdateDealDTO,
 )
+from app.schemas.deal_attachment import (
+    DealAttachmentListResponse,
+    DealAttachmentResponse,
+)
 from app.schemas.deal_filter import (
     DealFilterPaginatedResponse,
     DealFilterParams,
@@ -34,6 +40,7 @@ from app.schemas.deal_member import (
     DealMemberResponse,
     DealTransferOwnerRequest,
 )
+from app.services.deal_attachment_service import DealAttachmentService
 from app.services.deal_member_service import DealMemberService
 from app.services.deal_service import DealService
 from app.services.saved_filter_service import SavedFilterService
@@ -422,3 +429,82 @@ def delete_deal(
 ) -> Response:
     DealMemberService(db).delete_deal(deal_id=deal_id, current_user=current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ==============================================================================
+# 4. ĐÍNH KÈM VÀ QUẢN LÝ TÀI LIỆU TRONG CƠ HỘI (DEAL ATTACHMENTS - SCRUM-208)
+# ==============================================================================
+
+@router.post(
+    "/{deal_id}/attachments",
+    response_model=List[DealAttachmentResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Tải lên một hoặc nhiều tài liệu vào cơ hội (SCRUM-208)",
+)
+async def upload_deal_attachments(
+    deal_id: str,
+    files: List[UploadFile] = File(..., description="Danh sách tệp tài liệu đính kèm (tối đa 20MB/tệp)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[DealAttachmentResponse]:
+    return await DealAttachmentService(db).upload_attachments(
+        deal_id=deal_id, files=files, current_user=current_user
+    )
+
+
+@router.get(
+    "/{deal_id}/attachments",
+    response_model=DealAttachmentListResponse,
+    summary="Lấy danh sách tài liệu đính kèm của cơ hội (SCRUM-208)",
+)
+def get_deal_attachments(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealAttachmentListResponse:
+    return DealAttachmentService(db).get_attachments(
+        deal_id=deal_id, current_user=current_user
+    )
+
+
+@router.get(
+    "/{deal_id}/attachments/{attachment_id}/download",
+    summary="Tải xuống tài liệu đính kèm (Bảo mật phân quyền - SCRUM-208)",
+)
+def download_deal_attachment(
+    deal_id: str,
+    attachment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    abs_path, filename, media_type = DealAttachmentService(db).download_attachment(
+        deal_id=deal_id, attachment_id=attachment_id, current_user=current_user
+    )
+    quoted_filename = urllib.parse.quote(filename)
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{quoted_filename}\"; filename*=UTF-8''{quoted_filename}"
+    }
+    return FileResponse(
+        path=abs_path,
+        filename=filename,
+        media_type=media_type or "application/octet-stream",
+        headers=headers,
+    )
+
+
+@router.delete(
+    "/{deal_id}/attachments/{attachment_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Xóa tài liệu đính kèm (SCRUM-208)",
+)
+def delete_deal_attachment(
+    deal_id: str,
+    attachment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    DealAttachmentService(db).delete_attachment(
+        deal_id=deal_id, attachment_id=attachment_id, current_user=current_user
+    )
+    return {"message": "Đã xóa tài liệu đính kèm thành công."}
+
