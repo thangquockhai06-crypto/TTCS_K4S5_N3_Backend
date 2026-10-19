@@ -543,3 +543,22 @@ CREATE TABLE IF NOT EXISTS leads (
     INDEX idx_leads_form_id (form_id),
     CONSTRAINT fk_leads_form_id FOREIGN KEY (form_id) REFERENCES web_forms(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. BẢNG TÀI LIỆU ĐÍNH KÈM CƠ HỘI BÁN HÀNG (DEAL_ATTACHMENTS - SCRUM-208 / EP-05)
+CREATE TABLE IF NOT EXISTS deal_attachments (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) NOT NULL UNIQUE,
+    file_path VARCHAR(500) NOT NULL,
+    content_type VARCHAR(150) NULL,
+    file_size BIGINT NOT NULL,
+    uploaded_by VARCHAR(36) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_attachment_deal_id (deal_id),
+    INDEX idx_attachment_uploaded_by (uploaded_by),
+    INDEX idx_attachment_created_at (created_at),
+    CONSTRAINT fk_deal_attachment_deal FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    CONSTRAINT fk_deal_attachment_user FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
