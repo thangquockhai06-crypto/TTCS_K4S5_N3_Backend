@@ -146,9 +146,39 @@ CREATE TABLE IF NOT EXISTS deals (
             AND closed_at IS NOT NULL AND closed_by IS NOT NULL)
     ),
     INDEX idx_deal_status (status),
+    INDEX idx_deal_stage (stage),
+    INDEX idx_deal_value (value),
+    INDEX idx_deal_expected_close (expected_close_date),
+    INDEX idx_deal_owner (owner_id),
+    INDEX idx_deal_customer (customer_id),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (reopened_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.1 BẢNG LIÊN KẾT DEAL - PRODUCT (SCRUM-206)
+CREATE TABLE IF NOT EXISTS deal_products (
+    deal_id VARCHAR(36) NOT NULL,
+    product_id VARCHAR(36) NOT NULL,
+    PRIMARY KEY (deal_id, product_id),
+    INDEX idx_deal_products_deal (deal_id),
+    INDEX idx_deal_products_product (product_id),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.2 BẢNG BỘ LỌC CÁ NHÂN CHO DEALS (SAVED_DEAL_FILTERS - SCRUM-206)
+CREATE TABLE IF NOT EXISTS saved_deal_filters (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    filter_criteria JSON NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_saved_deal_filter_user_name (user_id, name),
+    INDEX idx_saved_deal_filter_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS deal_outcome_history (

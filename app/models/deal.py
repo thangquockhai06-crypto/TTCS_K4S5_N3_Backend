@@ -13,9 +13,18 @@ from sqlalchemy import (
     String,
     event,
     inspect,
+    Table,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from app.database import Base
+
+
+deal_products = Table(
+    "deal_products",
+    Base.metadata,
+    Column("deal_id", String(36), ForeignKey("deals.id", ondelete="CASCADE"), primary_key=True),
+    Column("product_id", String(36), ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class Deal(Base):
@@ -23,16 +32,21 @@ class Deal(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(255), nullable=False)
-    value = Column(Numeric(15, 2), default=0.00, nullable=False)
+    value = Column(Numeric(15, 2), default=0.00, nullable=False, index=True)
     stage = Column(
         Enum("lead", "contact", "proposal", "negotiation", "won", "lost", name="deal_stage_enum"),
         default="lead",
         nullable=False,
+        index=True,
     )
     probability = Column(Integer, default=20, nullable=False)
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
-    owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    expected_close_date = Column(Date, nullable=True)
+    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    expected_close_date = Column(Date, nullable=True, index=True)
+
+    # Synonyms for flexible queries (SCRUM-206)
+    amount = synonym("value")
+    assigned_to = synonym("owner_id")
 
     # Outcome data is separate from the pipeline stage so reopening a deal is explicit.
     status = Column(String(10), default="OPEN", nullable=False, index=True)
@@ -102,6 +116,7 @@ class Deal(Base):
         cascade="all, delete-orphan",
         order_by="DealOutcomeHistory.event_at.asc()",
     )
+    products = relationship("Product", secondary=deal_products, backref="deals")
 
     @property
     def is_closed(self) -> bool:
