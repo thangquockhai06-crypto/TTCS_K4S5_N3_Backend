@@ -74,8 +74,25 @@ class ActivityService:
         Tạo mới hoạt động.
         Xác thực quyền xem khách hàng trước và luôn gán user_id = user.id.
         """
-        # Xác thực quyền truy cập khách hàng trước
-        CustomerRepository.get_scoped_by_id(db, dto.customerId, user)
+        # Xác thực quyền truy cập khách hàng trước (hoặc là collaborator trên deal của khách hàng)
+        try:
+            CustomerRepository.get_scoped_by_id(db, dto.customerId, user)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_403_FORBIDDEN:
+                from app.models.deal import Deal
+                from app.models.deal_member import DealMember
+                has_deal_access = (
+                    db.query(Deal)
+                    .filter(
+                        Deal.customer_id == dto.customerId,
+                        Deal.members.any(DealMember.user_id == user.id),
+                    )
+                    .first()
+                )
+                if not has_deal_access:
+                    raise exc
+            else:
+                raise exc
 
         new_activity = Activity(
             id=str(uuid.uuid4()),
