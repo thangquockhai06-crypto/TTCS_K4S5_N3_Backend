@@ -117,6 +117,19 @@ class Deal(Base):
         order_by="DealOutcomeHistory.event_at.asc()",
     )
     products = relationship("Product", secondary=deal_products, backref="deals")
+    members = relationship(
+        "DealMember",
+        back_populates="deal",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    deal_histories = relationship(
+        "DealHistory",
+        back_populates="deal",
+        cascade="all, delete-orphan",
+        order_by="DealHistory.changed_at.desc()",
+        lazy="selectin",
+    )
 
     @property
     def is_closed(self) -> bool:
