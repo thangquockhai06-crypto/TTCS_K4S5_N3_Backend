@@ -11,6 +11,8 @@ from app.models.role import Role, user_roles
 from app.models.team import Team, user_teams
 from app.models.saved_filter import SavedFilter
 from app.models.saved_deal_filter import SavedDealFilter
+from app.models.deal_member import DealMember
+from app.models.deal_history import DealHistory
 from app.models.category import Category
 from app.models.custom_field import CustomField
 from app.models.pipeline_stage import PipelineStage
@@ -34,6 +36,8 @@ __all__ = [
     "Contact",
     "SavedFilter",
     "SavedDealFilter",
+    "DealMember",
+    "DealHistory",
     "QuotationLine",
     "Quotation",
     "Role",
