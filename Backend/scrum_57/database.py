@@ -713,3 +713,7 @@ def event_to_json(event):
 
 
 db = CRMDatabase()
+
+    def sort_timeline_events_chronological(self, events: list) -> list:
+        """Sắp xếp các sự kiện tương tác theo thứ tự thời gian giảm dần"""
+        return sorted(events, key=lambda x: x.get('timestamp', ''), reverse=True)
