@@ -125,3 +125,6 @@ ORDER_DESC = "desc"   # Mới nhất trước (mặc định - phù hợp khi ti
 ORDER_ASC = "asc"     # Cũ nhất trước (đọc lại câu chuyện từ đầu)
 
 DEFAULT_PORT = 5057
+
+# Channel types
+INTERACTION_CHANNELS = ['CALL', 'EMAIL', 'MEETING', 'ZALO', 'PORTAL']
