@@ -298,3 +298,9 @@ def paginate_timeline_events(events: list, page: int = 1, page_size: int = 15) -
         'page': page,
         'total_pages': (total + page_size - 1) // page_size if total > 0 else 1
     }
+
+
+def filter_interactions_by_owner(events: list, owner_id: str) -> list:
+    """Lọc tương tác theo nhân viên kinh doanh phụ trách"""
+    if not owner_id: return events
+    return [e for e in events if e.get('owner_id') == owner_id]
