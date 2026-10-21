@@ -890,11 +890,16 @@ class DealService:
 
         parsed_end = None
         if end_date and end_date.strip():
+            raw_end = end_date.strip()
             try:
-                parsed_end = datetime.fromisoformat(end_date.strip())
+                dt_end = datetime.fromisoformat(raw_end)
+                if len(raw_end) <= 10 or (dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0 and dt_end.microsecond == 0):
+                    parsed_end = datetime.combine(dt_end.date(), datetime.max.time())
+                else:
+                    parsed_end = dt_end
             except ValueError:
                 try:
-                    parsed_end = datetime.combine(date.fromisoformat(end_date.strip()), datetime.max.time())
+                    parsed_end = datetime.combine(date.fromisoformat(raw_end), datetime.max.time())
                 except ValueError:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
@@ -1110,10 +1115,15 @@ class DealService:
 
         parsed_end = None
         if end_date and end_date.strip():
+            raw_end = end_date.strip()
             try:
-                parsed_end = datetime.fromisoformat(end_date.strip())
+                dt_end = datetime.fromisoformat(raw_end)
+                if len(raw_end) <= 10 or (dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0 and dt_end.microsecond == 0):
+                    parsed_end = datetime.combine(dt_end.date(), datetime.max.time())
+                else:
+                    parsed_end = dt_end
             except ValueError:
-                parsed_end = datetime.combine(date.fromisoformat(end_date.strip()), datetime.max.time())
+                parsed_end = datetime.combine(date.fromisoformat(raw_end), datetime.max.time())
 
         histories, _ = DealRepository.get_deal_histories(
             db=db,

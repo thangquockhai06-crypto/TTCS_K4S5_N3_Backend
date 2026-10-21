@@ -15,8 +15,9 @@ Các kịch bản kiểm thử:
 10. Tính bất biến: Không hỗ trợ PUT/DELETE trên endpoint lịch sử (405 Method Not Allowed).
 11. Trả về 404 Not Found khi deal_id không tồn tại.
 """
+import uuid
+from datetime import date, datetime, timezone
 import pytest
-from datetime import date
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -539,3 +540,107 @@ def test_history_immutability_and_not_found_handling(
     not_found_res = client.get("/api/v1/deals/non-existent-deal-uuid-12345/history", headers=admin_auth)
     assert not_found_res.status_code == 404
     assert "Không tìm thấy" in not_found_res.json()["detail"]
+
+
+# ==============================================================================
+# 8. KIỂM THỬ BỘ LỌC THEO NGÀY (START_DATE, END_DATE) VÀ NGƯỜI THỰC HIỆN (CHANGED_BY)
+# ==============================================================================
+
+def test_get_deal_history_filtering_by_date_and_operator(
+    client: TestClient,
+    db_session: Session,
+    users_fixture: dict,
+    test_customer: Customer,
+):
+    """
+    Kiểm thử chức năng lọc lịch sử theo khoảng thời gian và theo ID người thực hiện (SCRUM-91).
+    Xác minh các trường thân thiện: old_display_value, new_display_value, change_description.
+    """
+    director_auth = users_fixture["director_auth"]
+    sales1_auth = users_fixture["sales1_auth"]
+    sales1 = users_fixture["sales1"]
+    director = users_fixture["director"]
+
+    # 1. Tạo deal
+    deal = Deal(
+        id=str(uuid.uuid4()),
+        title="Dự án ERP Năng Lượng Xanh",
+        value=500000000.0,
+        stage="lead",
+        probability=20,
+        customer_id=test_customer.id,
+        owner_id=sales1.id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db_session.add(deal)
+    db_session.commit()
+
+    # 2. Tạo thay đổi bởi sales1
+    client.put(
+        f"/api/v1/deals/{deal.id}",
+        json={"stage": "contact", "amount": 600000000.0},
+        headers=sales1_auth,
+    )
+
+    # 3. Tạo thay đổi bởi director
+    client.put(
+        f"/api/v1/deals/{deal.id}",
+        json={"stage": "proposal"},
+        headers=director_auth,
+    )
+
+    # 4. Lọc theo changed_by = sales1.id
+    res_sales = client.get(
+        f"/api/v1/deals/{deal.id}/history",
+        params={"changed_by": sales1.id},
+        headers=director_auth,
+    )
+    assert res_sales.status_code == 200
+    data_sales = res_sales.json()
+    assert data_sales["total_changes"] == 2
+    for item in data_sales["items"]:
+        assert item["changed_by_id"] == sales1.id
+
+    # 5. Lọc theo changed_by = director.id
+    res_dir = client.get(
+        f"/api/v1/deals/{deal.id}/history",
+        params={"changed_by": director.id},
+        headers=director_auth,
+    )
+    assert res_dir.status_code == 200
+    data_dir = res_dir.json()
+    assert data_dir["total_changes"] == 1
+    assert data_dir["items"][0]["changed_by_id"] == director.id
+    assert data_dir["items"][0]["field_name"] == "stage"
+    assert "proposal" in data_dir["items"][0]["new_value"]
+    assert data_dir["items"][0]["change_description"] is not None
+
+    # 6. Lọc khoảng ngày hôm nay
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    res_today = client.get(
+        f"/api/v1/deals/{deal.id}/history",
+        params={"start_date": today_str, "end_date": today_str},
+        headers=director_auth,
+    )
+    assert res_today.status_code == 200
+    assert res_today.json()["total_changes"] == 3
+
+    # 7. Lọc ngày tương lai => 0 bản ghi
+    res_future = client.get(
+        f"/api/v1/deals/{deal.id}/history",
+        params={"start_date": "2099-01-01"},
+        headers=director_auth,
+    )
+    assert res_future.status_code == 200
+    assert res_future.json()["total_changes"] == 0
+
+    # 8. Sai định dạng start_date => 400 Bad Request
+    res_invalid = client.get(
+        f"/api/v1/deals/{deal.id}/history",
+        params={"start_date": "invalid-date-format"},
+        headers=director_auth,
+    )
+    assert res_invalid.status_code == 400
+    assert "Định dạng start_date không hợp lệ" in res_invalid.json()["detail"]
+
