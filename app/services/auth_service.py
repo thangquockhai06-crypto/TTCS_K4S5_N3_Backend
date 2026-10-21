@@ -123,6 +123,7 @@ class AuthService:
             title=user.title or "Quản trị viên",
             department=user.department or "Vận hành",
             avatarUrl=user.avatar_url or f"https://api.dicebear.com/7.x/initials/svg?seed={user.full_name}",
+            avatarThumbnailUrl=user.avatar_thumbnail_url,
             workspaceName=user.workspace_name or "NexusCRM Enterprise VN",
         )
 
@@ -181,6 +182,7 @@ class AuthService:
             title=saved_user.title,
             department=saved_user.department,
             avatarUrl=saved_user.avatar_url,
+            avatarThumbnailUrl=saved_user.avatar_thumbnail_url,
             workspaceName=saved_user.workspace_name,
         )
 

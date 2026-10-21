@@ -67,7 +67,12 @@ class UserRepository:
 
     @staticmethod
     def get_by_email(db: Session, email: str) -> Optional[User]:
-        return db.query(User).filter(User.email == email.strip().lower()).first()
+        clean_email = email.strip().lower()
+        user = db.query(User).filter(User.email == clean_email).first()
+        if not user and (clean_email.endswith("@nexuscrm.com") or clean_email.endswith("@nexuscrm.vn")):
+            alt_email = clean_email.replace("@nexuscrm.com", "@nexuscrm.vn") if clean_email.endswith("@nexuscrm.com") else clean_email.replace("@nexuscrm.vn", "@nexuscrm.com")
+            user = db.query(User).filter(User.email == alt_email).first()
+        return user
 
     @staticmethod
     def create(db: Session, user: User) -> User:

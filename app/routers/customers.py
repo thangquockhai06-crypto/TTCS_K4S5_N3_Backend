@@ -11,6 +11,7 @@ from app.models.deal import Deal
 from app.models.support_ticket import SupportTicket
 from app.schemas.customer import (
     CustomerDTO,
+    AssignedUserDTO,
     CreateCustomerDTO,
     UpdateCustomerDTO,
     UpdateCustomerStatusDTO,

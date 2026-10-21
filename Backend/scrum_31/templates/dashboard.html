@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Làm Việc Nhân Viên Kinh Doanh{% endblock %}
+
+{% block content %}
+<!-- HERO BANNER TICKET SCRUM-31 -->
+<div class="card" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #ffffff; border: none; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <div style="max-width: 800px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span class="ticket-tag" style="background: rgba(255,255,255,0.2); color: #ffffff; border-color: rgba(255,255,255,0.3);">
+                    ⚡ {{ PARENT_EPIC }} / ☑ {{ TICKET_ID }}
+                </span>
+                <span class="badge" style="background: #10b981; color: #ffffff; border: none;">
+                    🎯 SLA: Gửi Báo Giá Trong Buổi Chiều Cùng Ngày
+                </span>
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 800; line-height: 1.3; margin-bottom: 8px;">
+                "Là Nhân viên kinh doanh, tôi muốn soạn báo giá từ một cơ hội, để gửi báo giá trong buổi chiều cùng ngày khách hỏi."
+            </h1>
+            <p style="color: #c7d2fe; font-size: 0.92rem; line-height: 1.5;">
+                Hệ thống tự động kế thừa toàn bộ dòng sản phẩm từ Cơ hội sang Báo giá mới, hỗ trợ chiết khấu theo % hoặc số tiền với cơ chế tính lại thành tiền tức thì, hiển thị cảnh báo đỏ khi chạm ngưỡng duyệt chiết khấu 10%, và cho phép lưu nháp để sửa tiếp linh hoạt.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('simulator') }}" class="btn btn-warning btn-lg" style="font-weight: 700; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+                ⚡ Chạy Simulator 5 Tiêu Chí
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #e0e7ff; color: #4338ca;">💼</div>
+        <div>
+            <div class="kpi-value">{{ kpis.opportunities_count }}</div>
+            <div class="kpi-label">Cơ hội đang mở</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #f1f5f9; color: #475569;">📝</div>
+        <div>
+            <div class="kpi-value">{{ kpis.draft_quotes }}</div>
+            <div class="kpi-label">Bản nháp lưu dở (AC5)</div>
+        </div>
+    </div>
+    <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+        <div class="kpi-icon" style="background: #fef3c7; color: #b45309;">⚠️</div>
+        <div>
+            <div class="kpi-value">{{ kpis.pending_approval }}</div>
+            <div class="kpi-label">Chờ duyệt chiết khấu (AC3)</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">📤</div>
+        <div>
+            <div class="kpi-value">{{ kpis.sent_quotes }}</div>
+            <div class="kpi-label">Báo giá đã gửi khách</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #d1fae5; color: #047857;">💰</div>
+        <div>
+            <div class="kpi-value" style="font-size: 1.25rem;">{{ kpis.total_pipeline_value_formatted }}</div>
+            <div class="kpi-label">Giá trị báo giá đã phát hành</div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 1: CƠ HỘI KHÁCH VỪA HỎI - CẦN SOẠN BÁO GIÁ GỬI BUỔI CHIỀU (AC1) -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">
+                <span>🔥</span> Cơ Hội Khách Vừa Hỏi - Cần Soạn Báo Giá Gửi Trong Buổi Chiều
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                Bấm nút "⚡ Soạn Báo Giá 1-Click" để tự động kế thừa toàn bộ dòng sản phẩm từ Cơ hội (AC1)
+            </div>
+        </div>
+        <a href="{{ url_for('opportunities_list') }}" class="btn btn-secondary btn-sm">
+            Xem Tất Cả Cơ Hội &rarr;
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã Cơ Hội</th>
+                    <th>Tên Cơ Hội & Khách Hàng</th>
+                    <th>Thời Điểm Khách Hỏi</th>
+                    <th>Dòng Sản Phẩm Kế Thừa (AC1)</th>
+                    <th>Người Phụ Trách</th>
+                    <th style="text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opp in opportunities %}
+                <tr>
+                    <td>
+                        <strong style="color: var(--primary);">{{ opp.id }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ opp.title }}</div>
+                        <div style="font-size: 0.82rem; color: #64748b;">
+                            🏢 {{ opp.account_name }} &bull; 👤 {{ opp.contact_name }} ({{ opp.contact_phone }})
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-amber" style="font-size: 0.78rem;">
+                            🕒 {{ opp.inquiry_time }}
+                        </span>
+                        <div style="font-size: 0.75rem; color: #059669; font-weight: 600; margin-top: 2px;">
+                            ⚡ Hạn gửi: Chiều nay
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">
+                            📦 {{ opp.line_items|length }} sản phẩm đã gắn
+                        </span>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+                            {{ opp.line_items[0].product_name[:35] }}...
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.85rem; font-weight: 600;">{{ opp.sales_rep_name }}</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('quote_create', opp_id=opp.id) }}" class="btn btn-primary btn-sm" style="font-weight: 700;">
+                            ⚡ Soạn Báo Giá 1-Click
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SECTION 2: BẢN NHÁP BÁO GIÁ ĐANG SOẠN DỞ (AC5: LƯU NHÁP VÀ SỬA TIẾP ĐƯỢC) -->
+<div class="card" style="border-top: 3px solid #64748b;">
+    <div class="card-header">
+        <div>
+            <div class="card-title">
+                <span>📝</span> Bản Nháp Báo Giá Đang Soạn Dở (Tiêu chí 5: Lưu nháp và sửa tiếp được)
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                Nhân viên có thể lưu dở khi bận việc và mở lại để cập nhật chiết khấu, sản phẩm, điều khoản bất kỳ lúc nào.
+            </div>
+        </div>
+        <span class="badge badge-slate" style="font-size: 0.85rem;">
+            {{ draft_quotes|length }} bản nháp
+        </span>
+    </div>
+
+    {% if draft_quotes %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Số Báo Giá</th>
+                    <th>Tiêu Đề & Khách Hàng</th>
+                    <th>Sản Phẩm</th>
+                    <th>Chiết Khấu Tổng</th>
+                    <th>Tổng Tiền</th>
+                    <th>Phiên Bản Nháp</th>
+                    <th>Lần Lưu Cuối</th>
+                    <th style="text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in draft_quotes %}
+                <tr>
+                    <td>
+                        <strong>{{ q.quote_number }}</strong>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ q.title }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">🏢 {{ q.account_name }}</div>
+                    </td>
+                    <td>{{ q['items']|length }} mục</td>
+                    <td>
+                        <span class="badge {% if q.overall_discount_percent >= 10 %}badge-red{% else %}badge-green{% endif %}">
+                            {{ q.overall_discount_percent }}%
+                        </span>
+                    </td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ q.grand_total|vi_currency }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge badge-slate">v{{ q.draft_version }}</span>
+                    </td>
+                    <td style="font-size: 0.8rem; color: #64748b;">
+                        {{ q.last_saved_at }}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('quote_edit', quote_id=q.id) }}" class="btn btn-secondary btn-sm" style="font-weight: 700; color: var(--primary);">
+                            ✏️ Sửa Tiếp Bản Nháp
+                        </a>
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-secondary btn-sm">
+                            👁️ Xem
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 30px; color: #64748b;">
+        Hiện không có bản nháp nào đang lưu dở. Bấm "Soạn Báo Giá 1-Click" ở trên để tạo báo giá mới!
+    </div>
+    {% endif %}
+</div>
+
+<!-- SECTION 3: BÁO GIÁ CẦN PHÊ DUYỆT CHIẾT KHẤU (AC3) -->
+{% if pending_quotes %}
+<div class="card" style="border-top: 3px solid #f59e0b; background: #fffdf5;">
+    <div class="card-header">
+        <div>
+            <div class="card-title" style="color: #b45309;">
+                <span>⚠️</span> Báo Giá Cần Phê Duyệt Chiết Khấu (Tiêu chí 3: Chạm ngưỡng duyệt >= 10%)
+            </div>
+            <div style="font-size: 0.82rem; color: #78350f; margin-top: 2px;">
+                Mức chiết khấu tổng vượt quyền hạn của NVKD. Cần Trưởng nhóm (usr-03) hoặc Giám đốc (usr-04) phê duyệt.
+            </div>
+        </div>
+        <span class="badge badge-amber">{{ pending_quotes|length }} chờ duyệt</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Số Báo Giá</th>
+                    <th>Khách Hàng</th>
+                    <th>NVKD Đề Xuất</th>
+                    <th>Mức Chiết Khấu</th>
+                    <th>Tổng Tiền Sau Giảm</th>
+                    <th>Lý Do / Cảnh Báo</th>
+                    <th style="text-align: right;">Thẩm Quyền Duyệt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in pending_quotes %}
+                <tr>
+                    <td><strong>{{ q.quote_number }}</strong></td>
+                    <td>
+                        <div style="font-weight: 700;">{{ q.account_name }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">{{ q.title }}</div>
+                    </td>
+                    <td>{{ q.sales_rep_name }}</td>
+                    <td>
+                        <span class="badge badge-red" style="font-size: 0.85rem; font-weight: 800;">
+                            ⚠️ {{ q.overall_discount_percent }}% (>= 10%)
+                        </span>
+                    </td>
+                    <td><strong style="color: #0f172a;">{{ q.grand_total|vi_currency }}</strong></td>
+                    <td style="font-size: 0.8rem; color: #991b1b; max-width: 250px;">
+                        {{ q.notes or 'Chiết khấu vượt hạn mức cho phép' }}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-warning btn-sm" style="font-weight: 700;">
+                            🔍 Xem & Xử Lý Duyệt
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

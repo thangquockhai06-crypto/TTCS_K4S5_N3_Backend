@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any
 from sqlalchemy.orm import Session
 
 from app.models.activity import Activity
@@ -20,21 +20,29 @@ class ActivityRepository(BaseRepository):
         search: Optional[str] = None,
         activity_type: Optional[str] = None,
         customer_id: Optional[str] = None,
+        deal_id: Optional[str] = None,
+        personal: bool = False,
+        date_from: Optional[Any] = None,
+        date_to: Optional[Any] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Activity], int]:
-        """Lấy danh sách hoạt động thỏa mãn Data Scope của người dùng."""
+        """Lấy danh sách hoạt động thỏa mãn Data Scope của người dùng hoặc chỉ của cá nhân (S6-05)."""
         query = db.query(Activity)
 
-        # 1. Lọc theo Data Scope
-        if user is not None:
+        # 1. Lọc theo Data Scope hoặc chỉ cá nhân (S6-05)
+        if personal and user is not None:
+            query = query.filter(Activity.user_id == user.id)
+        elif user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Activity)
 
-        # 2. Tìm kiếm theo tiêu đề / mô tả
+        # 2. Tìm kiếm theo tiêu đề / mô tả / ghi chú
         if search and search.strip():
             search_pattern = f"%{search.strip()}%"
             query = query.filter(
-                Activity.title.ilike(search_pattern) | Activity.description.ilike(search_pattern)
+                Activity.title.ilike(search_pattern)
+                | Activity.description.ilike(search_pattern)
+                | (Activity.notes != None) & Activity.notes.ilike(search_pattern)
             )
 
         # 3. Lọc theo loại hoạt động
@@ -44,6 +52,16 @@ class ActivityRepository(BaseRepository):
         # 4. Lọc theo khách hàng
         if customer_id:
             query = query.filter(Activity.customer_id == customer_id)
+
+        # 5. Lọc theo cơ hội bán hàng (deal)
+        if deal_id:
+            query = query.filter(Activity.deal_id == deal_id)
+
+        # 6. Lọc theo khoảng thời gian
+        if date_from:
+            query = query.filter(Activity.created_at >= date_from)
+        if date_to:
+            query = query.filter(Activity.created_at <= date_to)
 
         total = query.count()
         activities = query.order_by(Activity.created_at.desc()).offset(skip).limit(limit).all()

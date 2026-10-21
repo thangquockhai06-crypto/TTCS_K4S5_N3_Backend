@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Danh Sách Hợp Đồng - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title"><span>📝</span> Quản Lý Hợp Đồng Kinh Tế</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Tất cả hợp đồng được tạo từ báo giá chốt. Mỗi hợp đồng có <strong style="color: var(--primary);">Số hợp đồng DUY NHẤT (Tiêu chí 4)</strong>.
+            </p>
+        </div>
+        <form method="GET" action="{{ url_for('contracts_list') }}" style="display: flex; gap: 8px;">
+            <input type="text" name="q" class="form-control" placeholder="Tìm theo số HĐ, khách hàng..." 
+                   value="{{ search_query }}" style="width: 260px; padding: 6px 12px; font-size: 13px;">
+            <button type="submit" class="btn btn-primary" style="font-size: 12.5px;">🔍 Tìm</button>
+            {% if search_query %}
+                <a href="{{ url_for('contracts_list') }}" class="btn btn-secondary" style="font-size: 12.5px;">Xóa lọc</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if contracts %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Số Hợp Đồng (AC4)</th>
+                        <th>Khách Hàng (Bên Mua)</th>
+                        <th>Báo Giá Gốc</th>
+                        <th>Cơ Hội Đóng Thắng (AC3)</th>
+                        <th>Ngày Ký</th>
+                        <th>Thời Hạn Hiệu Lực (AC2)</th>
+                        <th>Tổng Giá Trị (AC1)</th>
+                        <th>Trạng Thái</th>
+                        <th style="text-align: right;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contracts %}
+                    <tr>
+                        <td>
+                            <strong style="color: #0f172a; font-size: 14.5px;">{{ c.contract_number }}</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Mã nội bộ: {{ c.contract_id }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: var(--text-main);">{{ c.customer_name }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Đại diện: {{ c.contact_person }}</div>
+                        </td>
+                        <td>
+                            <strong style="color: var(--primary);">{{ c.quote_id }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge badge-opp-won">🎉 {{ c.opportunity_id }}</span>
+                        </td>
+                        <td style="font-size: 13px;">{{ c.signed_date | date }}</td>
+                        <td style="font-size: 12.5px;">
+                            <div>Từ: <strong>{{ c.effective_date | date }}</strong></div>
+                            <div style="color: var(--text-muted);">Đến: {{ c.expiration_date | date }}</div>
+                        </td>
+                        <td>
+                            <strong style="color: var(--success); font-size: 14.5px;">{{ c.grand_total | currency }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge {{ CONTRACT_STATUS_BADGES.get(c.status, '') }}">
+                                {{ CONTRACT_STATUS_LABELS.get(c.status, c.status) }}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('contract_detail', contract_id=c.contract_id) }}" class="btn btn-secondary" style="font-size: 12.5px; padding: 6px 12px;">
+                                📄 Xem Chi Tiết
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <p>Không tìm thấy hợp đồng nào phù hợp.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

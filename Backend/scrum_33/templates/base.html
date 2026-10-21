@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Duyệt Báo Giá Theo Chiết Khấu{% endblock %} - AutoLead CRM</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- 1. Jira Ticket Topbar -->
+    <header class="jira-topbar">
+        <div class="jira-badge-group">
+            <span class="jira-epic">⚡ {{ PARENT_EPIC }}</span>
+            <span style="color: var(--text-muted);">/</span>
+            <span class="jira-ticket">☑ {{ TICKET_ID }}</span>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Duyệt báo giá theo mức chiết khấu</span>
+            <div class="jira-subtasks">
+                <span class="jira-subtask">FE: {{ SUBTASK_FE }}</span>
+                <span class="jira-subtask" style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc;">BE: {{ SUBTASK_BE }}</span>
+            </div>
+        </div>
+
+        <div class="persona-switcher">
+            <span style="color: var(--text-secondary); font-size: 0.8rem;">Đang đóng vai:</span>
+            <select id="persona-select" class="persona-select">
+                {% for u in all_users %}
+                    {% if u.role != 'SYSTEM' %}
+                    <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>
+                        {{ u.avatar }} {{ u.name }} ({{ u.role_name }})
+                    </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+    </header>
+
+    <!-- 2. Main Navigation Bar -->
+    <nav class="navbar">
+        <a href="{{ url_for('dashboard') }}" class="navbar-brand">
+            <div class="brand-icon">💼</div>
+            <div>
+                <div>AutoLead CRM</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 500;">Hệ Thống Quản Trị & Duyệt Báo Giá</div>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li>
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    📊 Bàn làm việc
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('approval_queue') }}" class="nav-link {% if request.endpoint == 'approval_queue' %}active{% endif %}">
+                    ⏳ Hàng chờ duyệt
+                    {% if metrics.pending_total > 0 %}
+                    <span class="badge-counter">{{ metrics.pending_total }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('quotes_list') }}" class="nav-link {% if request.endpoint == 'quotes_list' %}active{% endif %}">
+                    📑 Tất cả báo giá
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('quote_create') }}" class="nav-link {% if request.endpoint == 'quote_create' %}active{% endif %}">
+                    ➕ Soạn báo giá
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('simulator') }}" class="nav-link {% if request.endpoint == 'simulator' %}active{% endif %}" style="color: #38bdf8;">
+                    🧪 Mô phỏng 5 tiêu chí
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('reset_data') }}" class="nav-link btn-outline btn-sm" onclick="return confirm('Khôi phục toàn bộ dữ liệu mẫu ban đầu?');" title="Khôi phục dữ liệu mẫu">
+                    🔄 Reset Data
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 3. Flash Notification Messages -->
+    <div class="container" style="padding-top: 16px; padding-bottom: 0;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- 4. Page Main Content -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 5. Modal Phê Duyệt Toàn Cục (Duyệt / Từ chối / Trả lại sửa) - AC3 -->
+    <div id="approvalModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div id="modalTitle" class="modal-title">Phê duyệt Báo giá</div>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <form id="approvalForm" method="POST" action="">
+                <input type="hidden" name="action" id="modalActionInput" value="">
+                
+                <div class="form-group">
+                    <label id="modalCommentLabel" class="form-label">Ý kiến phê duyệt:</label>
+                    <textarea name="comment" id="modalCommentInput" class="form-control" placeholder="Nhập ý kiến..."></textarea>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 6px;">
+                        📌 Lưu ý: Ý kiến này sẽ được ghi nhận vào Sổ cái lịch sử kiểm toán bất biến (không thể sửa hoặc xóa).
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline btn-modal-cancel">Hủy bỏ</button>
+                    <button type="submit" id="modalSubmitBtn" class="btn btn-primary">Xác nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. Footer -->
+    <footer style="background: rgba(15, 23, 42, 0.9); border-top: 1px solid var(--border-color); padding: 18px 24px; text-align: center; font-size: 0.82rem; color: var(--text-muted); margin-top: 40px;">
+        AutoLead CRM &bull; Ticket <strong>{{ TICKET_ID }}</strong>: Duyệt báo giá theo mức chiết khấu &bull; Backend: Python 3 Flask Framework
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

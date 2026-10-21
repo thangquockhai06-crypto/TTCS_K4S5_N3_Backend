@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chuyển Báo Giá Thành Hợp Đồng{% endblock %} - AutoLead CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- JIRA TICKET TOPBAR -->
+    <header class="jira-topbar">
+        <div class="jira-breadcrumb">
+            <span>⚡ {{ PARENT_EPIC }}</span>
+            <span>/</span>
+            <span>☑ <strong>{{ TICKET_ID }}</strong></span>
+            <span class="jira-badge">AutoLead CRM CPQ</span>
+        </div>
+        <div class="jira-subtasks">
+            <span class="subtask-tag">🌐 <strong>{{ SUBTASK_FE }}</strong>: FE Chuyển Báo Giá -> HĐ & Quản Lý HĐ</span>
+            <span class="subtask-tag">⚙️ <strong>{{ SUBTASK_BE }}</strong>: BE Kế Thừa, Unique Số HĐ & Đóng Thắng Cơ Hội</span>
+        </div>
+    </header>
+
+    <!-- MAIN NAVBAR -->
+    <nav class="main-navbar">
+        <a href="{{ url_for('dashboard') }}" class="nav-brand">
+            <div class="brand-logo">📑</div>
+            <div class="brand-text">
+                <h1>AutoLead CRM CPQ</h1>
+                <span>Chuyển Báo Giá Thành Hợp Đồng</span>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <a href="{{ url_for('dashboard') }}">📊 Bàn Làm Việc</a>
+            </li>
+            <li class="nav-item {% if request.endpoint in ['quotes_list', 'convert_quote'] %}active{% endif %}">
+                <a href="{{ url_for('quotes_list') }}">📑 Báo Giá Sẵn Sàng</a>
+            </li>
+            <li class="nav-item {% if request.endpoint in ['contracts_list', 'contract_detail'] %}active{% endif %}">
+                <a href="{{ url_for('contracts_list') }}">📝 Hợp Đồng Đã Lập</a>
+            </li>
+            <li class="nav-item {% if request.endpoint == 'opportunities_list' %}active{% endif %}">
+                <a href="{{ url_for('opportunities_list') }}">🎯 Cơ Hội CRM & Pipeline</a>
+            </li>
+            <li class="nav-item {% if request.endpoint == 'simulator' %}active{% endif %}">
+                <a href="{{ url_for('simulator') }}">🧪 Kiểm Thử 4 Tiêu Chí</a>
+            </li>
+        </ul>
+
+        <div class="user-profile-badge">
+            <span style="font-size: 18px;">{{ current_user.avatar }}</span>
+            <div>
+                <strong style="display: block; font-size: 13px; line-height: 1.1;">{{ current_user.name }}</strong>
+                <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.role_label }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- BANNER ĐỀ BÀI (JIRA STORY & 4 TIÊU CHÍ CHẤP NHẬN) -->
+    <section class="story-banner">
+        <div class="app-container" style="margin: 0 auto; padding: 0;">
+            <div class="story-header">
+                <div class="story-title-group">
+                    <h2>🎯 User Story: SCRUM-38 (Nghiệp vụ Kế toán)</h2>
+                    <p><em>"Là Kế toán, tôi muốn chuyển một báo giá được chấp nhận thành hợp đồng, để số liệu hợp đồng khớp báo giá mà không phải gõ lại."</em></p>
+                </div>
+            </div>
+
+            <div class="criteria-grid">
+                <div class="criterion-card">
+                    <div class="criterion-icon">📦</div>
+                    <div class="criterion-body">
+                        <strong>Tiêu chí 1 (Kế thừa)</strong>
+                        <span>Hợp đồng kế thừa toàn bộ dòng sản phẩm và giá đã chốt, không nhập lại</span>
+                    </div>
+                </div>
+                <div class="criterion-card">
+                    <div class="criterion-icon">📅</div>
+                    <div class="criterion-body">
+                        <strong>Tiêu chí 2 (Khai báo)</strong>
+                        <span>Khai báo số hợp đồng, ngày ký, ngày hiệu lực, ngày hết hạn, điều khoản thanh toán</span>
+                    </div>
+                </div>
+                <div class="criterion-card">
+                    <div class="criterion-icon">🏆</div>
+                    <div class="criterion-body">
+                        <strong>Tiêu chí 3 (Đóng thắng)</strong>
+                        <span>Cơ hội tương ứng tự động chuyển sang Đóng thắng với giá trị đúng bằng giá trị hợp đồng</span>
+                    </div>
+                </div>
+                <div class="criterion-card">
+                    <div class="criterion-icon">🔑</div>
+                    <div class="criterion-body">
+                        <strong>Tiêu chí 4 (Duy nhất)</strong>
+                        <span>Số hợp đồng là duy nhất, hệ thống tự động chặn trùng lặp</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN BODY CONTENT -->
+    <main class="app-container">
+        <!-- Flash Alert Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer style="background: white; border-top: 1px solid var(--border-color); padding: 18px 24px; text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: auto;">
+        <div class="app-container" style="margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+            <span>AutoLead CRM Enterprise Platform © 2026 - Giải pháp Quản lý Bán hàng & Hợp đồng Thông minh</span>
+            <span>Jira Ticket <strong>SCRUM-38</strong> (Parent Epic: <strong>SCRUM-35</strong>)</span>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts_extra %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Trình Kiểm Thử 4 Tiêu Chí Chấp Nhận (Simulator) - SCRUM-38{% endblock %}
+
+{% block content %}
+<div class="card" style="border-top: 4px solid var(--purple);">
+    <div class="simulator-header">
+        <span class="badge" style="background: var(--purple-light); color: var(--purple); font-size: 13px; padding: 4px 12px; margin-bottom: 8px;">
+            🧪 BỘ KIỂM THỬ TỰ ĐỘNG HÓA INVARIANTS
+        </span>
+        <h2>Trình Mô Phỏng & Kiểm Thử 4 Tiêu Chí Chấp Nhận</h2>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">
+            Thực thi đồng thời toàn bộ kịch bản kiểm thử nghiệp vụ của User Story SCRUM-38: Kế thừa số liệu (AC1), Khai báo pháp lý (AC2), Tự động Đóng thắng (AC3) và Ràng buộc số hợp đồng duy nhất (AC4).
+        </p>
+
+        <div style="margin-top: 20px;">
+            <button type="button" class="btn btn-primary btn-lg" id="btnRunSimulator">
+                ⚡ Chạy Toàn Bộ Kiểm Thử (1-Click Run)
+            </button>
+        </div>
+    </div>
+
+    <!-- BANNER TRẠNG THÁI TỔNG THỂ -->
+    <div id="simulatorStatus" style="display: none; margin-bottom: 24px;"></div>
+
+    <!-- KHU VỰC HIỂN THỊ KẾT QUẢ TỪNG TIÊU CHÍ -->
+    <div id="simulatorResults">
+        <!-- Trạng thái mặc định trước khi bấm nút -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div class="test-result-item" style="border-left: 4px solid #cbd5e1;">
+                <div style="font-size: 22px;">📦</div>
+                <div>
+                    <strong style="display: block; font-size: 14px; color: var(--text-main); margin-bottom: 4px;">
+                        Tiêu chí 1: Kế thừa dòng sản phẩm & giá đã chốt
+                    </strong>
+                    <span style="font-size: 12.5px; color: var(--text-muted);">
+                        Kiểm thử tự động đối chiếu từng dòng sản phẩm, đơn giá, chiết khấu và tổng thanh toán giữa Báo giá và Hợp đồng mới tạo.
+                    </span>
+                </div>
+            </div>
+
+            <div class="test-result-item" style="border-left: 4px solid #cbd5e1;">
+                <div style="font-size: 22px;">📅</div>
+                <div>
+                    <strong style="display: block; font-size: 14px; color: var(--text-main); margin-bottom: 4px;">
+                        Tiêu chí 2: Khai báo đầy đủ thông tin pháp lý
+                    </strong>
+                    <span style="font-size: 12.5px; color: var(--text-muted);">
+                        Kiểm thử kiểm tra bắt buộc 5 trường pháp lý và phát hiện lỗi khi ngày hiệu lực sau ngày hết hạn.
+                    </span>
+                </div>
+            </div>
+
+            <div class="test-result-item" style="border-left: 4px solid #cbd5e1;">
+                <div style="font-size: 22px;">🏆</div>
+                <div>
+                    <strong style="display: block; font-size: 14px; color: var(--text-main); margin-bottom: 4px;">
+                        Tiêu chí 3: Cơ hội tự động chuyển Đóng thắng
+                    </strong>
+                    <span style="font-size: 12.5px; color: var(--text-muted);">
+                        Kiểm thử xác minh Cơ hội tự động chuyển sang stage CLOSED_WON và giá trị đúng bằng giá trị hợp đồng khớp từng đồng.
+                    </span>
+                </div>
+            </div>
+
+            <div class="test-result-item" style="border-left: 4px solid #cbd5e1;">
+                <div style="font-size: 22px;">🔑</div>
+                <div>
+                    <strong style="display: block; font-size: 14px; color: var(--text-main); margin-bottom: 4px;">
+                        Tiêu chí 4: Số hợp đồng là duy nhất
+                    </strong>
+                    <span style="font-size: 12.5px; color: var(--text-muted);">
+                        Kiểm thử xác minh hệ thống từ chối khi nhập số hợp đồng đã có (HD-2026/001) và chấp thuận số hợp đồng duy nhất mới.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: var(--radius-md); border: 1px dashed #cbd5e1;">
+            <p style="font-size: 13.5px; color: var(--text-muted);">
+                👉 Nhấp vào nút <strong>"⚡ Chạy Toàn Bộ Kiểm Thử (1-Click Run)"</strong> ở trên để hệ thống tự động chạy và hiển thị báo cáo chi tiết.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy.orm import relationship
+from app.database import Base
+
+
+def utc_now() -> datetime:
+    """Trả về thời gian UTC dạng naive datetime tương thích với SQLAlchemy và các hệ CSDL."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class DealHistory(Base):
+    """
+    Model ghi nhận lịch sử thay đổi của Cơ hội bán hàng (Deal History / Audit Log).
+    Thuộc SCRUM-91 / Sprint 5 (EP-05: Cơ hội bán hàng & Pipeline Kanban).
+    Tính bất biến (Audit Immutability): chỉ hỗ trợ INSERT và SELECT, không hỗ trợ UPDATE/DELETE.
+    """
+    __tablename__ = "deal_histories"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    deal_id = Column(String(36), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    field_name = Column(String(50), nullable=False, index=True)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    changed_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    changed_at = Column(DateTime, default=utc_now, nullable=False, index=True)
+
+    # Relationships
+    deal = relationship("Deal", back_populates="deal_histories")
+    user = relationship("User", foreign_keys=[changed_by], lazy="joined")
+
+    # Composite indexes tối ưu hóa truy vấn sắp xếp và tìm kiếm theo cơ hội
+    __table_args__ = (
+        Index("ix_deal_histories_deal_id_changed_at", "deal_id", "changed_at"),
+        Index("ix_deal_histories_deal_id_field_name", "deal_id", "field_name"),
+    )

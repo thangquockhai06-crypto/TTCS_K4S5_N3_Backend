@@ -15,6 +15,7 @@ class User(Base):
     title = Column(String(150), default="Quản trị viên hệ thống")
     department = Column(String(150), default="Ban Quản Trị & Vận Hành Doanh Thu")
     avatar_url = Column(Text, nullable=True)
+    avatar_thumbnail_url = Column(Text, nullable=True)
     workspace_name = Column(String(150), default="NexusCRM Enterprise VN")
 
     # Brute-force protection fields (SCRUM-32 / SCRUM-101)
@@ -32,6 +33,6 @@ class User(Base):
     # Relationships
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     customers = relationship("Customer", back_populates="assigned_user")
-    deals = relationship("Deal", back_populates="owner")
+    deals = relationship("Deal", back_populates="owner", primaryjoin="User.id == Deal.owner_id")
     roles = relationship("Role", secondary="user_roles", back_populates="users")
     teams = relationship("Team", secondary="user_teams", back_populates="users")

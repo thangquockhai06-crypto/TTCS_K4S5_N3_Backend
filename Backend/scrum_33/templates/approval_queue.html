@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Hàng Chờ Duyệt Báo Giá{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">⏳ Hàng Chờ Phê Duyệt Báo Giá B2B</div>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px;">
+                Phân loại theo mức thẩm quyền phê duyệt: Trưởng nhóm kinh doanh hoặc Giám đốc kinh doanh
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{{ url_for('approval_queue') }}" class="btn btn-sm {% if not active_filter %}btn-primary{% else %}btn-outline{% endif %}">
+                Tất cả ({{ quotes|length }})
+            </a>
+            <a href="{{ url_for('approval_queue', authority='TEAM_LEAD') }}" class="btn btn-sm {% if active_filter == 'TEAM_LEAD' %}btn-warning{% else %}btn-outline{% endif %}">
+                👔 Cần Trưởng nhóm duyệt
+            </a>
+            <a href="{{ url_for('approval_queue', authority='DIRECTOR') }}" class="btn btn-sm {% if active_filter == 'DIRECTOR' %}btn-danger{% else %}btn-outline{% endif %}">
+                👑 Bắt buộc Giám đốc duyệt
+            </a>
+            <a href="{{ url_for('approval_queue', authority='BELOW_FLOOR') }}" class="btn btn-sm {% if active_filter == 'BELOW_FLOOR' %}btn-danger{% else %}btn-outline{% endif %}">
+                🚨 Bán dưới giá sàn
+            </a>
+        </div>
+    </div>
+
+    {% if quotes %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã Báo Giá</th>
+                    <th>Tiêu Đề &amp; Doanh Nghiệp</th>
+                    <th>NVKD Trình</th>
+                    <th>Chiết Khấu</th>
+                    <th>Giá Trị Sau Giảm</th>
+                    <th>Kiểm Tra Giá Sàn</th>
+                    <th>Thẩm Quyền Bắt Buộc</th>
+                    <th>Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in quotes %}
+                <tr>
+                    <td>
+                        <strong style="color: #38bdf8;">{{ q.id }}</strong>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">{{ q.submitted_at|vi_datetime }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ q.title }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">🏢 {{ q.account_name }} &bull; {{ q.contact_name }}</div>
+                    </td>
+                    <td>
+                        <div>{{ q.sales_rep_name }}</div>
+                    </td>
+                    <td>
+                        <span style="font-size: 1.15rem; font-weight: 700; color: {% if q.discount_rate > 20 %}#f87171{% elif q.discount_rate >= 10 %}#fbbf24{% else %}#34d399{% endif %};">
+                            {{ "%.1f"|format(q.discount_rate) }}%
+                        </span>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">-{{ q.total_discount_amount|vi_currency }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #60a5fa;">{{ q.total_amount|vi_currency }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">(Gồm VAT 8%)</div>
+                    </td>
+                    <td>
+                        {% if q.below_floor_price %}
+                        <span class="badge badge-floor-alert">🚨 Có {{ q.items_below_floor_count }} món dưới sàn</span>
+                        {% else %}
+                        <span class="badge badge-slate">✓ Đạt chuẩn sàn</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if q.required_role == 'DIRECTOR' %}
+                        <span class="badge badge-director">👑 Giám đốc duyệt</span>
+                        {% else %}
+                        <span class="badge badge-team-lead">👔 Trưởng nhóm duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('quote_detail', quote_id=q.id) }}" class="btn btn-primary btn-sm">
+                            Xem &amp; Phê Duyệt &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 48px; color: var(--text-secondary);">
+        <div style="font-size: 2.5rem; margin-bottom: 12px;">✅</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">Không có báo giá nào trong mục lọc này!</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Các báo giá đã được xử lý hoặc tự động thông qua.</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

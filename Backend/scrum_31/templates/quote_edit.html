@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh Sửa Bản Nháp {{ quote.quote_number }}{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('quote_edit', quote_id=quote.id) }}" id="quoteForm">
+    <!-- TIÊU ĐỀ & ĐIỀU HƯỚNG -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="ticket-tag">TIÊU CHÍ 5 (AC5): SỬA TIẾP BẢN NHÁP</span>
+                <span class="badge badge-slate" style="font-size: 0.85rem;">
+                    Phiên bản nháp: <strong>v{{ quote.draft_version }}</strong>
+                </span>
+                <span class="badge {{ quote.status_badge_class }}">
+                    {{ quote.status_label }}
+                </span>
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-top: 6px;">
+                ✏️ Chỉnh Sửa Báo Giá: {{ quote.quote_number }}
+            </h1>
+            <p style="color: #64748b; font-size: 0.9rem;">
+                Khách hàng: <strong>{{ quote.account_name }}</strong> &bull; Lần lưu gần nhất: {{ quote.last_saved_at }}
+            </p>
+        </div>
+
+        <!-- HÀNH ĐỘNG NỘP / LƯU NHÁP (AC5) -->
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('quote_detail', quote_id=quote.id) }}" class="btn btn-secondary">
+                Xem Báo Giá
+            </a>
+            <button type="submit" name="action" value="save_draft" class="btn btn-secondary" style="font-weight: 700; border-color: #94a3b8;">
+                💾 Lưu Nháp Tiếp Tục (AC5)
+            </button>
+            <button type="submit" name="action" value="submit" id="btnSubmitQuote" class="btn btn-primary btn-lg" style="font-weight: 700;">
+                🚀 Hoàn Tất & Gửi Báo Giá Ngay Buổi Chiều
+            </button>
+        </div>
+    </div>
+
+    <!-- KHỐI CẢNH BÁO PHÊ DUYỆT CHIẾT KHẤU THỜI GIAN THỰC (AC3) -->
+    <div id="approvalAlertContainer" class="approval-alert-box alert-success-soft" style="display: flex;">
+        <div style="font-size: 1.4rem; line-height: 1;">✅</div>
+        <div>
+            <div style="font-weight: 700; font-size: 0.92rem; color: #065f46; margin-bottom: 2px;">
+                Chiết khấu tổng hợp lệ: {{ quote.overall_discount_percent }}% (Dưới ngưỡng phê duyệt 10.0%)
+            </div>
+            <div style="font-size: 0.84rem;">
+                Báo giá đủ thẩm quyền gửi thẳng cho khách hàng ngay trong buổi chiều mà không cần chờ duyệt.
+            </div>
+        </div>
+    </div>
+
+    <!-- THÔNG TIN CHUNG BÁO GIÁ & KHÁCH HÀNG -->
+    <div class="card" style="padding: 20px;">
+        <div class="card-header" style="margin-bottom: 14px; padding-bottom: 8px;">
+            <div class="card-title" style="font-size: 1.05rem;">
+                <span>🏢</span> Thông Tin Khách Hàng & Tiêu Đề Báo Giá
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 8px;">
+                <label class="form-label">Tiêu Đề Báo Giá *</label>
+                <input type="text" name="title" class="form-control" value="{{ quote.title }}" required style="font-weight: 600;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Tên Doanh Nghiệp</label>
+                <input type="text" class="form-control" value="{{ quote.account_name }}" readonly style="background-color: #f1f5f9; font-weight: 600;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Mã Số Thuế (MST)</label>
+                <input type="text" class="form-control" value="{{ quote.tax_id }}" readonly style="background-color: #f1f5f9;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Người Nhận Báo Giá</label>
+                <input type="text" name="contact_name" class="form-control" value="{{ quote.contact_name }}" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Số Điện Thoại</label>
+                <input type="text" name="contact_phone" class="form-control" value="{{ quote.contact_phone }}" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Email Nhận Báo Giá</label>
+                <input type="email" name="contact_email" class="form-control" value="{{ quote.contact_email }}">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label">Địa Chỉ Khách Hàng</label>
+                <input type="text" name="address" class="form-control" value="{{ quote.address }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG DÒNG SẢN PHẨM (AC1, AC2) -->
+    <div class="card" style="padding: 20px;">
+        <div class="card-header" style="margin-bottom: 14px; padding-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <div class="card-title" style="font-size: 1.05rem;">
+                    <span>📦</span> Chi Tiết Dòng Sản Phẩm & Chiết Khấu (AC1 & AC2)
+                </div>
+                <div style="font-size: 0.8rem; color: #64748b;">
+                    Bạn có thể sửa số lượng, giá, chiết khấu (% hoặc VNĐ), thêm hoặc xóa dòng tùy ý.
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="catalogSelect" class="form-select" style="width: 250px; font-size: 0.82rem; padding: 6px 10px;">
+                    <option value="">+ Chọn từ Danh mục để thêm...</option>
+                    {% for p in catalog %}
+                    <option value="{{ p.id }}" data-json='{{ p|tojson }}'>
+                        {{ p.name }} ({{ p.price|vi_currency }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addFromCatalogDropdown()">
+                    + Thêm Từ DM
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="addNewRow()">
+                    + Dòng Tùy Chỉnh
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="line-items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">STT</th>
+                        <th>Tên Sản Phẩm / Dịch Vụ</th>
+                        <th style="width: 90px; text-align: center;">ĐVT</th>
+                        <th style="width: 90px; text-align: right;">Số Lượng</th>
+                        <th style="width: 140px; text-align: right;">Đơn Giá (VNĐ)</th>
+                        <th style="width: 200px; text-align: center;">Chiết Khấu Dòng (AC2)</th>
+                        <th style="width: 150px; text-align: right;">Thành Tiền (VNĐ)</th>
+                        <th style="width: 50px; text-align: center;">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody id="lineItemsBody">
+                    {% for itm in quote['items'] %}
+                    <tr data-subtotal="{{ itm.subtotal }}" data-discount-amount="{{ itm.discount_amount }}" data-total="{{ itm.total }}">
+                        <td style="text-align: center; color: #64748b; font-weight: 700;">{{ loop.index }}</td>
+                        <td>
+                            <input type="hidden" name="item_id[]" value="{{ itm.item_id }}">
+                            <input type="hidden" name="product_id[]" value="{{ itm.product_id }}">
+                            <input type="hidden" name="product_code[]" value="{{ itm.product_code }}">
+                            <input type="text" name="product_name[]" class="line-input" value="{{ itm.product_name }}" required>
+                            <input type="text" name="description[]" class="line-input" style="font-size: 0.78rem; color: #64748b; margin-top: 4px;" value="{{ itm.description or '' }}">
+                        </td>
+                        <td style="width: 90px;">
+                            <input type="text" name="unit[]" class="line-input" value="{{ itm.unit }}" style="text-align: center;">
+                        </td>
+                        <td style="width: 90px;">
+                            <input type="number" name="quantity[]" class="line-input quantity-input" value="{{ itm.quantity }}" min="1" step="1" style="text-align: right;" required>
+                        </td>
+                        <td style="width: 140px;">
+                            <input type="number" name="unit_price[]" class="line-input price-input" value="{{ itm.unit_price }}" min="0" step="100000" style="text-align: right;" required>
+                            <div class="row-subtotal-display" style="font-size: 0.75rem; color: #64748b; text-align: right; margin-top: 2px;">
+                                {{ itm.subtotal|vi_currency }}
+                            </div>
+                        </td>
+                        <td style="width: 200px;">
+                            <div class="discount-group">
+                                <select name="discount_type[]" class="discount-type-select">
+                                    <option value="PERCENT" {% if itm.discount_type == 'PERCENT' %}selected{% endif %}>%</option>
+                                    <option value="AMOUNT" {% if itm.discount_type == 'AMOUNT' %}selected{% endif %}>VNĐ</option>
+                                </select>
+                                <input type="number" name="discount_value[]" class="line-input discount-value-input" value="{{ itm.discount_value }}" min="0" step="any" placeholder="{% if itm.discount_type == 'PERCENT' %}% (0 - 100){% else %}Số tiền VNĐ{% endif %}" style="text-align: right;">
+                            </div>
+                            <div class="row-discount-display" style="font-size: 0.75rem; color: #ef4444; text-align: right; margin-top: 2px;">
+                                Giảm: {{ itm.discount_amount|vi_currency }}
+                            </div>
+                        </td>
+                        <td style="width: 150px; text-align: right; font-weight: 700; color: #0f172a;">
+                            <span class="row-total-display">{{ itm.total|vi_currency }}</span>
+                        </td>
+                        <td style="width: 50px; text-align: center;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="removeRow(this)" title="Xóa dòng sản phẩm này" style="color: #ef4444; padding: 4px 8px;">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TỔNG KẾT TÀI CHÍNH & CẢNH BÁO CHIẾT KHẤU TỔNG (AC3) -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+            <div class="totals-summary-box">
+                <div class="total-row">
+                    <span>Tổng tiền hàng (trước chiết khấu):</span>
+                    <strong id="summarySubtotal">{{ quote.subtotal|vi_currency }}</strong>
+                </div>
+                <div class="total-row" style="color: #ef4444;">
+                    <span>Tổng tiền chiết khấu các dòng:</span>
+                    <strong id="summaryDiscountAmount">{{ quote.total_discount|vi_currency }}</strong>
+                </div>
+                <div class="total-row" style="background: #f1f5f9; padding: 6px 10px; border-radius: var(--radius-sm); margin: 4px 0;">
+                    <span style="font-weight: 700; color: #1e293b;">Mức chiết khấu tổng (AC3):</span>
+                    <span id="summaryDiscountPercent" class="badge {% if quote.overall_discount_percent >= 10 %}badge-red{% else %}badge-green{% endif %}" style="font-size: 0.9rem; font-weight: 800;">
+                        {{ quote.overall_discount_percent }}%
+                    </span>
+                </div>
+                <div class="total-row">
+                    <span>Thành tiền sau chiết khấu:</span>
+                    <strong id="summaryAfterDiscount">{{ quote.amount_after_discount|vi_currency }}</strong>
+                </div>
+                <div class="total-row">
+                    <span>Thuế VAT (8%):</span>
+                    <strong id="summaryVat">{{ quote.vat_amount|vi_currency }}</strong>
+                </div>
+                <div class="total-row highlight">
+                    <span>TỔNG CỘNG THANH TOÁN:</span>
+                    <span id="summaryGrandTotal" style="color: var(--primary);">{{ quote.grand_total|vi_currency }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHAI BÁO HIỆU LỰC, ĐIỀU KHOẢN THANH TOÁN & GIAO HÀNG (AC4) -->
+    <div class="card" style="padding: 20px;">
+        <div class="card-header" style="margin-bottom: 14px; padding-bottom: 8px;">
+            <div class="card-title" style="font-size: 1.05rem;">
+                <span>⚖️</span> Khai Báo Hiệu Lực, Điều Khoản Thanh Toán & Giao Hàng (AC4)
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <!-- HIỆU LỰC BÁO GIÁ -->
+            <div class="form-group">
+                <label class="form-label">⏳ Thời Hạn Hiệu Lực Báo Giá *</label>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                    <select name="validity_days" id="validityDaysSelect" class="form-select" style="font-weight: 600;">
+                        {% for v in VALIDITY_PRESETS %}
+                        <option value="{{ v.days }}" {% if v.days == quote.validity_days %}selected{% endif %}>
+                            {{ v.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    Báo giá có giá trị đến hết ngày: <strong id="validUntilDisplay" style="color: var(--primary);">{{ quote.valid_until }}</strong>
+                </div>
+            </div>
+
+            <!-- ĐIỀU KHOẢN THANH TOÁN -->
+            <div class="form-group">
+                <label class="form-label">💳 Điều Khoản Thanh Toán (AC4) *</label>
+                <div style="margin-bottom: 6px;">
+                    <select id="paymentPresetSelect" class="form-select" style="font-size: 0.82rem;">
+                        <option value="">-- Chọn mẫu điều khoản thanh toán có sẵn --</option>
+                        {% for pt in PAYMENT_TERMS_PRESETS %}
+                        <option value="{{ pt }}">{{ pt[:65] }}...</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <textarea name="payment_terms" id="paymentTermsTextarea" class="form-control" rows="3" required placeholder="Nhập chi tiết điều khoản thanh toán...">{{ quote.payment_terms }}</textarea>
+            </div>
+
+            <!-- ĐIỀU KHOẢN GIAO HÀNG -->
+            <div class="form-group">
+                <label class="form-label">🚚 Điều Khoản Giao Hàng & Triển Khai (AC4) *</label>
+                <div style="margin-bottom: 6px;">
+                    <select id="deliveryPresetSelect" class="form-select" style="font-size: 0.82rem;">
+                        <option value="">-- Chọn mẫu điều khoản giao hàng có sẵn --</option>
+                        {% for dt in DELIVERY_TERMS_PRESETS %}
+                        <option value="{{ dt }}">{{ dt[:65] }}...</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <textarea name="delivery_terms" id="deliveryTermsTextarea" class="form-control" rows="3" required placeholder="Nhập chi tiết điều khoản giao hàng...">{{ quote.delivery_terms }}</textarea>
+            </div>
+
+            <!-- CHÍNH SÁCH BẢO HÀNH & GHI CHÚ BỔ SUNG -->
+            <div class="form-group">
+                <label class="form-label">📝 Ghi Chú & Điều Khoản Bổ Sung</label>
+                <textarea name="notes" class="form-control" rows="4">{{ quote.notes }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- NÚT LƯU NHÁP & GỬI CUỐI TRANG (AC5) -->
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding: 16px 0;">
+        <a href="{{ url_for('quote_detail', quote_id=quote.id) }}" class="btn btn-secondary btn-lg">
+            Hủy Bỏ
+        </a>
+        <button type="submit" name="action" value="save_draft" class="btn btn-secondary btn-lg" style="font-weight: 700; border-color: #94a3b8;">
+            💾 Lưu Nháp Tiếp Tục (AC5)
+        </button>
+        <button type="submit" name="action" value="submit" class="btn btn-primary btn-lg" style="font-weight: 700;">
+            🚀 Hoàn Tất & Gửi Báo Giá Ngay Buổi Chiều
+        </button>
+    </div>
+</form>
+
+<script>
+function addFromCatalogDropdown() {
+    const sel = document.getElementById('catalogSelect');
+    if (!sel || !sel.value) {
+        alert("Vui lòng chọn 1 sản phẩm trong danh sách!");
+        return;
+    }
+    const opt = sel.options[sel.selectedIndex];
+    const product = JSON.parse(opt.dataset.json);
+    addProductFromCatalog(product);
+    sel.selectedIndex = 0;
+}
+</script>
+{% endblock %}

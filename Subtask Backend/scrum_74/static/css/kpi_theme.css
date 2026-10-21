@@ -1,0 +1,12 @@
+/* Style hiển thị bảng xếp hạng thành tích kinh doanh */
+.leaderboard-container {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.rank-badge-gold {
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    color: #ffffff;
+    font-weight: bold;
+}

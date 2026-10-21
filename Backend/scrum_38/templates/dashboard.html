@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Bàn Làm Việc Kế Toán{% endblock %}
+
+{% block content %}
+<!-- KPI STATS CARDS -->
+<div class="stats-grid">
+    <div class="stat-card stat-success">
+        <div class="stat-icon">📝</div>
+        <div class="stat-info">
+            <span>Hợp Đồng Đã Ký Kết</span>
+            <h3>{{ stats.total_contracts }}</h3>
+            <small>{{ stats.total_contract_value | currency }}</small>
+        </div>
+    </div>
+
+    <div class="stat-card stat-warning">
+        <div class="stat-icon">📑</div>
+        <div class="stat-info">
+            <span>Báo Giá Chờ Lập Hợp Đồng</span>
+            <h3>{{ stats.ready_quotes_count }}</h3>
+            <small>{{ stats.ready_quotes_value | currency }} sẵn sàng</small>
+        </div>
+    </div>
+
+    <div class="stat-card stat-purple">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-info">
+            <span>Cơ Hội Đã Đóng Thắng (AC3)</span>
+            <h3>{{ stats.won_opps_count }}</h3>
+            <small>{{ stats.won_opps_value | currency }}</small>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-info">
+            <span>Tỷ Lệ Chuyển Đổi CRM</span>
+            <h3>{{ stats.conversion_rate }}%</h3>
+            <small>Khách chốt / Tổng cơ hội</small>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION: BÁO GIÁ ĐÃ CHẤP NHẬN SẴN SÀNG CHUYỂN ĐỔI (CORE WORKFLOW) -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">
+                <span>📑</span> Báo Giá Đã Chấp Nhận Sẵn Sàng Chuyển Thành Hợp Đồng
+            </h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Khách hàng đã chấp thuận cam kết. Kế toán chỉ cần bấm "Chuyển thành Hợp đồng" để kế thừa toàn bộ số liệu và tự động Đóng Thắng Cơ hội (AC1, AC2, AC3).
+            </p>
+        </div>
+        <a href="{{ url_for('quotes_list') }}" class="btn btn-secondary" style="font-size: 12.5px;">Xem tất cả báo giá</a>
+    </div>
+
+    {% if ready_quotes %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Mã Báo Giá</th>
+                        <th>Khách Hàng / Dự Án</th>
+                        <th>Cơ Hội CRM Liên Kết</th>
+                        <th>Số Dòng SP</th>
+                        <th>Tổng Giá Trị Đã Chốt</th>
+                        <th>Thời Điểm Khách Duyệt</th>
+                        <th style="text-align: right;">Hành Động Kế Toán</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in ready_quotes %}
+                    <tr>
+                        <td>
+                            <strong style="color: var(--primary);">{{ q.quote_id }}</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">{{ q.created_by }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: var(--text-main);">{{ q.customer_name }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ q.title }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-opp-negotiation">💬 {{ q.opportunity_id }}</span>
+                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">{{ q.opportunity_name }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-locked">🔒 {{ q['items'] | length }} sản phẩm</span>
+                        </td>
+                        <td>
+                            <strong style="color: var(--success); font-size: 15px;">{{ q.grand_total | currency }}</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">(Đã gồm VAT {{ q.vat_percent }}%)</div>
+                        </td>
+                        <td style="font-size: 12.5px; color: var(--text-muted);">
+                            {{ q.accepted_at | datetime }}
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('convert_quote', quote_id=q.quote_id) }}" class="btn btn-success" style="font-size: 13px;">
+                                ⚡ Chuyển Thành Hợp Đồng
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="font-size: 40px; margin-bottom: 10px;">✅</div>
+            <p>Hiện tại không có báo giá nào đang chờ chuyển đổi. Tất cả đã được lập hợp đồng!</p>
+            <form action="{{ url_for('api_reset_data') }}" method="POST" style="margin-top: 14px;">
+                <button type="submit" class="btn btn-secondary">Khôi phục dữ liệu mẫu để thử nghiệm</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<!-- SECTION: HỢP ĐỒNG MỚI LẬP & LỊCH SỬ KIỂM TOÁN -->
+<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px;">
+    <!-- HỢP ĐỒNG MỚI LẬP -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h3 class="card-title"><span>📝</span> Hợp Đồng Đã Lập Gần Đây</h3>
+            <a href="{{ url_for('contracts_list') }}" class="btn btn-secondary" style="font-size: 12.5px;">Tất cả HĐ</a>
+        </div>
+
+        {% if recent_contracts %}
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Số Hợp Đồng (AC4)</th>
+                            <th>Khách Hàng</th>
+                            <th>Ngày Ký</th>
+                            <th>Giá Trị HĐ</th>
+                            <th>Chi Tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in recent_contracts %}
+                        <tr>
+                            <td>
+                                <strong style="color: #0f172a; font-size: 14px;">{{ c.contract_number }}</strong>
+                                <div style="font-size: 11.5px; color: var(--text-muted);">Mã: {{ c.contract_id }}</div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">{{ c.customer_name }}</div>
+                                <span class="badge {{ CONTRACT_STATUS_BADGES.get(c.status, '') }}">{{ CONTRACT_STATUS_LABELS.get(c.status, c.status) }}</span>
+                            </td>
+                            <td style="font-size: 12.5px;">{{ c.signed_date | date }}</td>
+                            <td>
+                                <strong style="color: var(--success);">{{ c.grand_total | currency }}</strong>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('contract_detail', contract_id=c.contract_id) }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
+                                    Xem HĐ ➔
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--text-muted); text-align: center; padding: 20px;">Chưa có hợp đồng nào.</p>
+        {% endif %}
+    </div>
+
+    <!-- AUDIT TRAIL LOG -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h3 class="card-title"><span>🛡️</span> Nhật Ký Kiểm Toán Nghiệp Vụ</h3>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for log in audit_logs %}
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px;">
+                    <strong>{{ log.performed_by }}</strong>
+                    <span>{{ log.timestamp | datetime }}</span>
+                </div>
+                <p style="font-size: 12.5px; color: var(--text-main); line-height: 1.4; margin: 0;">
+                    {{ log.message }}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

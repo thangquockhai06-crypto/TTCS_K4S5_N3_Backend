@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}So sánh cạnh nhau {{ diff.base_version.version_tag }} vs {{ diff.target_version.version_tag }} - {{ quote_code }}{% endblock %}
+
+{% block content %}
+<div class="compare-container">
+    <!-- THANH CHỌN 2 PHIÊN BẢN CẦN SO SÁNH -->
+    <div class="compare-selector-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 24px;">🔍</span>
+            <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main);">
+                    So Sánh Cạnh Nhau Hai Phiên Bản (Tiêu chí 2)
+                </h3>
+                <span style="font-size: 12.5px; color: var(--text-muted);">
+                    Họ báo giá: <strong>{{ quote_code }}</strong> ({{ family[0].customer_name }})
+                </span>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; flex: 1; max-width: 650px;">
+            <div class="compare-version-select">
+                <label style="font-size: 13px; font-weight: 700; white-space: nowrap; color: #475569;">Bản Cũ (Gốc):</label>
+                <select id="select-ver-1" class="form-control">
+                    {% for v in family %}
+                        <option value="{{ v.version_id }}" {% if v.version_id == v1_id %}selected{% endif %}>
+                            {{ v.version_tag }} {% if v.is_effective %}(Đang hiệu lực 🌟){% elif v.is_sent %}(Đã gửi){% else %}(Nháp){% endif %} - {{ v.grand_total | currency }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="button" id="btn-swap-versions" class="btn btn-outline btn-sm" title="Hoán đổi vị trí">
+                ⇄
+            </button>
+
+            <div class="compare-version-select">
+                <label style="font-size: 13px; font-weight: 700; white-space: nowrap; color: #475569;">Bản Mới (So Sánh):</label>
+                <select id="select-ver-2" class="form-control">
+                    {% for v in family %}
+                        <option value="{{ v.version_id }}" {% if v.version_id == v2_id %}selected{% endif %}>
+                            {{ v.version_tag }} {% if v.is_effective %}(Đang hiệu lực 🌟){% elif v.is_sent %}(Đã gửi){% else %}(Nháp){% endif %} - {{ v.grand_total | currency }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="button" id="btn-apply-compare" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                ⚡ Đối Chiếu Ngay
+            </button>
+        </div>
+
+        <div>
+            <a href="{{ url_for('quote_detail', quote_code=quote_code) }}" class="btn btn-outline btn-sm">
+                ← Quay lại Báo giá
+            </a>
+        </div>
+    </div>
+
+    <!-- TỔNG KẾT BIẾN ĐỘNG TÀI CHÍNH (FINANCIAL DELTA METRICS) -->
+    <div class="financial-delta-grid">
+        <!-- TỔNG TIỀN GỐC -->
+        <div class="delta-card">
+            <h4>
+                <span>Tiền Gốc Sản Phẩm</span>
+                <span>Subtotal</span>
+            </h4>
+            <div class="delta-values">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.base_version.version_tag }}</div>
+                    <div style="font-size: 14px; font-weight: 600;">{{ diff.financial_diff.subtotal.base_formatted }}</div>
+                </div>
+                <div style="font-size: 18px; color: var(--text-light);">➔</div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.target_version.version_tag }}</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--primary);">{{ diff.financial_diff.subtotal.target_formatted }}</div>
+                </div>
+            </div>
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; justify-content: space-between; font-size: 12.5px;">
+                <span>Chênh lệch:</span>
+                <strong>{{ diff.financial_diff.subtotal.delta_formatted }}</strong>
+            </div>
+        </div>
+
+        <!-- TỔNG CHIẾT KHẤU -->
+        <div class="delta-card">
+            <h4>
+                <span>Tổng Chiết Khấu Giảm</span>
+                <span>Discount</span>
+            </h4>
+            <div class="delta-values">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.base_version.version_tag }}</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #dc2626;">{{ diff.financial_diff.total_discount.base_formatted }}</div>
+                </div>
+                <div style="font-size: 18px; color: var(--text-light);">➔</div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.target_version.version_tag }}</div>
+                    <div style="font-size: 14px; font-weight: 700; color: #dc2626;">{{ diff.financial_diff.total_discount.target_formatted }}</div>
+                </div>
+            </div>
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; justify-content: space-between; font-size: 12.5px;">
+                <span>Biến động chiết khấu:</span>
+                <strong>{{ diff.financial_diff.total_discount.delta_formatted }}</strong>
+            </div>
+        </div>
+
+        <!-- TỔNG THANH TOÁN (GRAND TOTAL) -->
+        <div class="delta-card" style="border: 2px solid {% if diff.financial_diff.grand_total.delta > 0 %}#3b82f6{% elif diff.financial_diff.grand_total.delta < 0 %}#10b981{% else %}#94a3b8{% endif %};">
+            <h4>
+                <span style="font-weight: 700; color: #1e3a8a;">TỔNG THANH TOÁN CUỐI</span>
+                <span class="delta-badge {% if diff.financial_diff.grand_total.trend == 'INCREASED' %}increased{% elif diff.financial_diff.grand_total.trend == 'DECREASED' %}decreased{% else %}neutral{% endif %}">
+                    {% if diff.financial_diff.grand_total.trend == 'INCREASED' %}
+                        Tăng {{ diff.financial_diff.grand_total.delta_percent }}% 📈
+                    {% elif diff.financial_diff.grand_total.trend == 'DECREASED' %}
+                        Giảm {{ diff.financial_diff.grand_total.delta_percent }}% 📉
+                    {% else %}
+                        Không đổi (=)
+                    {% endif %}
+                </span>
+            </h4>
+            <div class="delta-values">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.base_version.version_tag }}</div>
+                    <div style="font-size: 15px; font-weight: 600;">{{ diff.financial_diff.grand_total.base_formatted }}</div>
+                </div>
+                <div style="font-size: 18px; color: var(--primary);">➔</div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">{{ diff.target_version.version_tag }}</div>
+                    <div style="font-size: 17px; font-weight: 800; color: #1e3a8a;">{{ diff.financial_diff.grand_total.target_formatted }}</div>
+                </div>
+            </div>
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Chênh lệch ròng:</span>
+                <strong style="color: {% if diff.financial_diff.grand_total.delta > 0 %}#2563eb{% elif diff.financial_diff.grand_total.delta < 0 %}#059669{% else %}inherit{% endif %};">
+                    {{ diff.financial_diff.grand_total.delta_formatted }}
+                </strong>
+            </div>
+        </div>
+
+        <!-- THỐNG KÊ SỐ LƯỢNG BIẾN ĐỔI -->
+        <div class="delta-card">
+            <h4>
+                <span>Thống Kê Thay Đổi Dòng</span>
+                <span>Line Items Diff</span>
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12.5px; margin-top: 8px;">
+                <span class="diff-pill diff-pill-added">Thêm mới: {{ diff.stats.added_count }}</span>
+                <span class="diff-pill diff-pill-removed">Đã xóa: {{ diff.stats.removed_count }}</span>
+                <span class="diff-pill diff-pill-modified">Điều chỉnh: {{ diff.stats.modified_count }}</span>
+                <span class="diff-pill diff-pill-unchanged">Giữ nguyên: {{ diff.stats.unchanged_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG ĐỐI CHIẾU DÒNG SẢN PHẨM CẠNH NHAU (SIDE-BY-SIDE TABLE) -->
+    <div class="card">
+        <div class="card-header" style="background: #ffffff;">
+            <div class="card-title">
+                <span>📦</span>
+                <span>Đối Chiếu Chi Tiết Từng Dòng Sản Phẩm Giữa {{ diff.base_version.version_tag }} Và {{ diff.target_version.version_tag }}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                Highlight màu sắc: <span class="diff-pill diff-pill-added">Thêm</span> <span class="diff-pill diff-pill-removed">Xóa</span> <span class="diff-pill diff-pill-modified">Sửa</span>
+            </div>
+        </div>
+
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="diff-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 110px; text-align: center;">Phân Loại</th>
+                            <th style="width: 260px;">Sản Phẩm / Dịch Vụ</th>
+                            <!-- CỘT PHIÊN BẢN A (CŨ) -->
+                            <th style="background: #f1f5f9; border-left: 2px solid #cbd5e1; width: 340px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Phiên Bản Gốc ({{ diff.base_version.version_tag }})</span>
+                                    {% if diff.base_version.is_effective %}<span class="badge badge-effective" style="font-size: 10px;">Hiệu lực 🌟</span>{% endif %}
+                                </div>
+                            </th>
+                            <!-- CỘT PHIÊN BẢN B (MỚI) -->
+                            <th style="background: #eff6ff; border-left: 2px solid #93c5fd; width: 340px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--primary);">Phiên Bản Mới ({{ diff.target_version.version_tag }})</span>
+                                    {% if diff.target_version.is_effective %}<span class="badge badge-effective" style="font-size: 10px;">Hiệu lực 🌟</span>{% endif %}
+                                </div>
+                            </th>
+                            <th style="width: 180px; text-align: right;">Chênh Lệch Dòng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in diff.items_diff %}
+                        <tr class="diff-row-{{ row.diff_type|lower }}">
+                            <!-- 1. PHÂN LOẠI -->
+                            <td style="text-align: center;">
+                                <span class="diff-pill diff-pill-{{ row.diff_type|lower }}">
+                                    {{ row.diff_label }}
+                                </span>
+                            </td>
+
+                            <!-- 2. TÊN SẢN PHẨM -->
+                            <td>
+                                <strong>{{ row.product_name }}</strong>
+                            </td>
+
+                            <!-- 3. NỘI DUNG TẠI PHIÊN BẢN GỐC (BASE) -->
+                            <td style="border-left: 2px solid #cbd5e1; background: {% if row.diff_type == 'REMOVED' %}#fee2e2{% else %}transparent{% endif %};">
+                                {% if row.base_item %}
+                                    <div style="font-size: 13px;">
+                                        <div>
+                                            Số lượng: <strong>{{ row.base_item.quantity }}</strong> {{ row.base_item.unit }}
+                                            × {{ row.base_item.unit_price | currency }}
+                                        </div>
+                                        <div style="color: #64748b; font-size: 12px; margin-top: 2px;">
+                                            Chiết khấu: <strong style="color: #dc2626;">{{ row.base_item.discount_percent }}%</strong>
+                                            ({{ row.base_item.discount_amount | currency }})
+                                        </div>
+                                        <div style="font-weight: 700; color: #1e3a8a; margin-top: 4px;">
+                                            Thành tiền: {{ row.base_item.amount | currency }}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span style="color: var(--text-light); font-style: italic;">(Không có trong phiên bản này)</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 4. NỘI DUNG TẠI PHIÊN BẢN MỚI (TARGET) -->
+                            <td style="border-left: 2px solid #93c5fd; background: {% if row.diff_type == 'ADDED' %}#d1fae5{% elif row.diff_type == 'MODIFIED' %}#fef3c7{% else %}transparent{% endif %};">
+                                {% if row.target_item %}
+                                    <div style="font-size: 13px;">
+                                        <div>
+                                            Số lượng: 
+                                            {% if 'quantity' in row.changes %}
+                                                <span class="change-highlight">{{ row.target_item.quantity }}</span> (từ {{ row.changes.quantity.old }})
+                                            {% else %}
+                                                <strong>{{ row.target_item.quantity }}</strong>
+                                            {% endif %}
+                                            {{ row.target_item.unit }}
+                                            × 
+                                            {% if 'unit_price' in row.changes %}
+                                                <span class="change-highlight">{{ row.target_item.unit_price | currency }}</span>
+                                            {% else %}
+                                                {{ row.target_item.unit_price | currency }}
+                                            {% endif %}
+                                        </div>
+                                        <div style="color: #64748b; font-size: 12px; margin-top: 2px;">
+                                            Chiết khấu: 
+                                            {% if 'discount_percent' in row.changes %}
+                                                <span class="change-highlight" style="color: #b91c1c;">{{ row.target_item.discount_percent }}%</span> (cũ: {{ row.changes.discount_percent.old }}%)
+                                            {% else %}
+                                                <strong style="color: #dc2626;">{{ row.target_item.discount_percent }}%</strong>
+                                            {% endif %}
+                                            ({{ row.target_item.discount_amount | currency }})
+                                        </div>
+                                        <div style="font-weight: 700; color: #1e3a8a; margin-top: 4px;">
+                                            Thành tiền: 
+                                            {% if 'amount' in row.changes %}
+                                                <span class="change-highlight" style="color: #1e3a8a; font-size: 14px;">{{ row.target_item.amount | currency }}</span>
+                                            {% else %}
+                                                {{ row.target_item.amount | currency }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span style="color: #dc2626; font-style: italic; text-decoration: line-through;">(Đã bị loại bỏ trong phiên bản mới)</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 5. CHÊNH LỆCH DÒNG -->
+                            <td style="text-align: right; font-weight: 700;">
+                                {% if row.diff_type == 'ADDED' %}
+                                    <span style="color: #059669;">+{{ row.target_item.amount | currency }}</span>
+                                {% elif row.diff_type == 'REMOVED' %}
+                                    <span style="color: #dc2626;">-{{ row.base_item.amount | currency }}</span>
+                                {% elif row.diff_type == 'MODIFIED' %}
+                                    {% set delta_line = row.target_item.amount - row.base_item.amount %}
+                                    <span style="color: {% if delta_line > 0 %}#2563eb{% elif delta_line < 0 %}#059669{% else %}inherit{% endif %};">
+                                        {% if delta_line > 0 %}+{% endif %}{{ delta_line | currency }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: var(--text-light); font-weight: 400;">0 đ (giữ nguyên)</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SO SÁNH ĐIỀU KHOẢN THƯƠNG MẠI & METADATA -->
+    <div class="card">
+        <div class="card-header" style="background: #ffffff;">
+            <div class="card-title">
+                <span>📝</span>
+                <span>So Sánh Điều Khoản Thương Mại & Pháp Lý Giữa 2 Phiên Bản</span>
+            </div>
+            {% if diff.has_metadata_changes %}
+                <span class="badge badge-accepted">Có điều khoản thay đổi</span>
+            {% else %}
+                <span class="badge badge-draft">Điều khoản giống nhau hoàn toàn</span>
+            {% endif %}
+        </div>
+
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 220px;">Hạng Mục So Sánh</th>
+                            <th style="background: #f8fafc; width: 45%;">Bản Gốc ({{ diff.base_version.version_tag }})</th>
+                            <th style="background: #eff6ff; width: 45%;">Bản Mới ({{ diff.target_version.version_tag }})</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, meta in diff.metadata_diff.items() %}
+                        <tr style="{% if meta.is_changed %}background-color: #fffbeb; font-weight: 500;{% endif %}">
+                            <td>
+                                <strong>{{ meta.field_name }}</strong>
+                                {% if meta.is_changed %}
+                                    <span class="diff-pill diff-pill-modified" style="margin-left: 6px;">Đổi</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ meta.old }}</td>
+                            <td style="color: {% if meta.is_changed %}#b45309; font-weight: 700;{% else %}inherit{% endif %};">
+                                {{ meta.new }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

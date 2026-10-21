@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Soạn Báo Giá Mới (Khởi tạo v1.0) - AutoLead CRM{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>➕</span>
+            <span>Soạn Thảo Báo Giá Mới (Khởi tạo Phiên bản v1.0)</span>
+        </div>
+        <a href="{{ url_for('quotes_list') }}" class="btn btn-outline btn-sm">
+            ✕ Hủy bỏ
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('quote_create') }}">
+        <div class="card-body">
+            <!-- THÔNG TIN CHUNG BÁO GIÁ -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <div>
+                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                        Tiêu đề báo giá: <span style="color: red;">*</span>
+                    </label>
+                    <input type="text" name="title" class="form-control" value="Báo giá Hệ thống AutoLead CRM & Module CPQ" required style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px;">
+                </div>
+
+                <div>
+                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                        Thời hạn hiệu lực (ngày):
+                    </label>
+                    <input type="number" name="validity_days" class="form-control" value="15" min="1" max="90" style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px;">
+                </div>
+            </div>
+
+            <!-- THÔNG TIN KHÁCH HÀNG -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 24px;">
+                <h4 style="font-size: 14px; font-weight: 700; color: #1e3a8a; margin-bottom: 14px;">
+                    🏢 Thông Tin Khách Hàng Doanh Nghiệp
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Tên công ty / Doanh nghiệp: *</label>
+                        <input type="text" name="customer_name" class="form-control" value="Công ty Cổ phần Giải pháp Số Apex" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Email nhận báo giá: *</label>
+                        <input type="email" name="customer_email" class="form-control" value="contact@apex-solutions.vn" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Số điện thoại liên hệ:</label>
+                        <input type="text" name="customer_phone" class="form-control" value="0988776655" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    </div>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH DÒNG SẢN PHẨM -->
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="font-size: 15px; font-weight: 700; color: #334155;">
+                        📦 Danh Sách Sản Phẩm & Điều Khoản Giá (Bản v1.0)
+                    </h4>
+                    <button type="button" id="add-item-btn" class="btn btn-outline btn-sm" style="color: var(--primary); border-color: #93c5fd;">
+                        ➕ Thêm Dòng Sản Phẩm
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align: center;">STT</th>
+                                <th>Sản phẩm / Dịch vụ</th>
+                                <th style="width: 90px;">ĐVT</th>
+                                <th style="width: 90px;">SL</th>
+                                <th style="width: 150px;">Đơn giá</th>
+                                <th style="width: 110px;">Chiết khấu (%)</th>
+                                <th style="width: 160px; text-align: right;">Thành tiền</th>
+                                <th>Ghi chú dòng</th>
+                                <th style="width: 50px; text-align: center;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-tbody">
+                            <tr>
+                                <td class="text-center font-bold text-muted">1</td>
+                                <td>
+                                    <input type="text" name="product_name[]" class="form-control" value="AutoLead CRM Enterprise (Gói Doanh Nghiệp)" required style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                    <input type="hidden" name="product_id[]" value="PROD-CRM-ENT">
+                                </td>
+                                <td>
+                                    <input type="text" name="unit[]" class="form-control" value="Gói/Năm" style="width: 80px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <input type="number" name="quantity[]" class="form-control item-qty calc-trigger" value="1" min="1" style="width: 80px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <input type="number" name="unit_price[]" class="form-control item-price calc-trigger" value="24000000" min="0" step="500000" style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <input type="number" name="discount_percent[]" class="form-control item-disc calc-trigger" value="0" min="0" max="100" step="0.5" style="width: 70px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                        <span>%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-bold" style="color: #1e3a8a;">
+                                    <span class="item-amount-display">24.000.000 đ</span>
+                                </td>
+                                <td>
+                                    <input type="text" name="item_notes[]" class="form-control" value="Bản quyền 50 users" style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline btn-sm delete-row-btn" style="color: #ef4444;" title="Xóa dòng">🗑️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold text-muted">2</td>
+                                <td>
+                                    <input type="text" name="product_name[]" class="form-control" value="Module CPQ Nâng Cao & Quản Lý Phiên Bản Báo Giá" required style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                    <input type="hidden" name="product_id[]" value="PROD-CPQ-MOD">
+                                </td>
+                                <td>
+                                    <input type="text" name="unit[]" class="form-control" value="Module" style="width: 80px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <input type="number" name="quantity[]" class="form-control item-qty calc-trigger" value="1" min="1" style="width: 80px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <input type="number" name="unit_price[]" class="form-control item-price calc-trigger" value="8500000" min="0" step="500000" style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <input type="number" name="discount_percent[]" class="form-control item-disc calc-trigger" value="0" min="0" max="100" step="0.5" style="width: 70px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                        <span>%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-bold" style="color: #1e3a8a;">
+                                    <span class="item-amount-display">8.500.000 đ</span>
+                                </td>
+                                <td>
+                                    <input type="text" name="item_notes[]" class="form-control" value="So sánh phiên bản side-by-side" style="width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline btn-sm delete-row-btn" style="color: #ef4444;" title="Xóa dòng">🗑️</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ĐIỀU KHOẢN VÀ TÍNH TIỀN TỔNG -->
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 24px;">
+                <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+                    <h4 style="font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px;">
+                        📝 Điều Khoản Hợp Đồng Mẫu
+                    </h4>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Điều khoản thanh toán:</label>
+                        <select name="payment_terms" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            {% for opt in PAYMENT_TERMS_OPTIONS %}
+                                <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Điều khoản giao hàng & cài đặt:</label>
+                        <select name="delivery_terms" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            {% for opt in DELIVERY_TERMS_OPTIONS %}
+                                <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Ghi chú cam kết:</label>
+                        <textarea name="notes" rows="3" class="form-control" placeholder="Ghi chú cam kết bảo hành, hỗ trợ kỹ thuật..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">Báo giá khởi tạo ban đầu, cam kết đào tạo đầy đủ cho người dùng.</textarea>
+                    </div>
+                </div>
+
+                <!-- TỔNG KẾT LIVE -->
+                <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+                    <h4 style="font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px;">
+                        💰 Tổng Hợp Chi Phí Dự Kiến (v1.0)
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Tổng tiền gốc:</span>
+                            <strong id="display-subtotal">32.500.000 đ</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; color: #dc2626;">
+                            <span>Chiết khấu giảm trừ:</span>
+                            <strong id="display-discount">0 đ</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-muted);">Thuế suất VAT (%):</span>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <input type="number" id="vat-percent-input" name="vat_percent" value="10" min="0" max="20" class="calc-trigger" style="width: 60px; padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 4px; text-align: right;">
+                                <span>%</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Tiền thuế VAT:</span>
+                            <strong id="display-vat">3.250.000 đ</strong>
+                        </div>
+                        <div style="border-top: 2px dashed var(--border-color); padding-top: 10px; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline;">
+                            <span style="font-size: 15px; font-weight: 700; color: #1e3a8a;">TỔNG THANH TOÁN:</span>
+                            <span id="display-grand-total" style="font-size: 20px; font-weight: 800; color: #1e3a8a;">
+                                35.750.000 đ
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 12px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: var(--radius-sm);">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: #1e40af;">
+                            <input type="checkbox" name="send_now" value="1" style="width: 16px; height: 16px;">
+                            <span>📤 Gửi báo giá cho khách hàng ngay và kích hoạt hiệu lực (AC3)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUTTONS -->
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <a href="{{ url_for('quotes_list') }}" class="btn btn-outline">Hủy Bỏ</a>
+                <button type="submit" class="btn btn-primary" style="padding: 10px 24px; font-size: 15px;">
+                    💾 Lưu Báo Giá (Phiên Bản v1.0)
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
