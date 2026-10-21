@@ -1,0 +1,39 @@
+erDiagram
+    USERS ||--o{ TASKS : "assignee"
+    USERS ||--o| REMINDER_SETTINGS : "configures"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    TASKS ||--o{ NOTIFICATIONS : "generates"
+
+    USERS {
+        string id PK
+        string email
+        string full_name
+        string role
+        string team_id
+    }
+
+    TASKS {
+        string id PK
+        string title
+        string status
+        datetime due_date
+        string assignee_id FK
+        json reminded_milestones
+    }
+
+    REMINDER_SETTINGS {
+        string id PK
+        string user_id FK
+        json remind_before_minutes
+        boolean is_enabled
+    }
+
+    NOTIFICATIONS {
+        string id PK
+        string user_id FK
+        string task_id FK
+        string title
+        text message
+        boolean is_read
+        datetime created_at
+    }
