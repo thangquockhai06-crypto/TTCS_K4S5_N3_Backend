@@ -361,9 +361,22 @@ class LeadService:
         if "status" in update_dict and update_dict["status"]:
             lead.status = update_dict["status"].upper()
         if "assignedUserId" in update_dict:
+            old_assigned = lead.assigned_user_id
             lead.assigned_user_id = update_dict["assignedUserId"]
             if lead.assigned_user_id and not lead.assigned_at:
                 lead.assigned_at = datetime.utcnow()
+            if lead.assigned_user_id and lead.assigned_user_id != old_assigned:
+                try:
+                    from app.services.notification_service import NotificationService
+                    NotificationService.notify_lead_assigned(
+                        db=db,
+                        lead_id=lead.id,
+                        lead_name=lead.full_name,
+                        assignee_id=lead.assigned_user_id,
+                        assigner_name="Quản trị viên",
+                    )
+                except Exception:
+                    pass
         if "notes" in update_dict:
             lead.notes = update_dict["notes"]
 

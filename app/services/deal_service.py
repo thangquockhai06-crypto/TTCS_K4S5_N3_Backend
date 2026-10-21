@@ -386,7 +386,7 @@ class DealService:
                 missing_requirements.append("Phải nhập lý do thất bại (Loss Reason).")
 
         if missing_requirements:
-            msg = "Điều kiện thoát giai đoạn (Exit Conditions) chưa đáp ứng: " + " | ".join(missing_requirements)
+            msg = "Chưa đáp ứng điều kiện thoát giai đoạn (Exit Conditions): " + " | ".join(missing_requirements)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=msg,
@@ -572,6 +572,12 @@ class DealService:
             is_overdue = d.expected_close_date and d.expected_close_date < today
 
             if is_inactive or is_overdue:
+                if not d.is_stalled:
+                    try:
+                        from app.services.notification_service import NotificationService
+                        NotificationService.notify_stalled_deal(db, d.id, d.title, d.owner_id)
+                    except Exception:
+                        pass
                 d.is_stalled = True
                 stalled_deals.append(d)
             else:

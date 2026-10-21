@@ -122,7 +122,20 @@ class TaskService:
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
-        return TaskRepository.create(db, new_task)
+        created_task = TaskRepository.create(db, new_task)
+        if created_task.assignee_id and created_task.assignee_id != user.id:
+            try:
+                from app.services.notification_service import NotificationService
+                NotificationService.notify_task_assigned(
+                    db=db,
+                    task_id=created_task.id,
+                    task_title=created_task.title,
+                    assignee_id=created_task.assignee_id,
+                    creator_name=user.full_name or user.email,
+                )
+            except Exception:
+                pass
+        return created_task
 
     @classmethod
     def update_task(cls, db: Session, task_id: str, dto: UpdateTaskDTO, user: User) -> Task:
