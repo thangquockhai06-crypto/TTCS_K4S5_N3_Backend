@@ -14,6 +14,7 @@ from app.models.product import Product, PriceList
 from app.models.category import Category
 from app.models.custom_field import CustomField
 from app.models.pipeline_stage import PipelineStage
+from app.models.product import Product, PriceList
 from app.models.win_loss import WinLossReason, Competitor
 from app.models.user_import_job import UserImportJob
 from app.models.lead import Lead

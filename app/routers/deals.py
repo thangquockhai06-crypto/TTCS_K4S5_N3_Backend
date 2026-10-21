@@ -2,6 +2,8 @@ from typing import List, Optional, Dict, Any
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+
+from app.core.export import export_to_excel
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
@@ -25,7 +27,7 @@ from app.schemas.deal_history import (
     format_field_value_and_description,
 )
 from app.services.deal_service import DealService
-from app.core.export import export_to_excel
+from app.services.saved_filter_service import SavedFilterService
 
 router = APIRouter(prefix="/deals", tags=["Deals Pipeline (EP-05: S5-01 -> S5-08)"])
 
@@ -145,13 +147,13 @@ def export_deals(
             "Có" if d.is_stalled else "Không",
             d.created_at.strftime("%Y-%m-%d %H:%M:%S") if d.created_at else "",
         ]
-        for d in deals
+        for deal in deals
     ]
     return export_to_excel(
-        sheet_title="CoHoiBanHang",
-        headers=headers,
+        sheet_title="Deals",
+        headers=["Deal ID", "Title", "Value", "Stage", "Outcome", "Actual value", "Signed date", "Lost reason", "Competitor", "Owner"],
         rows=rows,
-        filename="danh_sach_co_hoi.xlsx",
+        filename="danh_sach_deals.xlsx",
     )
 
 

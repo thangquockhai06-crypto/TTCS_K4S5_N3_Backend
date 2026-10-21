@@ -71,11 +71,123 @@ CREATE TABLE IF NOT EXISTS deals (
     owner_id VARCHAR(36) NOT NULL,
     campaign_id VARCHAR(36) DEFAULT NULL,
     expected_close_date DATE DEFAULT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'OPEN',
+    closed_at DATETIME DEFAULT NULL,
+    closed_by VARCHAR(36) DEFAULT NULL,
+    actual_value DECIMAL(15, 2) DEFAULT NULL,
+    signed_date DATE DEFAULT NULL,
+    lost_reason_id VARCHAR(36) DEFAULT NULL,
+    lost_reason_note TEXT DEFAULT NULL,
+    competitor_id VARCHAR(36) DEFAULT NULL,
+    reopened_at DATETIME DEFAULT NULL,
+    reopened_by VARCHAR(36) DEFAULT NULL,
+    reopen_reason TEXT DEFAULT NULL,
+    last_open_stage VARCHAR(30) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT ck_deal_status_valid CHECK (status IN ('OPEN', 'WON', 'LOST')),
+    CONSTRAINT ck_deal_outcome_fields CHECK (
+        (status = 'OPEN' AND actual_value IS NULL AND signed_date IS NULL AND lost_reason_id IS NULL
+            AND lost_reason_note IS NULL AND competitor_id IS NULL AND closed_at IS NULL AND closed_by IS NULL)
+        OR (status = 'WON' AND actual_value IS NOT NULL AND actual_value > 0 AND signed_date IS NOT NULL
+            AND lost_reason_id IS NULL AND lost_reason_note IS NULL AND competitor_id IS NULL
+            AND closed_at IS NOT NULL AND closed_by IS NOT NULL)
+        OR (status = 'LOST' AND actual_value IS NULL AND signed_date IS NULL AND lost_reason_id IS NOT NULL
+            AND closed_at IS NOT NULL AND closed_by IS NOT NULL)
+    ),
+    INDEX idx_deal_status (status),
+    INDEX idx_deal_stage (stage),
+    INDEX idx_deal_value (value),
+    INDEX idx_deal_expected_close (expected_close_date),
+    INDEX idx_deal_owner (owner_id),
+    INDEX idx_deal_customer (customer_id),
     INDEX idx_deals_campaign_id (campaign_id),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reopened_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.1 BẢNG LIÊN KẾT DEAL - PRODUCT (SCRUM-206)
+CREATE TABLE IF NOT EXISTS deal_products (
+    deal_id VARCHAR(36) NOT NULL,
+    product_id VARCHAR(36) NOT NULL,
+    PRIMARY KEY (deal_id, product_id),
+    INDEX idx_deal_products_deal (deal_id),
+    INDEX idx_deal_products_product (product_id),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.2 BẢNG BỘ LỌC CÁ NHÂN CHO DEALS (SAVED_DEAL_FILTERS - SCRUM-206)
+CREATE TABLE IF NOT EXISTS saved_deal_filters (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    filter_criteria JSON NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_saved_deal_filter_user_name (user_id, name),
+    INDEX idx_saved_deal_filter_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.3 BẢNG THÀNH VIÊN PHỐI HỢP CƠ HỘI BÁN HÀNG (DEAL_MEMBERS - SCRUM-207)
+CREATE TABLE IF NOT EXISTS deal_members (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    role_in_deal VARCHAR(50) NOT NULL DEFAULT 'COLLABORATOR',
+    added_by VARCHAR(36) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_deal_member (deal_id, user_id),
+    INDEX idx_deal_member_deal (deal_id),
+    INDEX idx_deal_member_user (user_id),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4.4 BẢNG NHẬT KÝ THAY ĐỔI CƠ HỘI (DEAL_HISTORIES - SCRUM-207)
+CREATE TABLE IF NOT EXISTS deal_histories (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    field_name VARCHAR(50) NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    changed_by VARCHAR(36) DEFAULT NULL,
+    changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_deal_histories_deal (deal_id),
+    INDEX idx_deal_histories_field (field_name),
+    INDEX idx_deal_histories_changed_at (changed_at),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS deal_outcome_history (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    outcome VARCHAR(10) NOT NULL,
+    previous_status VARCHAR(10) NOT NULL,
+    resulting_status VARCHAR(10) NOT NULL,
+    previous_stage VARCHAR(30) DEFAULT NULL,
+    resulting_stage VARCHAR(30) DEFAULT NULL,
+    actor_id VARCHAR(36) DEFAULT NULL,
+    event_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME DEFAULT NULL,
+    closed_by VARCHAR(36) DEFAULT NULL,
+    actual_value DECIMAL(15, 2) DEFAULT NULL,
+    signed_date DATE DEFAULT NULL,
+    lost_reason_id VARCHAR(36) DEFAULT NULL,
+    lost_reason_note TEXT DEFAULT NULL,
+    competitor_id VARCHAR(36) DEFAULT NULL,
+    reopen_reason TEXT DEFAULT NULL,
+    INDEX idx_deal_outcome_history_deal (deal_id),
+    INDEX idx_deal_outcome_history_event (event_at),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. BẢNG NHẬT KÝ HOẠT ĐỘNG (ACTIVITIES)
