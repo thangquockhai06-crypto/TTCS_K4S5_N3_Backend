@@ -10,7 +10,7 @@ from app.models.deal_item import DealItem
 from app.models.campaign import Campaign
 from app.models.lead import Lead, LeadRoutingRule
 from app.models.activity import Activity, Note
-from app.models.quotation import Quotation
+from app.models.quotation import Quotation, QuoteItem, QuoteApprovalHistory
 from app.models.role import Role, user_roles
 from app.models.team import Team, user_teams
 from app.models.audit_log import AuditLog
@@ -21,6 +21,10 @@ from app.models.pipeline_stage import PipelineStage
 from app.models.win_loss import WinLossReason, Competitor
 from app.models.user_import_job import UserImportJob
 from app.models.task import Task
+from app.models.contract import Contract, ContractItem
+from app.models.pdf_template import PdfTemplate
+from app.models.notification import Notification
+from app.models.automation import AutomationRule, AutomationLog
 
 __all__ = [
     "Base",
@@ -38,6 +42,14 @@ __all__ = [
     "Activity",
     "Note",
     "Quotation",
+    "QuoteItem",
+    "QuoteApprovalHistory",
+    "Contract",
+    "ContractItem",
+    "PdfTemplate",
+    "Notification",
+    "AutomationRule",
+    "AutomationLog",
     "Role",
     "user_roles",
     "Team",
