@@ -644,3 +644,113 @@ def test_get_deal_history_filtering_by_date_and_operator(
     assert res_invalid.status_code == 400
     assert "Định dạng start_date không hợp lệ" in res_invalid.json()["detail"]
 
+
+# ==============================================================================
+# 9. KIỂM THỬ ENDPOINT THỐNG KÊ SUMMARY VÀ XUẤT BÁO CÁO EXCEL LỊCH SỬ DEAL
+# ==============================================================================
+
+def test_get_deal_history_summary_endpoint(
+    client: TestClient,
+    db_session: Session,
+    users_fixture: dict,
+    test_customer: Customer,
+):
+    """
+    Kiểm thử endpoint GET /api/v1/deals/{id}/history/summary (SCRUM-91).
+    Xác minh các chỉ số tổng hợp: total_changes, stage_changes_count, amount_changes_count,
+    changes_by_field và top_operators.
+    """
+    admin_auth = users_fixture["admin_auth"]
+    admin = users_fixture["admin"]
+
+    # 1. Tạo deal
+    deal = Deal(
+        id=str(uuid.uuid4()),
+        title="Dự án Chuyển Đổi Số Khách Sạn 5 Sao",
+        value=150000000.0,
+        stage="lead",
+        probability=20,
+        customer_id=test_customer.id,
+        owner_id=admin.id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db_session.add(deal)
+    db_session.commit()
+
+    # 2. Thực hiện 2 lần sửa đổi
+    client.put(
+        f"/api/v1/deals/{deal.id}",
+        json={"stage": "contact"},
+        headers=admin_auth,
+    )
+    client.put(
+        f"/api/v1/deals/{deal.id}",
+        json={"amount": 250000000.0},
+        headers=admin_auth,
+    )
+
+    # 3. Gọi endpoint summary
+    res = client.get(
+        f"/api/v1/deals/{deal.id}/history/summary",
+        headers=admin_auth,
+    )
+    assert res.status_code == 200
+    summary = res.json()
+    assert summary["deal_id"] == deal.id
+    assert summary["total_changes"] == 2
+    assert summary["stage_changes_count"] == 1
+    assert summary["amount_changes_count"] == 1
+    assert summary["first_change_at"] is not None
+    assert summary["last_change_at"] is not None
+    assert len(summary["changes_by_field"]) == 2
+    assert len(summary["top_operators"]) >= 1
+    assert summary["top_operators"][0]["count"] == 2
+
+
+def test_export_deal_history_to_excel_endpoint(
+    client: TestClient,
+    db_session: Session,
+    users_fixture: dict,
+    test_customer: Customer,
+):
+    """
+    Kiểm thử endpoint GET /api/v1/deals/{id}/history/export (SCRUM-91).
+    Xác minh file nhị phân Excel trả về với header và content type hợp lệ.
+    """
+    director_auth = users_fixture["director_auth"]
+    director = users_fixture["director"]
+
+    # 1. Tạo deal
+    deal = Deal(
+        id=str(uuid.uuid4()),
+        title="Dự án Hạ Tầng Đám Mây",
+        value=300000000.0,
+        stage="lead",
+        probability=20,
+        customer_id=test_customer.id,
+        owner_id=director.id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db_session.add(deal)
+    db_session.commit()
+
+    # 2. Cập nhật deal để sinh lịch sử
+    client.put(
+        f"/api/v1/deals/{deal.id}",
+        json={"stage": "negotiation", "amount": 350000000.0},
+        headers=director_auth,
+    )
+
+    # 3. Xuất file Excel
+    res = client.get(
+        f"/api/v1/deals/{deal.id}/history/export",
+        headers=director_auth,
+    )
+    assert res.status_code == 200
+    assert "spreadsheet" in res.headers.get("content-type", "").lower() or "octet-stream" in res.headers.get("content-type", "").lower()
+    assert "attachment" in res.headers.get("content-disposition", "")
+    assert len(res.content) > 0
+
+
