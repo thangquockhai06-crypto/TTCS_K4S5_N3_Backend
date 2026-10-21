@@ -754,3 +754,108 @@ def test_export_deal_history_to_excel_endpoint(
     assert len(res.content) > 0
 
 
+# ==============================================================================
+# 10. KIỂM THỬ GHI NHẬN LỊCH SỬ KHI ĐÓNG DEAL (CLOSE WON / CLOSE LOST)
+# ==============================================================================
+
+def test_close_deal_won_and_lost_creates_history_records(
+    client: TestClient,
+    db_session: Session,
+    users_fixture: dict,
+    test_customer: Customer,
+):
+    """
+    Kiểm thử quy trình đóng cơ hội bán hàng Won / Lost tự động ghi nhận lịch sử thay đổi (SCRUM-91 & S5-05).
+    - Đóng Won kèm giá trị thực tế khác ban đầu => ghi vết cả stage và amount.
+    - Đóng Lost kèm lý do thất bại => ghi vết stage sang lost.
+    """
+    admin_auth = users_fixture["admin_auth"]
+    admin = users_fixture["admin"]
+
+    # 1. Tạo deal cho kịch bản Won
+    deal_won = Deal(
+        id=str(uuid.uuid4()),
+        title="Hợp Đồng Mua Bản Quyền Phần Mềm",
+        value=100000000.0,
+        stage="negotiation",
+        probability=70,
+        customer_id=test_customer.id,
+        owner_id=admin.id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db_session.add(deal_won)
+
+    # 2. Tạo deal cho kịch bản Lost
+    deal_lost = Deal(
+        id=str(uuid.uuid4()),
+        title="Gói Dịch Vụ Bảo Trì Server 24/7",
+        value=60000000.0,
+        stage="proposal",
+        probability=50,
+        customer_id=test_customer.id,
+        owner_id=admin.id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db_session.add(deal_lost)
+    db_session.commit()
+
+    # 3. Đóng Won với actualValue = 120000000.0
+    res_close_won = client.post(
+        f"/api/v1/deals/{deal_won.id}/close",
+        json={
+            "stage": "won",
+            "actualValue": 120000000.0,
+            "signingDate": "2026-10-21",
+        },
+        headers=admin_auth,
+    )
+    assert res_close_won.status_code == 200
+
+    # Kiểm tra lịch sử của deal_won
+    history_won_res = client.get(
+        f"/api/v1/deals/{deal_won.id}/history",
+        headers=admin_auth,
+    )
+    assert history_won_res.status_code == 200
+    won_items = history_won_res.json()["items"]
+    won_fields = [i["field_name"] for i in won_items]
+    assert "stage" in won_fields
+    assert "amount" in won_fields
+
+    stage_won_item = next(i for i in won_items if i["field_name"] == "stage")
+    assert stage_won_item["old_value"] == "negotiation"
+    assert stage_won_item["new_value"] == "won"
+
+    amount_won_item = next(i for i in won_items if i["field_name"] == "amount")
+    assert "100000000" in amount_won_item["old_value"]
+    assert "120000000" in amount_won_item["new_value"]
+
+    # 4. Đóng Lost
+    res_close_lost = client.post(
+        f"/api/v1/deals/{deal_lost.id}/close",
+        json={
+            "stage": "lost",
+            "lossReason": "Khách hàng cắt giảm ngân sách quý IV",
+            "lossCompetitor": "Không có",
+        },
+        headers=admin_auth,
+    )
+    assert res_close_lost.status_code == 200
+
+    # Kiểm tra lịch sử của deal_lost
+    history_lost_res = client.get(
+        f"/api/v1/deals/{deal_lost.id}/history",
+        headers=admin_auth,
+    )
+    assert history_lost_res.status_code == 200
+    lost_items = history_lost_res.json()["items"]
+    lost_fields = [i["field_name"] for i in lost_items]
+    assert "stage" in lost_fields
+    stage_lost_item = next(i for i in lost_items if i["field_name"] == "stage")
+    assert stage_lost_item["old_value"] == "proposal"
+    assert stage_lost_item["new_value"] == "lost"
+
+
+
