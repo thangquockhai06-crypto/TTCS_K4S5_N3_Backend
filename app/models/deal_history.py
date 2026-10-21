@@ -1,8 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from app.database import Base
+
+
+def utc_now() -> datetime:
+    """Trả về thời gian UTC dạng naive datetime tương thích với SQLAlchemy và các hệ CSDL."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class DealHistory(Base):
@@ -19,7 +24,7 @@ class DealHistory(Base):
     old_value = Column(Text, nullable=True)
     new_value = Column(Text, nullable=True)
     changed_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    changed_at = Column(DateTime, default=utc_now, nullable=False, index=True)
 
     # Relationships
     deal = relationship("Deal", back_populates="deal_histories")

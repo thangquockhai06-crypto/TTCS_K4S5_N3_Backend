@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -179,7 +179,7 @@ class DealService:
             p_stage = db.query(PipelineStage).filter(PipelineStage.stage_key == stage_key).first()
             probability = p_stage.probability if p_stage else STAGE_PROBABILITY_MAP.get(stage_key, 20)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         new_deal = Deal(
             id=str(uuid.uuid4()),
             title=dto.title.strip(),
@@ -226,7 +226,7 @@ class DealService:
         if not deal:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         histories: List[DealHistory] = []
 
         # 1. So sánh 'stage'
@@ -521,7 +521,7 @@ class DealService:
 
         # Ghi lịch sử thay đổi stage
         if old_stage != target_stage:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             history = DealHistory(
                 id=str(uuid.uuid4()),
                 deal_id=deal.id,
@@ -553,7 +553,7 @@ class DealService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
 
         close_type = dto.stage.lower()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if close_type == "won":
             deal.stage = "won"
@@ -743,7 +743,7 @@ class DealService:
             )
 
         updated_count = 0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         for deal_id in dto.dealIds:
             deal = db.query(Deal).filter(Deal.id == deal_id).first()
