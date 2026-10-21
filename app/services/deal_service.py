@@ -29,6 +29,7 @@ from app.schemas.deal_history import (
     DealHistoryListResponse,
     FIELD_LABEL_MAP,
     get_field_label,
+    format_field_value_and_description,
 )
 from app.core.scope import get_user_data_scope, DataScope
 from app.repositories.deal_repository import DealRepository
@@ -892,6 +893,7 @@ class DealService:
         for h in histories:
             operator_name = h.user.full_name if h.user else "Hệ thống"
             label = FIELD_LABEL_MAP.get(h.field_name, get_field_label(h.field_name))
+            old_disp, new_disp, desc = format_field_value_and_description(h.field_name, h.old_value, h.new_value)
             items.append(
                 DealHistoryItemResponse(
                     id=h.id,
@@ -900,6 +902,9 @@ class DealService:
                     field_label=label,
                     old_value=h.old_value,
                     new_value=h.new_value,
+                    old_display_value=old_disp,
+                    new_display_value=new_disp,
+                    change_description=desc,
                     changed_by_id=h.changed_by or "",
                     changed_by_name=operator_name,
                     changed_at=h.changed_at,

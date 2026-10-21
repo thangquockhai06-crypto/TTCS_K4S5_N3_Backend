@@ -15,11 +15,61 @@ FIELD_LABEL_MAP = {
 }
 
 
+STAGE_LABEL_MAP = {
+    "lead": "Khách hàng tiềm năng",
+    "contact": "Đã liên hệ",
+    "contacted": "Đã liên hệ",
+    "proposal": "Đề xuất / Báo giá",
+    "negotiation": "Đang thương thảo",
+    "won": "Thành công (Won)",
+    "lost": "Thất bại (Lost)",
+}
+
+
 def get_field_label(field_name: str) -> str:
     """Trả về nhãn tiếng Việt thân thiện theo tên trường dữ liệu."""
     if not field_name:
         return ""
     return FIELD_LABEL_MAP.get(field_name.strip(), field_name.replace("_", " ").title())
+
+
+def format_field_value_and_description(
+    field_name: str,
+    old_value: Optional[str],
+    new_value: Optional[str],
+) -> tuple[str, str, str]:
+    """
+    Trả về (old_display_value, new_display_value, change_description) tiếng Việt thân thiện.
+    """
+    fn = (field_name or "").strip().lower()
+    old_disp = old_value or ""
+    new_disp = new_value or ""
+
+    if fn == "stage":
+        old_disp = STAGE_LABEL_MAP.get(old_disp.lower(), old_disp)
+        new_disp = STAGE_LABEL_MAP.get(new_disp.lower(), new_disp)
+        desc = f"Chuyển giai đoạn từ '{old_disp or 'Chưa xác định'}' sang '{new_disp}'"
+    elif fn in ("amount", "value"):
+        try:
+            old_num = float(old_disp)
+            old_disp = f"{old_num:,.0f} đ".replace(",", ".")
+        except (ValueError, TypeError):
+            pass
+        try:
+            new_num = float(new_disp)
+            new_disp = f"{new_num:,.0f} đ".replace(",", ".")
+        except (ValueError, TypeError):
+            pass
+        desc = f"Cập nhật giá trị cơ hội từ {old_disp or '0 đ'} thành {new_disp or '0 đ'}"
+    elif fn in ("expected_close_date", "expectedclosedate"):
+        desc = f"Thay đổi ngày dự kiến chốt từ {old_disp or 'Chưa đặt'} thành {new_disp or 'Chưa đặt'}"
+    elif fn in ("assigned_to", "owner_id", "assignedto", "ownerid"):
+        desc = "Điều chuyển người phụ trách cơ hội bán hàng"
+    else:
+        label = get_field_label(field_name)
+        desc = f"Cập nhật thông tin '{label}'"
+
+    return old_disp, new_disp, desc
 
 
 class DealHistoryItemResponse(BaseModel):
@@ -51,6 +101,21 @@ class DealHistoryItemResponse(BaseModel):
         None,
         validation_alias=AliasChoices("new_value", "newValue"),
         serialization_alias="new_value",
+    )
+    old_display_value: Optional[str] = Field(
+        None,
+        validation_alias=AliasChoices("old_display_value", "oldDisplayValue"),
+        serialization_alias="old_display_value",
+    )
+    new_display_value: Optional[str] = Field(
+        None,
+        validation_alias=AliasChoices("new_display_value", "newDisplayValue"),
+        serialization_alias="new_display_value",
+    )
+    change_description: Optional[str] = Field(
+        None,
+        validation_alias=AliasChoices("change_description", "changeDescription"),
+        serialization_alias="change_description",
     )
     changed_by_id: str | int = Field(
         ...,
