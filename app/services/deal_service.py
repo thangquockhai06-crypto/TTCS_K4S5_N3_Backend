@@ -559,6 +559,10 @@ class DealService:
         close_type = dto.stage.lower()
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+        old_stage = deal.stage
+        old_value = float(deal.value or 0.0)
+        histories: List[DealHistory] = []
+
         if close_type == "won":
             deal.stage = "won"
             deal.probability = 100
@@ -566,6 +570,17 @@ class DealService:
             deal.close_date = date.fromisoformat(dto.signingDate) if dto.signingDate else date.today()
             audit_action = "DEAL_CLOSE_WON"
             details = f"Chốt thành công cơ hội '{deal.title}' với giá trị {deal.actual_value} VNĐ"
+            if dto.actualValue is not None and round(float(dto.actualValue), 2) != round(old_value, 2):
+                deal.value = float(dto.actualValue)
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="amount",
+                    old_value=str(old_value),
+                    new_value=str(dto.actualValue),
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
         elif close_type == "lost":
             if not dto.lossReason:
                 raise HTTPException(
@@ -584,6 +599,20 @@ class DealService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Trạng thái đóng deal chỉ chấp nhận 'won' hoặc 'lost'.",
             )
+
+        if old_stage != close_type:
+            histories.append(DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="stage",
+                old_value=str(old_stage) if old_stage else "",
+                new_value=str(close_type),
+                changed_by=user.id,
+                changed_at=now,
+            ))
+
+        for h in histories:
+            db.add(h)
 
         saved = DealRepository.update(db, deal)
 
