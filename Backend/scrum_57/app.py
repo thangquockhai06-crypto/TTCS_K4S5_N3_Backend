@@ -304,3 +304,8 @@ def filter_interactions_by_owner(events: list, owner_id: str) -> list:
     """Lọc tương tác theo nhân viên kinh doanh phụ trách"""
     if not owner_id: return events
     return [e for e in events if e.get('owner_id') == owner_id]
+
+
+def serialize_timeline_response(event_item: dict) -> dict:
+    """Chuẩn hóa cấu trúc sự kiện timeline gửi về cho client"""
+    return event_item
