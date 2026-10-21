@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,6 +12,7 @@ from app.models.customer import Customer
 from app.models.product import Product
 from app.models.pipeline_stage import PipelineStage
 from app.models.audit_log import AuditLog
+from app.models.deal_history import DealHistory
 from app.schemas.deal import (
     CreateDealDTO,
     UpdateDealDTO,
@@ -23,6 +24,17 @@ from app.schemas.deal import (
     SalesForecastDTO,
     ForecastPeriodSummary,
 )
+from app.schemas.deal_history import (
+    DealHistoryItemResponse,
+    DealHistoryListResponse,
+    DealHistorySummaryResponse,
+    FieldChangeStat,
+    OperatorChangeStat,
+    FIELD_LABEL_MAP,
+    get_field_label,
+    format_field_value_and_description,
+)
+from app.core.scope import get_user_data_scope, DataScope
 from app.repositories.deal_repository import DealRepository
 
 
@@ -197,7 +209,7 @@ class DealService:
             p_stage = db.query(PipelineStage).filter(PipelineStage.stage_key == stage_key).first()
             probability = p_stage.probability if p_stage else STAGE_PROBABILITY_MAP.get(stage_key, 20)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         new_deal = Deal(
             id=str(uuid.uuid4()),
             title=dto.title.strip(),
@@ -230,26 +242,147 @@ class DealService:
         dto: UpdateDealDTO,
         user: User,
     ) -> Deal:
+        """
+        SCRUM-91 / S5-01: Cập nhật thông tin cơ hội bán hàng.
+        Tự động ghi nhận lịch sử thay đổi (DealHistory / Audit Log) cho 4 trường trọng yếu:
+        - 'stage': Giai đoạn pipeline
+        - 'amount': Giá trị cơ hội (so sánh theo số thực chuẩn)
+        - 'expected_close_date': Ngày dự kiến chốt hợp đồng
+        - 'assigned_to': Người phụ trách thương vụ
+        Chỉ lưu log khi giá trị thực tế có sự thay đổi (old_value != new_value).
+        Toàn bộ thao tác cập nhật Deal và DealHistory được thực hiện trong cùng Database Transaction.
+        """
         deal = cls.get_deal_by_id(db, deal_id, user)
         if not deal:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
 
-        if dto.title:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        histories: List[DealHistory] = []
+
+        # 1. So sánh 'stage'
+        new_stage = dto.stage.strip().lower() if dto.stage is not None and dto.stage.strip() else None
+        if new_stage is not None and new_stage != deal.stage:
+            old_stage_val = str(deal.stage) if deal.stage else ""
+            new_stage_val = str(new_stage)
+            if old_stage_val != new_stage_val:
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="stage",
+                    old_value=old_stage_val,
+                    new_value=new_stage_val,
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
+            deal.stage = new_stage
+
+        # 2. So sánh 'amount' / 'value'
+        new_amount = None
+        if dto.amount is not None:
+            new_amount = float(dto.amount)
+        elif dto.value is not None:
+            new_amount = float(dto.value)
+
+        if new_amount is not None:
+            old_num = float(deal.value or 0.0)
+            new_num = float(new_amount)
+            if round(old_num, 2) != round(new_num, 2):
+                def format_amount(n: float) -> str:
+                    return str(int(n)) if n.is_integer() else f"{n:.2f}".rstrip("0").rstrip(".")
+                old_amt_val = format_amount(old_num)
+                new_amt_val = format_amount(new_num)
+                if old_amt_val != new_amt_val:
+                    histories.append(DealHistory(
+                        id=str(uuid.uuid4()),
+                        deal_id=deal.id,
+                        field_name="amount",
+                        old_value=old_amt_val,
+                        new_value=new_amt_val,
+                        changed_by=user.id,
+                        changed_at=now,
+                    ))
+            deal.value = new_amount
+
+        # 3. So sánh 'expected_close_date'
+        close_date_raw = dto.expected_close_date if dto.expected_close_date is not None else dto.expectedCloseDate
+        if close_date_raw is not None:
+            new_close_date = None
+            if isinstance(close_date_raw, str):
+                if close_date_raw.strip():
+                    try:
+                        new_close_date = date.fromisoformat(close_date_raw.strip())
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Định dạng ngày dự kiến đóng không hợp lệ (chuẩn YYYY-MM-DD).",
+                        )
+            elif isinstance(close_date_raw, date):
+                new_close_date = close_date_raw
+
+            old_close_date = deal.expected_close_date
+            if old_close_date != new_close_date:
+                old_date_val = old_close_date.isoformat() if old_close_date else None
+                new_date_val = new_close_date.isoformat() if new_close_date else None
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="expected_close_date",
+                    old_value=old_date_val,
+                    new_value=new_date_val,
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
+            deal.expected_close_date = new_close_date
+
+        # 4. So sánh 'assigned_to' / 'owner_id'
+        new_assigned_to = None
+        if dto.assigned_to is not None and dto.assigned_to.strip():
+            new_assigned_to = dto.assigned_to.strip()
+        elif dto.assignedTo is not None and dto.assignedTo.strip():
+            new_assigned_to = dto.assignedTo.strip()
+        elif dto.owner_id is not None and dto.owner_id.strip():
+            new_assigned_to = dto.owner_id.strip()
+        elif dto.ownerId is not None and dto.ownerId.strip():
+            new_assigned_to = dto.ownerId.strip()
+
+        if new_assigned_to is not None and new_assigned_to != deal.owner_id:
+            old_assigned_val = str(deal.owner_id) if deal.owner_id else None
+            new_assigned_val = str(new_assigned_to)
+            histories.append(DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="assigned_to",
+                old_value=old_assigned_val,
+                new_value=new_assigned_val,
+                changed_by=user.id,
+                changed_at=now,
+            ))
+            deal.owner_id = new_assigned_to
+
+        # Cập nhật các trường phụ khác
+        if dto.title is not None and dto.title.strip():
             deal.title = dto.title.strip()
-        if dto.value is not None:
-            deal.value = dto.value
-        if dto.stage:
-            deal.stage = dto.stage.lower()
         if dto.probability is not None:
             deal.probability = dto.probability
-        if dto.customerId:
+        if dto.customerId is not None:
             deal.customer_id = dto.customerId
-        if dto.expectedCloseDate:
-            deal.expected_close_date = date.fromisoformat(dto.expectedCloseDate)
         if dto.campaignId is not None:
             deal.campaign_id = dto.campaignId
 
-        return DealRepository.update(db, deal)
+        deal.updated_at = now
+        deal.last_activity_at = now
+
+        # Lưu Deal và DealHistories trong cùng một Database Transaction
+        try:
+            for h in histories:
+                db.add(h)
+            db.commit()
+            db.refresh(deal)
+        except Exception:
+            db.rollback()
+            raise
+
+        return deal
 
     # =========================================================================
     # S5-03: PRODUCTS AND DEAL ITEMS
@@ -409,11 +542,26 @@ class DealService:
         cls.validate_stage_exit_conditions(deal, new_stage, override=override, user=user)
 
         target_stage = new_stage.lower()
+        old_stage = deal.stage
         deal.stage = target_stage
         deal.probability = STAGE_PROBABILITY_MAP.get(target_stage, deal.probability)
         if target_stage == "won":
             deal.close_date = date.today()
             deal.actual_value = deal.value
+
+        # Ghi lịch sử thay đổi stage
+        if old_stage != target_stage:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            history = DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="stage",
+                old_value=str(old_stage) if old_stage else "",
+                new_value=str(target_stage),
+                changed_by=user.id if user else None,
+                changed_at=now,
+            )
+            db.add(history)
 
         updated_deal = DealRepository.update_stage(db, deal, target_stage)
         return updated_deal
@@ -435,7 +583,11 @@ class DealService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
 
         close_type = dto.stage.lower()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        old_stage = deal.stage
+        old_value = float(deal.value or 0.0)
+        histories: List[DealHistory] = []
 
         if close_type == "won":
             deal.stage = "won"
@@ -444,6 +596,17 @@ class DealService:
             deal.close_date = date.fromisoformat(dto.signingDate) if dto.signingDate else date.today()
             audit_action = "DEAL_CLOSE_WON"
             details = f"Chốt thành công cơ hội '{deal.title}' với giá trị {deal.actual_value} VNĐ"
+            if dto.actualValue is not None and round(float(dto.actualValue), 2) != round(old_value, 2):
+                deal.value = float(dto.actualValue)
+                histories.append(DealHistory(
+                    id=str(uuid.uuid4()),
+                    deal_id=deal.id,
+                    field_name="amount",
+                    old_value=str(old_value),
+                    new_value=str(dto.actualValue),
+                    changed_by=user.id,
+                    changed_at=now,
+                ))
         elif close_type == "lost":
             if not dto.lossReason:
                 raise HTTPException(
@@ -462,6 +625,20 @@ class DealService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Trạng thái đóng deal chỉ chấp nhận 'won' hoặc 'lost'.",
             )
+
+        if old_stage != close_type:
+            histories.append(DealHistory(
+                id=str(uuid.uuid4()),
+                deal_id=deal.id,
+                field_name="stage",
+                old_value=str(old_stage) if old_stage else "",
+                new_value=str(close_type),
+                changed_by=user.id,
+                changed_at=now,
+            ))
+
+        for h in histories:
+            db.add(h)
 
         saved = DealRepository.update(db, deal)
 
@@ -631,7 +808,7 @@ class DealService:
             )
 
         updated_count = 0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         for deal_id in dto.dealIds:
             deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -670,3 +847,326 @@ class DealService:
             "newOwnerId": new_owner.id,
             "newOwnerName": new_owner.full_name,
         }
+
+    # =========================================================================
+    # SCRUM-91: DEAL CHANGE HISTORY / AUDIT LOG
+    # =========================================================================
+
+    @classmethod
+    def get_deal_history(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+        field_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        changed_by: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> DealHistoryListResponse:
+        """
+        SCRUM-91: Truy xuất lịch sử thay đổi của Deal có phân quyền:
+        - DIRECTOR: Xem toàn bộ lịch sử cơ hội trong hệ thống.
+        - TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
+        - SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
+        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date, và người thực hiện changed_by.
+        """
+        # 1. Kiểm tra tồn tại của deal_id (unscoped)
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        # 2. Kiểm tra quyền truy cập theo vai trò (Record-level Security)
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        # SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        # TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+        # DIRECTOR / ALL: Xem toàn bộ cơ hội
+
+        # 3. Parse ngày lọc
+        parsed_start = None
+        if start_date and start_date.strip():
+            try:
+                parsed_start = datetime.fromisoformat(start_date.strip())
+            except ValueError:
+                try:
+                    parsed_start = datetime.combine(date.fromisoformat(start_date.strip()), datetime.min.time())
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Định dạng start_date không hợp lệ (chuẩn YYYY-MM-DD hoặc ISO-8601).",
+                    )
+
+        parsed_end = None
+        if end_date and end_date.strip():
+            raw_end = end_date.strip()
+            try:
+                dt_end = datetime.fromisoformat(raw_end)
+                if len(raw_end) <= 10 or (dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0 and dt_end.microsecond == 0):
+                    parsed_end = datetime.combine(dt_end.date(), datetime.max.time())
+                else:
+                    parsed_end = dt_end
+            except ValueError:
+                try:
+                    parsed_end = datetime.combine(date.fromisoformat(raw_end), datetime.max.time())
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Định dạng end_date không hợp lệ (chuẩn YYYY-MM-DD hoặc ISO-8601).",
+                    )
+
+        # 4. Phân trang
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 20
+        skip = (page - 1) * page_size
+
+        # 5. Query DealHistories
+        histories, total = DealRepository.get_deal_histories(
+            db=db,
+            deal_id=deal.id,
+            field_name=field_name,
+            start_date=parsed_start,
+            end_date=parsed_end,
+            changed_by=changed_by.strip() if changed_by and changed_by.strip() else None,
+            skip=skip,
+            limit=page_size,
+        )
+
+        # 5. Format lại nhãn trường tiếng Việt thân thiện
+        items: List[DealHistoryItemResponse] = []
+        for h in histories:
+            operator_name = h.user.full_name if h.user else "Hệ thống"
+            label = FIELD_LABEL_MAP.get(h.field_name, get_field_label(h.field_name))
+            old_disp, new_disp, desc = format_field_value_and_description(h.field_name, h.old_value, h.new_value)
+            items.append(
+                DealHistoryItemResponse(
+                    id=h.id,
+                    deal_id=h.deal_id,
+                    field_name=h.field_name,
+                    field_label=label,
+                    old_value=h.old_value,
+                    new_value=h.new_value,
+                    old_display_value=old_disp,
+                    new_display_value=new_disp,
+                    change_description=desc,
+                    changed_by_id=h.changed_by or "",
+                    changed_by_name=operator_name,
+                    changed_at=h.changed_at,
+                )
+            )
+
+        return DealHistoryListResponse(
+            deal_id=deal.id,
+            total_changes=total,
+            items=items,
+            page=page,
+            page_size=page_size,
+        )
+
+    @classmethod
+    def get_deal_history_summary(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+    ) -> DealHistorySummaryResponse:
+        """
+        SCRUM-91: Tổng hợp các chỉ số thay đổi của một cơ hội bán hàng (Audit Trail Summary).
+        Bao gồm số lần đổi stage, đổi giá trị, thời điểm đầu/cuối và thống kê theo nhân sự.
+        """
+        # 1. Kiểm tra tồn tại
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        # 2. Phân quyền truy cập
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+
+        # 3. Lấy toàn bộ lịch sử
+        histories = DealRepository.get_all_deal_histories(db, deal.id)
+        total = len(histories)
+
+        stage_count = 0
+        amount_count = 0
+        close_date_count = 0
+        assigned_to_count = 0
+        field_counter: Dict[str, int] = {}
+        operator_counter: Dict[str, Dict[str, Any]] = {}
+
+        for h in histories:
+            fn = h.field_name.lower()
+            if fn == "stage":
+                stage_count += 1
+            elif fn in ("amount", "value"):
+                amount_count += 1
+            elif "close_date" in fn:
+                close_date_count += 1
+            elif "assigned" in fn or "owner" in fn:
+                assigned_to_count += 1
+
+            field_counter[h.field_name] = field_counter.get(h.field_name, 0) + 1
+
+            op_id = h.changed_by or "system"
+            op_name = h.user.full_name if h.user else "Hệ thống"
+            if op_id not in operator_counter:
+                operator_counter[op_id] = {"name": op_name, "count": 0}
+            operator_counter[op_id]["count"] += 1
+
+        first_at = histories[0].changed_at if histories else None
+        last_at = histories[-1].changed_at if histories else None
+
+        changes_by_field = [
+            FieldChangeStat(
+                field_name=k,
+                field_label=FIELD_LABEL_MAP.get(k, get_field_label(k)),
+                count=v,
+            )
+            for k, v in field_counter.items()
+        ]
+
+        top_operators = [
+            OperatorChangeStat(
+                user_id=k,
+                user_name=v["name"],
+                count=v["count"],
+            )
+            for k, v in sorted(operator_counter.items(), key=lambda x: x[1]["count"], reverse=True)
+        ]
+
+        return DealHistorySummaryResponse(
+            deal_id=deal.id,
+            total_changes=total,
+            stage_changes_count=stage_count,
+            amount_changes_count=amount_count,
+            expected_close_date_changes_count=close_date_count,
+            assigned_to_changes_count=assigned_to_count,
+            first_change_at=first_at,
+            last_change_at=last_at,
+            changes_by_field=changes_by_field,
+            top_operators=top_operators,
+        )
+
+    @classmethod
+    def get_deal_history_for_export(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+        field_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        changed_by: Optional[str] = None,
+    ) -> tuple[Deal, List[DealHistory]]:
+        """
+        SCRUM-91: Truy xuất toàn bộ lịch sử thỏa mãn điều kiện lọc để chuẩn bị xuất báo cáo Excel/CSV.
+        Kiểm tra quyền truy cập theo vai trò (Record-level Security).
+        """
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+
+        parsed_start = None
+        if start_date and start_date.strip():
+            try:
+                parsed_start = datetime.fromisoformat(start_date.strip())
+            except ValueError:
+                parsed_start = datetime.combine(date.fromisoformat(start_date.strip()), datetime.min.time())
+
+        parsed_end = None
+        if end_date and end_date.strip():
+            raw_end = end_date.strip()
+            try:
+                dt_end = datetime.fromisoformat(raw_end)
+                if len(raw_end) <= 10 or (dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0 and dt_end.microsecond == 0):
+                    parsed_end = datetime.combine(dt_end.date(), datetime.max.time())
+                else:
+                    parsed_end = dt_end
+            except ValueError:
+                parsed_end = datetime.combine(date.fromisoformat(raw_end), datetime.max.time())
+
+        histories, _ = DealRepository.get_deal_histories(
+            db=db,
+            deal_id=deal.id,
+            field_name=field_name,
+            start_date=parsed_start,
+            end_date=parsed_end,
+            changed_by=changed_by.strip() if changed_by and changed_by.strip() else None,
+            skip=0,
+            limit=10000,
+        )
+        return deal, histories
+
+

@@ -46,11 +46,17 @@ class CreateDealDTO(DealBase):
 class UpdateDealDTO(BaseModel):
     title: Optional[str] = None
     value: Optional[float] = None
+    amount: Optional[float] = None  # Alias cho value
     stage: Optional[str] = None
     probability: Optional[int] = None
     customerId: Optional[str] = Field(None, alias="customerId")
     expectedCloseDate: Optional[str] = Field(None, alias="expectedCloseDate")
+    expected_close_date: Optional[str] = Field(None, alias="expected_close_date")
     campaignId: Optional[str] = Field(None, alias="campaignId")
+    assigned_to: Optional[str] = Field(None, alias="assigned_to")
+    assignedTo: Optional[str] = Field(None, alias="assignedTo")
+    owner_id: Optional[str] = Field(None, alias="owner_id")
+    ownerId: Optional[str] = Field(None, alias="ownerId")
 
     model_config = ConfigDict(populate_by_name=True)
 

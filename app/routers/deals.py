@@ -17,6 +17,13 @@ from app.schemas.deal import (
     BulkReassignDealsDTO,
     SalesForecastDTO,
 )
+from app.schemas.deal_history import (
+    DealHistoryListResponse,
+    DealHistorySummaryResponse,
+    FIELD_LABEL_MAP,
+    get_field_label,
+    format_field_value_and_description,
+)
 from app.services.deal_service import DealService
 from app.core.export import export_to_excel
 
@@ -207,6 +214,7 @@ def get_deal_detail(
 
 
 @router.put("/{deal_id}", response_model=DealDTO, summary="Cập nhật thông tin cơ hội bán hàng (S5-01)")
+@router.patch("/{deal_id}", response_model=DealDTO, summary="Cập nhật thông tin cơ hội bán hàng (PATCH alias)")
 def update_deal(
     deal_id: str,
     dto: UpdateDealDTO,
@@ -215,6 +223,117 @@ def update_deal(
 ) -> DealDTO:
     updated = DealService.update_deal(db=db, deal_id=deal_id, dto=dto, user=current_user)
     return DealService.map_to_dto(updated)
+
+
+@router.get("/{deal_id}/history", response_model=DealHistoryListResponse, summary="Lấy danh sách lịch sử thay đổi của một cơ hội (SCRUM-91)")
+def get_deal_history(
+    deal_id: str,
+    field_name: Optional[str] = Query(None, description="Tùy chọn lọc riêng theo: 'stage', 'amount', 'expected_close_date', 'assigned_to'"),
+    start_date: Optional[str] = Query(None, description="Lọc thay đổi từ ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
+    end_date: Optional[str] = Query(None, description="Lọc thay đổi đến ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
+    changed_by: Optional[str] = Query(None, description="Lọc thay đổi theo người thực hiện (ID người dùng)"),
+    page: int = Query(1, ge=1, description="Trang hiện tại (bắt đầu từ 1)"),
+    page_size: int = Query(20, ge=1, le=100, description="Số lượng bản ghi mỗi trang"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealHistoryListResponse:
+    """
+    SCRUM-91 (Sprint 5 / EP-05): Truy xuất lịch sử thay đổi của Cơ hội bán hàng (Deal Change History / Audit Log).
+    - Phân quyền theo vai trò (Record-level Security):
+      + DIRECTOR: Xem lịch sử của toàn bộ cơ hội trong hệ thống.
+      + TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
+      + SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
+    """
+    return DealService.get_deal_history(
+        db=db,
+        deal_id=deal_id,
+        user=current_user,
+        field_name=field_name,
+        start_date=start_date,
+        end_date=end_date,
+        changed_by=changed_by,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/{deal_id}/history/summary", response_model=DealHistorySummaryResponse, summary="Thống kê tổng quan lịch sử thay đổi của một cơ hội (SCRUM-91)")
+def get_deal_history_summary(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealHistorySummaryResponse:
+    """
+    SCRUM-91: Báo cáo tổng hợp các chỉ số thay đổi của cơ hội bán hàng.
+    Bao gồm số lần đổi stage, đổi giá trị, thời điểm đầu/cuối và thống kê theo nhân viên.
+    Phân quyền tương tự Record-level Security của Deal History.
+    """
+    return DealService.get_deal_history_summary(
+        db=db,
+        deal_id=deal_id,
+        user=current_user,
+    )
+
+
+@router.get("/{deal_id}/history/export", summary="Xuất lịch sử thay đổi của cơ hội ra file Excel (SCRUM-91)")
+def export_deal_history(
+    deal_id: str,
+    field_name: Optional[str] = Query(None, description="Tùy chọn lọc riêng theo: 'stage', 'amount', 'expected_close_date', 'assigned_to'"),
+    start_date: Optional[str] = Query(None, description="Lọc thay đổi từ ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
+    end_date: Optional[str] = Query(None, description="Lọc thay đổi đến ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
+    changed_by: Optional[str] = Query(None, description="Lọc thay đổi theo người thực hiện (ID người dùng)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    SCRUM-91: Xuất toàn bộ nhật ký thay đổi của một cơ hội ra file Excel (.xlsx).
+    Bao gồm thông tin ngày giờ, trường thay đổi, nhãn tiếng Việt, giá trị cũ/mới và người thực hiện.
+    """
+    deal, histories = DealService.get_deal_history_for_export(
+        db=db,
+        deal_id=deal_id,
+        user=current_user,
+        field_name=field_name,
+        start_date=start_date,
+        end_date=end_date,
+        changed_by=changed_by,
+    )
+    headers = [
+        "Mã Deal",
+        "Tên cơ hội",
+        "Thời gian thay đổi",
+        "Trường thay đổi",
+        "Nhãn hiển thị",
+        "Giá trị cũ",
+        "Giá trị mới",
+        "Mô tả chi tiết",
+        "Người thực hiện",
+        "Mã người thực hiện",
+    ]
+    rows = []
+    for h in histories:
+        operator_name = h.user.full_name if h.user else "Hệ thống"
+        label = FIELD_LABEL_MAP.get(h.field_name, get_field_label(h.field_name))
+        old_disp, new_disp, desc = format_field_value_and_description(h.field_name, h.old_value, h.new_value)
+        rows.append([
+            deal.id,
+            deal.title,
+            h.changed_at.strftime("%Y-%m-%d %H:%M:%S") if h.changed_at else "",
+            h.field_name,
+            label,
+            old_disp,
+            new_disp,
+            desc,
+            operator_name,
+            h.changed_by or "",
+        ])
+
+    return export_to_excel(
+        sheet_title="LichSuThayDoi",
+        headers=headers,
+        rows=rows,
+        filename=f"lich_su_deal_{deal.id[:8]}.xlsx",
+    )
 
 
 @router.post("/{deal_id}/stage", response_model=DealDTO, summary="Di chuyển stage của deal trên bảng Kanban (POST alias)")

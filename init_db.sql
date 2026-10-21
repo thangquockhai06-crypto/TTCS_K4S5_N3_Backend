@@ -166,6 +166,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 11. BẢNG LỊCH SỬ THAY ĐỔI CƠ HỘI BÁN HÀNG (DEAL_HISTORIES / SCRUM-91)
+CREATE TABLE IF NOT EXISTS deal_histories (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_id VARCHAR(36) NOT NULL,
+    field_name VARCHAR(50) NOT NULL,
+    old_value TEXT DEFAULT NULL,
+    new_value TEXT DEFAULT NULL,
+    changed_by VARCHAR(36) DEFAULT NULL,
+    changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_deal_histories_deal (deal_id),
+    INDEX idx_deal_histories_field (field_name),
+    INDEX idx_deal_histories_changed_at (changed_at),
+    INDEX idx_deal_histories_deal_changed_at (deal_id, changed_at),
+    INDEX idx_deal_histories_deal_field (deal_id, field_name),
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =====================================================================
 -- DỮ LIỆU BAN ĐẦU: Tài khoản Admin mặc định
 -- Mật khẩu mặc định: Admin@2026 (bcrypt hash: $2b$12$N2aF4GgA3Wl5O80S47ZZeepB5G3WJ1dM43hCgXzL9s3fKkYtTz8S2)

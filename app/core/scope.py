@@ -32,9 +32,14 @@ ROLE_SCOPE_MAPPING: Dict[str, DataScope] = {
 
     # Phạm vi TEAM: Trưởng nhóm kinh doanh, Trưởng bộ phận RevOps, Quản lý
     "team leader": DataScope.TEAM,
+    "team lead": DataScope.TEAM,
+    "team_lead": DataScope.TEAM,
+    "team_leader": DataScope.TEAM,
     "sales leader": DataScope.TEAM,
+    "sales_leader": DataScope.TEAM,
     "revops lead": DataScope.TEAM,
     "sales manager": DataScope.TEAM,
+    "sales_manager": DataScope.TEAM,
     "manager": DataScope.TEAM,
     "lead": DataScope.TEAM,
     "trưởng nhóm": DataScope.TEAM,
@@ -43,8 +48,11 @@ ROLE_SCOPE_MAPPING: Dict[str, DataScope] = {
     # Phạm vi OWN: Nhân viên kinh doanh, Account Executive, Sales Rep
     "employee": DataScope.OWN,
     "account executive": DataScope.OWN,
+    "account_executive": DataScope.OWN,
     "sales rep": DataScope.OWN,
+    "sales_rep": DataScope.OWN,
     "sales representative": DataScope.OWN,
+    "sales_representative": DataScope.OWN,
     "nhân viên": DataScope.OWN,
     "nhân viên kinh doanh": DataScope.OWN,
 }
@@ -75,4 +83,8 @@ def get_user_data_scope(user: Optional[object]) -> DataScope:
         return DataScope.OWN
 
     normalized_role = str(role).strip().lower()
-    return ROLE_SCOPE_MAPPING.get(normalized_role, DataScope.OWN)
+    if normalized_role in ROLE_SCOPE_MAPPING:
+        return ROLE_SCOPE_MAPPING[normalized_role]
+
+    normalized_role_spaced = normalized_role.replace("_", " ")
+    return ROLE_SCOPE_MAPPING.get(normalized_role_spaced, DataScope.OWN)
