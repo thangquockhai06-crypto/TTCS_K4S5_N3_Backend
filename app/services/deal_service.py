@@ -794,6 +794,8 @@ class DealService:
         deal_id: str,
         user: User,
         field_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> DealHistoryListResponse:
@@ -802,6 +804,7 @@ class DealService:
         - DIRECTOR: Xem toàn bộ lịch sử cơ hội trong hệ thống.
         - TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
         - SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
+        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date.
         """
         # 1. Kiểm tra tồn tại của deal_id (unscoped)
         deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -837,18 +840,47 @@ class DealService:
                 )
         # DIRECTOR / ALL: Xem toàn bộ cơ hội
 
-        # 3. Phân trang
+        # 3. Parse ngày lọc
+        parsed_start = None
+        if start_date and start_date.strip():
+            try:
+                parsed_start = datetime.fromisoformat(start_date.strip())
+            except ValueError:
+                try:
+                    parsed_start = datetime.combine(date.fromisoformat(start_date.strip()), datetime.min.time())
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Định dạng start_date không hợp lệ (chuẩn YYYY-MM-DD hoặc ISO-8601).",
+                    )
+
+        parsed_end = None
+        if end_date and end_date.strip():
+            try:
+                parsed_end = datetime.fromisoformat(end_date.strip())
+            except ValueError:
+                try:
+                    parsed_end = datetime.combine(date.fromisoformat(end_date.strip()), datetime.max.time())
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Định dạng end_date không hợp lệ (chuẩn YYYY-MM-DD hoặc ISO-8601).",
+                    )
+
+        # 4. Phân trang
         if page < 1:
             page = 1
         if page_size < 1:
             page_size = 20
         skip = (page - 1) * page_size
 
-        # 4. Query DealHistories
+        # 5. Query DealHistories
         histories, total = DealRepository.get_deal_histories(
             db=db,
             deal_id=deal.id,
             field_name=field_name,
+            start_date=parsed_start,
+            end_date=parsed_end,
             skip=skip,
             limit=page_size,
         )
