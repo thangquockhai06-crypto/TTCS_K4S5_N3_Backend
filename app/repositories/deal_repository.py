@@ -1,16 +1,20 @@
-from datetime import date, datetime, time, timedelta
-from typing import List, Optional
-
-from sqlalchemy import func
+from typing import Optional, List, Dict, Any
+from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, and_, desc
 
 from app.models.deal import Deal
+from app.models.deal_item import DealItem
 from app.models.user import User
+from app.models.pipeline_stage import PipelineStage
 from app.repositories.base_repository import BaseRepository
 
 
 class DealRepository(BaseRepository):
-    """Deal queries with centralized data-scope enforcement."""
+    """
+    Tầng Repository xử lý truy vấn dữ liệu Cơ hội bán hàng (Kanban Deal / Opportunity Pipeline).
+    Tích hợp Centralized Data Scope Filter ở mức CSDL và hỗ trợ EP-05.
+    """
 
     @staticmethod
     def get_all(
@@ -18,15 +22,18 @@ class DealRepository(BaseRepository):
         user: Optional[User] = None,
         search: Optional[str] = None,
         stage: Optional[str] = None,
-        outcome: Optional[str] = None,
-        closed_from: Optional[date] = None,
-        closed_to: Optional[date] = None,
-        signed_from: Optional[date] = None,
-        signed_to: Optional[date] = None,
-        lost_reason_id: Optional[str] = None,
+        is_stalled: Optional[bool] = None,
+        campaign_id: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[Deal]:
+        """Lấy danh sách deals thỏa mãn Data Scope của người dùng và các bộ lọc Sprint 6 (S6-01, S6-02)."""
         query = db.query(Deal)
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Deal)
@@ -47,6 +54,34 @@ class DealRepository(BaseRepository):
         if lost_reason_id:
             query = query.filter(Deal.lost_reason_id == lost_reason_id)
 
+        # 4. Lọc theo trạng thái ứ đọng (stalled)
+        if is_stalled is not None:
+            query = query.filter(Deal.is_stalled == is_stalled)
+
+        # 5. Lọc theo chiến dịch
+        if campaign_id:
+            query = query.filter(Deal.campaign_id == campaign_id)
+
+        # 6. S6-01 & S6-02: Lọc theo khoảng giá trị Deal (deal value / value range)
+        if min_value is not None:
+            query = query.filter(Deal.value >= min_value)
+        if max_value is not None:
+            query = query.filter(Deal.value <= max_value)
+
+        # 7. S6-01 & S6-02: Lọc theo ngày đóng (closing date)
+        if close_date_from is not None:
+            query = query.filter(Deal.expected_close_date >= close_date_from)
+        if close_date_to is not None:
+            query = query.filter(Deal.expected_close_date <= close_date_to)
+
+        # 8. S6-01 & S6-02: Lọc theo người phụ trách (deal owner)
+        if owner_id and owner_id.lower() != "all":
+            query = query.filter(Deal.owner_id == owner_id)
+
+        # 9. S6-02: Lọc theo sản phẩm (product)
+        if product_id and product_id.lower() != "all":
+            query = query.join(Deal.deal_items).filter(DealItem.product_id == product_id).distinct()
+
         query = query.order_by(Deal.created_at.desc())
         if skip is not None:
             query = query.offset(skip)
@@ -60,15 +95,45 @@ class DealRepository(BaseRepository):
         user: User,
         search: Optional[str] = None,
         stage: Optional[str] = None,
-        outcome: Optional[str] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        close_date_from: Optional[date] = None,
+        close_date_to: Optional[date] = None,
+        owner_id: Optional[str] = None,
+        product_id: Optional[str] = None,
+        deal_ids: Optional[List[str]] = None,
     ) -> List[Deal]:
-        return DealRepository.get_all(
-            db=db,
-            user=user,
-            search=search,
-            stage=stage,
-            outcome=outcome,
-        )
+        """Xuất danh sách Deals ra file Excel tuân thủ Data Scope (S6-04)."""
+        query = db.query(Deal)
+        query = BaseRepository.apply_data_scope_filter(query, user, Deal)
+
+        # S6-04: Lọc theo danh sách ID được chọn nếu có
+        if deal_ids:
+            query = query.filter(Deal.id.in_(deal_ids))
+
+        if search and search.strip():
+            query = query.filter(Deal.title.ilike(f"%{search.strip()}%"))
+
+        if stage and stage.lower() != "all":
+            query = query.filter(Deal.stage == stage.lower())
+
+        if min_value is not None:
+            query = query.filter(Deal.value >= min_value)
+        if max_value is not None:
+            query = query.filter(Deal.value <= max_value)
+
+        if close_date_from is not None:
+            query = query.filter(Deal.expected_close_date >= close_date_from)
+        if close_date_to is not None:
+            query = query.filter(Deal.expected_close_date <= close_date_to)
+
+        if owner_id and owner_id.lower() != "all":
+            query = query.filter(Deal.owner_id == owner_id)
+
+        if product_id and product_id.lower() != "all":
+            query = query.join(Deal.deal_items).filter(DealItem.product_id == product_id).distinct()
+
+        return query.order_by(Deal.created_at.desc()).all()
 
     @staticmethod
     def get_by_id(db: Session, deal_id: str) -> Optional[Deal]:
@@ -97,8 +162,18 @@ class DealRepository(BaseRepository):
         return deal
 
     @staticmethod
+    def update(db: Session, deal: Deal) -> Deal:
+        deal.updated_at = datetime.utcnow()
+        deal.last_activity_at = datetime.utcnow()
+        db.commit()
+        db.refresh(deal)
+        return deal
+
+    @staticmethod
     def update_stage(db: Session, deal: Deal, new_stage: str) -> Deal:
         deal.stage = new_stage
+        deal.updated_at = datetime.utcnow()
+        deal.last_activity_at = datetime.utcnow()
         db.commit()
         db.refresh(deal)
         return deal
@@ -123,3 +198,41 @@ class DealRepository(BaseRepository):
             query = BaseRepository.apply_data_scope_filter(query, user, Deal)
         total = query.scalar()
         return float(total) if total is not None else 0.0
+
+    @staticmethod
+    def get_items(db: Session, deal_id: str) -> List[DealItem]:
+        return db.query(DealItem).filter(DealItem.deal_id == deal_id).all()
+
+    @staticmethod
+    def add_item(db: Session, item: DealItem) -> DealItem:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return item
+
+    @staticmethod
+    def delete_item(db: Session, item_id: str) -> bool:
+        item = db.query(DealItem).filter(DealItem.id == item_id).first()
+        if item:
+            db.delete(item)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def recalculate_deal_value(db: Session, deal_id: str) -> float:
+        """
+        S5-03: Tính lại giá trị tổng Deal chuẩn xác trên backend dựa trên tổng các DealItem.
+        """
+        items = db.query(DealItem).filter(DealItem.deal_id == deal_id).all()
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if deal:
+            if items:
+                total_val = sum(float(i.subtotal) for i in items)
+                deal.value = total_val
+            deal.updated_at = datetime.utcnow()
+            deal.last_activity_at = datetime.utcnow()
+            db.commit()
+            db.refresh(deal)
+            return float(deal.value)
+        return 0.0

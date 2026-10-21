@@ -1,40 +1,22 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import (
-    CheckConstraint,
-    Column,
-    DDL,
-    Date,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    event,
-    inspect,
-    Table,
-)
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy import Column, String, Numeric, Integer, Date, DateTime, Enum, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
-deal_products = Table(
-    "deal_products",
-    Base.metadata,
-    Column("deal_id", String(36), ForeignKey("deals.id", ondelete="CASCADE"), primary_key=True),
-    Column("product_id", String(36), ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
-)
-
-
 class Deal(Base):
+    """
+    Model Cơ hội bán hàng (EP-05: Deal Management: S5-01 -> S5-08).
+    Hỗ trợ luồng phễu: lead -> contact -> proposal -> negotiation -> won / lost.
+    """
     __tablename__ = "deals"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(255), nullable=False)
     value = Column(Numeric(15, 2), default=0.00, nullable=False, index=True)
     stage = Column(
-        Enum("lead", "contact", "proposal", "negotiation", "won", "lost", name="deal_stage_enum"),
+        String(50),
         default="lead",
         nullable=False,
         index=True,
@@ -44,23 +26,20 @@ class Deal(Base):
     owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     expected_close_date = Column(Date, nullable=True, index=True)
 
-    # Synonyms for flexible queries (SCRUM-206)
-    amount = synonym("value")
-    assigned_to = synonym("owner_id")
-
-    # Outcome data is separate from the pipeline stage so reopening a deal is explicit.
-    status = Column(String(10), default="OPEN", nullable=False, index=True)
-    closed_at = Column(DateTime, nullable=True)
-    closed_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # EP-05 Extensions:
+    campaign_id = Column(String(36), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
+    close_date = Column(Date, nullable=True)
     actual_value = Column(Numeric(15, 2), nullable=True)
-    signed_date = Column(Date, nullable=True)
-    lost_reason_id = Column(String(36), ForeignKey("win_loss_reasons.id", ondelete="RESTRICT"), nullable=True)
-    lost_reason_note = Column(String(2000), nullable=True)
-    competitor_id = Column(String(36), ForeignKey("competitors.id", ondelete="SET NULL"), nullable=True)
-    reopened_at = Column(DateTime, nullable=True)
-    reopened_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    reopen_reason = Column(String(2000), nullable=True)
-    last_open_stage = Column(String(30), nullable=True)
+    loss_reason = Column(String(255), nullable=True)
+    loss_competitor = Column(String(255), nullable=True)
+
+    # Stalled Deals Tracking (S5-07)
+    is_stalled = Column(Boolean, default=False, nullable=False, index=True)
+    last_activity_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Deal Reassignment Tracking (S5-08)
+    reassignment_reason = Column(String(255), nullable=True)
+    reassigned_from_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -107,76 +86,7 @@ class Deal(Base):
     )
 
     customer = relationship("Customer", back_populates="deals")
-    owner = relationship("User", back_populates="deals", foreign_keys=[owner_id])
-    lost_reason = relationship("WinLossReason", foreign_keys=[lost_reason_id])
-    competitor = relationship("Competitor", foreign_keys=[competitor_id])
-    outcome_history = relationship(
-        "DealOutcomeHistory",
-        back_populates="deal",
-        cascade="all, delete-orphan",
-        order_by="DealOutcomeHistory.event_at.asc()",
-    )
-    products = relationship("Product", secondary=deal_products, backref="deals")
-    members = relationship(
-        "DealMember",
-        back_populates="deal",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
-    deal_histories = relationship(
-        "DealHistory",
-        back_populates="deal",
-        cascade="all, delete-orphan",
-        order_by="DealHistory.changed_at.desc()",
-        lazy="selectin",
-    )
-    attachments = relationship(
-        "DealAttachment",
-        back_populates="deal",
-        cascade="all, delete-orphan",
-        order_by="DealAttachment.created_at.desc()",
-        lazy="selectin",
-    )
-
-    @property
-    def is_closed(self) -> bool:
-        return self.status in {"WON", "LOST"}
-
-
-@event.listens_for(Deal, "before_update")
-def _prevent_closed_deal_mutation(mapper, connection, target) -> None:
-    """Protect closed deals even when an internal service forgets its guard."""
-    state = inspect(target)
-    old_status = state.attrs.status.history.deleted
-    previous_status = old_status[0] if old_status else target.status
-    if previous_status not in {"WON", "LOST"} or target.status != previous_status:
-        return
-
-    immutable_fields = {
-        "title",
-        "value",
-        "stage",
-        "probability",
-        "customer_id",
-        "owner_id",
-        "expected_close_date",
-    }
-    if any(state.attrs[field].history.has_changes() for field in immutable_fields):
-        raise ValueError("Closed opportunities cannot be edited.")
-
-
-event.listen(
-    Deal.__table__,
-    "after_create",
-    DDL(
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_closed_deal_update
-        BEFORE UPDATE OF title, value, stage, probability, customer_id, owner_id, expected_close_date
-        ON deals
-        WHEN OLD.status IN ('WON', 'LOST') AND NEW.status = OLD.status
-        BEGIN
-            SELECT RAISE(ABORT, 'Closed opportunities cannot be edited.');
-        END
-        """
-    ).execute_if(dialect="sqlite"),
-)
+    owner = relationship("User", foreign_keys=[owner_id], back_populates="deals")
+    reassigned_from = relationship("User", foreign_keys=[reassigned_from_id])
+    campaign = relationship("Campaign", back_populates="deals")
+    deal_items = relationship("DealItem", back_populates="deal", cascade="all, delete-orphan")

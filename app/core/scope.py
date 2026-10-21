@@ -21,7 +21,7 @@ class DataScope(str, Enum):
 # Bảng ánh xạ vai trò người dùng -> Data Scope
 # Nguồn chân lý duy nhất (Single Source of Truth)
 ROLE_SCOPE_MAPPING: Dict[str, DataScope] = {
-    # Phạm vi ALL: Quản trị viên, Giám đốc kinh doanh, Phó chủ tịch, Chăm sóc khách hàng
+    # Phạm vi ALL: Quản trị viên, Giám đốc kinh doanh, Phó chủ tịch
     "super admin": DataScope.ALL,
     "admin": DataScope.ALL,
     "sales director": DataScope.ALL,
@@ -29,15 +29,9 @@ ROLE_SCOPE_MAPPING: Dict[str, DataScope] = {
     "director": DataScope.ALL,
     "giám đốc kinh doanh": DataScope.ALL,
     "quản trị viên": DataScope.ALL,
-    "cs": DataScope.ALL,
-    "customer care": DataScope.ALL,
-    "customer success": DataScope.ALL,
-    "chăm sóc khách hàng": DataScope.ALL,
-    "csm": DataScope.ALL,
 
     # Phạm vi TEAM: Trưởng nhóm kinh doanh, Trưởng bộ phận RevOps, Quản lý
     "team leader": DataScope.TEAM,
-    "team lead": DataScope.TEAM,
     "sales leader": DataScope.TEAM,
     "revops lead": DataScope.TEAM,
     "sales manager": DataScope.TEAM,
@@ -80,5 +74,5 @@ def get_user_data_scope(user: Optional[object]) -> DataScope:
     if not role:
         return DataScope.OWN
 
-    normalized_role = str(role).strip().lower().replace("_", " ")
+    normalized_role = str(role).strip().lower()
     return ROLE_SCOPE_MAPPING.get(normalized_role, DataScope.OWN)

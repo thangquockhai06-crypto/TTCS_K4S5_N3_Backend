@@ -79,13 +79,8 @@ def apply_data_scope_filter(
 
     # 2. Phạm vi OWN: Chỉ bản ghi do chính mình tạo / được phân công (hoặc tham gia phối hợp nếu là Deal)
     if scope == DataScope.OWN:
-        if model == Deal:
-            return query.filter(
-                or_(
-                    Deal.owner_id == user.id,
-                    Deal.members.any(DealMember.user_id == user.id),
-                )
-            )
+        if hasattr(model, "assignee_id") and hasattr(model, "creator_id"):
+            return query.filter(or_(model.assignee_id == user.id, model.creator_id == user.id))
         return query.filter(owner_col == user.id)
 
     # 3. Phạm vi TEAM: Bản ghi thuộc thành viên trong cùng nhóm (hoặc thành viên nhóm tham gia phối hợp nếu là Deal)
@@ -101,11 +96,11 @@ def apply_data_scope_filter(
             .where(User.team_id == team_id)
             .scalar_subquery()
         )
-        if model == Deal:
+        if hasattr(model, "assignee_id") and hasattr(model, "creator_id"):
             return query.filter(
                 or_(
-                    Deal.owner_id.in_(team_users_subquery),
-                    Deal.members.any(DealMember.user_id.in_(team_users_subquery)),
+                    model.assignee_id.in_(team_users_subquery),
+                    model.creator_id.in_(team_users_subquery),
                 )
             )
         return query.filter(owner_col.in_(team_users_subquery))

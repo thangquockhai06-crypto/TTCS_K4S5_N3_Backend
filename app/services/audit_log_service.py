@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy.orm import Session
@@ -17,7 +18,6 @@ class AuditLogService:
         end_date: Optional[datetime] = None,
         page: int = 1,
         limit: int = 20,
-        include_cost_fields: bool = True,
     ) -> AuditLogPaginatedResponse:
         records, total_items = self.repository.get_audit_logs(
             performed_by=performed_by,
@@ -26,7 +26,6 @@ class AuditLogService:
             end_date=end_date,
             page=page,
             limit=limit,
-            include_cost_fields=include_cost_fields,
         )
 
         data_dtos: List[AuditLogSchema] = [
@@ -47,9 +46,12 @@ class AuditLogService:
             for rec in records
         ]
 
+        pages = math.ceil(total_items / limit) if limit > 0 else 1
         return AuditLogPaginatedResponse(
             total=total_items,
             page=page,
             limit=limit,
             data=data_dtos,
+            items=data_dtos,
+            pages=pages,
         )

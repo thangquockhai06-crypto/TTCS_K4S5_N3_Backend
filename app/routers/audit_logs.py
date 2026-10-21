@@ -3,11 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dependencies import get_current_user
-from app.models.user import User
 from app.services.audit_log_service import AuditLogService
 from app.schemas.audit_log import AuditLogPaginatedResponse
-from app.services.catalog_item_service import is_sales_director
 
 router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
 
@@ -21,7 +18,6 @@ def get_audit_logs(
     page: int = Query(1, ge=1, description="Trang hiện tại"),
     limit: int = Query(20, ge=1, le=100, description="Số bản ghi mỗi trang"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> AuditLogPaginatedResponse:
     service = AuditLogService(db)
     return service.get_audit_logs(
@@ -31,5 +27,4 @@ def get_audit_logs(
         end_date=end_date,
         page=page,
         limit=limit,
-        include_cost_fields=is_sales_director(current_user),
     )

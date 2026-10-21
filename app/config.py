@@ -26,7 +26,6 @@ class Settings(BaseSettings):
     AVATAR_STORAGE_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
     MEDIA_URL: str = "/media"
     AVATAR_THUMBNAIL_SIZE: int = 128
-    MAX_SAVED_CUSTOMER_FILTERS: int = 20
 
     # Deal Attachments storage (SCRUM-208)
     DEAL_ATTACHMENTS_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "deals")

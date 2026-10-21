@@ -1,242 +1,144 @@
-import urllib.parse
+from typing import List, Optional, Dict, Any
 from datetime import date
-from decimal import Decimal
-from typing import Any, List, Optional, Union
-
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.export import export_to_excel
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.routers.opportunities import _to_deal_dto, _validate_outcome
-from app.schemas.activity import ActivityDTO
+from app.models.deal import Deal
 from app.schemas.deal import (
-    CloseDealDTO,
-    CreateDealDTO,
     DealDTO,
-    DealOutcomeHistoryDTO,
-    MoveDealStageDTO,
-    ReopenDealDTO,
+    CreateDealDTO,
     UpdateDealDTO,
+    MoveDealStageDTO,
+    DealItemDTO,
+    CreateDealItemDTO,
+    CloseDealDTO,
+    BulkReassignDealsDTO,
+    SalesForecastDTO,
 )
-from app.schemas.deal_attachment import (
-    DealAttachmentListResponse,
-    DealAttachmentResponse,
-)
-from app.schemas.deal_filter import (
-    DealFilterPaginatedResponse,
-    DealFilterParams,
-    SavedDealFilterCreate,
-    SavedDealFilterResponse,
-    SavedDealFilterUpdate,
-)
-from app.schemas.deal_member import (
-    DealActivityCreateDTO,
-    DealHistoryResponse,
-    DealMemberCreate,
-    DealMemberResponse,
-    DealTransferOwnerRequest,
-)
-from app.services.deal_attachment_service import DealAttachmentService
-from app.services.deal_member_service import DealMemberService
 from app.services.deal_service import DealService
 from app.services.saved_filter_service import SavedFilterService
 
-router = APIRouter(prefix="/deals", tags=["Deals Pipeline (Kanban)"])
+router = APIRouter(prefix="/deals", tags=["Deals Pipeline (EP-05: S5-01 -> S5-08)"])
 
 
 # ==============================================================================
-# 1. QUẢN LÝ BỘ LỌC CÁ NHÂN (SAVED FILTERS - SCRUM-206)
+# S5-06 & S5-07: FORECAST & STALLED DEALS (Đặt trước /{deal_id} để tránh đụng URL)
 # ==============================================================================
 
-@router.get("/saved-filters", response_model=List[SavedDealFilterResponse], summary="Lấy danh sách bộ lọc cơ hội đã lưu")
-def list_saved_deal_filters(
+@router.get("/forecast", response_model=SalesForecastDTO, summary="Báo cáo dự báo doanh thu bán hàng theo trọng số xác suất (S5-06)")
+def get_sales_forecast(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[SavedDealFilterResponse]:
-    return SavedFilterService(db).list_saved_deal_filters(user=current_user)
+) -> SalesForecastDTO:
+    """
+    S5-06: Dự báo doanh thu bán hàng:
+    Weighted forecast = Sum of deal amount × stage win probability.
+    Phân loại theo từng tháng, quý và từng giai đoạn phễu.
+    """
+    return DealService.get_sales_forecast(db=db, user=current_user)
 
 
-@router.post("/saved-filters", response_model=SavedDealFilterResponse, status_code=status.HTTP_201_CREATED, summary="Tạo mới bộ lọc cơ hội cá nhân")
-def create_saved_deal_filter(
-    dto: SavedDealFilterCreate,
+@router.get("/stalled", response_model=List[DealDTO], summary="Danh sách các cơ hội bán hàng bị ứ đọng (S5-07)")
+def get_stalled_deals(
+    days: int = Query(14, ge=1, le=180, description="Ngưỡng số ngày không có hoạt động"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> SavedDealFilterResponse:
-    return SavedFilterService(db).create_saved_deal_filter(dto=dto, user=current_user)
+) -> List[DealDTO]:
+    """
+    S5-07: Xác định các deal không có hoạt động trong X ngày hoặc quá hạn đóng hợp đồng.
+    """
+    return DealService.detect_and_get_stalled_deals(db=db, days_threshold=days, user=current_user)
 
 
-@router.get("/saved-filters/{filter_id}", response_model=SavedDealFilterResponse, summary="Xem chi tiết bộ lọc cơ hội đã lưu")
-def get_saved_deal_filter(
-    filter_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> SavedDealFilterResponse:
-    return SavedFilterService(db).get_saved_deal_filter(filter_id=filter_id, user=current_user)
-
-
-@router.put("/saved-filters/{filter_id}", response_model=SavedDealFilterResponse, summary="Cập nhật bộ lọc cơ hội cá nhân (PUT)")
-def update_saved_deal_filter_put(
-    filter_id: str,
-    dto: SavedDealFilterUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> SavedDealFilterResponse:
-    return SavedFilterService(db).update_saved_deal_filter(filter_id=filter_id, dto=dto, user=current_user)
-
-
-@router.patch("/saved-filters/{filter_id}", response_model=SavedDealFilterResponse, summary="Cập nhật một phần bộ lọc cơ hội cá nhân (PATCH)")
-def update_saved_deal_filter_patch(
-    filter_id: str,
-    dto: SavedDealFilterUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> SavedDealFilterResponse:
-    return SavedFilterService(db).update_saved_deal_filter(filter_id=filter_id, dto=dto, user=current_user)
-
-
-@router.delete("/saved-filters/{filter_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa bộ lọc cơ hội cá nhân")
-def delete_saved_deal_filter(
-    filter_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> Response:
-    SavedFilterService(db).delete_saved_deal_filter(filter_id=filter_id, user=current_user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ==============================================================================
-# 2. TÌM KIẾM VÀ LỌC CƠ HỘI NÂNG CAO ĐA ĐIỀU KIỆN (SCRUM-206)
-# ==============================================================================
-
-@router.get("", summary="Tìm kiếm, lọc danh sách cơ hội đa tiêu chí (SCRUM-206)")
-def get_deals(
-    search: Optional[str] = Query(None, description="Từ khóa tìm kiếm theo tên cơ hội, mã cơ hội, khách hàng"),
-    stages: Optional[List[str]] = Query(None, description="Danh sách giai đoạn pipeline (ví dụ: stages=proposal&stages=negotiation)"),
-    stage: Optional[str] = Query(None, description="Giai đoạn pipeline đơn lẻ"),
-    min_amount: Optional[Decimal] = Query(None, alias="min_amount", ge=0, description="Khoảng giá trị tối thiểu"),
-    max_amount: Optional[Decimal] = Query(None, alias="max_amount", ge=0, description="Khoảng giá trị tối đa"),
-    expected_close_from: Optional[date] = Query(None, alias="expected_close_from", description="Ngày chốt dự kiến từ"),
-    expected_close_to: Optional[date] = Query(None, alias="expected_close_to", description="Ngày chốt dự kiến đến"),
-    product_id: Optional[str] = Query(None, alias="product_id", description="Lọc theo sản phẩm quan tâm"),
-    product_ids: Optional[List[str]] = Query(None, alias="product_ids", description="Lọc theo nhiều sản phẩm"),
-    owner_id: Optional[str] = Query(None, alias="owner_id", description="Người phụ trách cơ hội"),
-    assigned_to: Optional[str] = Query(None, alias="assigned_to", description="Người phụ trách (alias)"),
-    sort_by: Optional[str] = Query("expected_close_date", alias="sort_by", description="Sắp xếp theo: expected_close_date, amount, created_at"),
-    sort_order: Optional[str] = Query("asc", alias="sort_order", description="Thứ tự: asc hoặc desc"),
-    page: Optional[int] = Query(None, ge=1, description="Trang hiện tại (1-indexed)"),
-    page_size: Optional[int] = Query(None, ge=1, le=100, alias="page_size", description="Số bản ghi trên mỗi trang"),
-    saved_filter_id: Optional[str] = Query(None, alias="saved_filter_id", description="Áp dụng bộ lọc cá nhân đã lưu"),
-    paginated: Optional[bool] = Query(None, description="Bắt buộc trả về định dạng phân trang DealFilterPaginatedResponse"),
-    # Legacy query parameters
-    outcome: Optional[str] = Query(None),
-    closedFrom: Optional[date] = Query(None),
-    closedTo: Optional[date] = Query(None),
-    signedFrom: Optional[date] = Query(None),
-    signedTo: Optional[date] = Query(None),
-    lostReasonId: Optional[str] = Query(None),
-    response: Response = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> Any:
-    is_paginated_request = (
-        paginated is True
-        or page is not None
-        or page_size is not None
-        or stages is not None
-        or min_amount is not None
-        or max_amount is not None
-        or expected_close_from is not None
-        or expected_close_to is not None
-        or product_id is not None
-        or product_ids is not None
-        or saved_filter_id is not None
-        or owner_id is not None
-        or assigned_to is not None
-        or (sort_by is not None and sort_by != "expected_close_date")
-        or (sort_order is not None and sort_order.lower() != "asc")
-    )
-
-    if is_paginated_request:
-        effective_stages = stages or []
-        if stage and stage not in effective_stages:
-            effective_stages = list(effective_stages) + [stage]
-
-        params = DealFilterParams(
-            search=search,
-            stages=effective_stages if effective_stages else None,
-            min_amount=min_amount,
-            max_amount=max_amount,
-            expected_close_from=expected_close_from,
-            expected_close_to=expected_close_to,
-            product_id=product_id,
-            product_ids=product_ids,
-            owner_id=owner_id or assigned_to,
-            sort_by=sort_by or "expected_close_date",
-            sort_order=sort_order or "asc",
-            page=page or 1,
-            page_size=page_size or 20,
-            saved_filter_id=saved_filter_id,
-        )
-        return DealService.filter_deals(db=db, user=current_user, params=params)
-
-    # Legacy fallback khi không truyền tham số phân trang mới
-    deals = DealService.get_deals(
-        db=db,
-        user=current_user,
-        search=search,
-        stage=stage,
-        outcome=_validate_outcome(outcome),
-        closed_from=closedFrom,
-        closed_to=closedTo,
-        signed_from=signedFrom,
-        signed_to=signedTo,
-        lost_reason_id=lostReasonId,
-    )
-    if response is not None:
-        response.headers["X-Total-Count"] = str(len(deals))
-    return [_to_deal_dto(deal, include_history=False) for deal in deals]
-
-
-@router.post("/search", response_model=DealFilterPaginatedResponse, summary="Tìm kiếm và lọc cơ hội qua HTTP POST (SCRUM-206)")
-def search_deals_post(
-    params: DealFilterParams,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealFilterPaginatedResponse:
-    return DealService.filter_deals(db=db, user=current_user, params=params)
-
-
-@router.get("/export", summary="Export deals")
-def export_deals(
-    search: Optional[str] = Query(None),
-    stage: Optional[str] = Query(None),
-    outcome: Optional[str] = Query(None),
+@router.post("/scan-stalled", summary="Kích hoạt quét cơ hội ứ đọng (S5-07)")
+def scan_stalled_deals(
+    days: int = Query(14, ge=1, le=180, description="Ngưỡng số ngày không có hoạt động"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    S5-07: Quét và cập nhật cờ ứ đọng (is_stalled) cho tất cả các deal chưa đóng.
+    Trả về số lượng deal đã quét và số lượng deal phát hiện bị ứ đọng.
+    """
+    return DealService.scan_stalled_deals(db=db, days_threshold=days, user=current_user)
+
+
+@router.post("/bulk-reassign", summary="Tái phân bổ hàng loạt cơ hội bán hàng (alias)")
+@router.post("/reassign", summary="Tái phân bổ hàng loạt cơ hội bán hàng cho người phụ trách mới (S5-08)")
+def bulk_reassign_deals(
+    dto: BulkReassignDealsDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    S5-08: Chuyển giao nhiều Deals cho chủ sở hữu mới kèm lý do bắt buộc và ghi lịch sử kiểm toán.
+    """
+    return DealService.bulk_reassign_deals(db=db, dto=dto, actor=current_user)
+
+
+@router.get("/export", summary="Xuất danh sách cơ hội bán hàng ra Excel (.xlsx) (S6-04)")
+def export_deals(
+    search: Optional[str] = Query(None, description="Tìm kiếm theo tiêu đề"),
+    stage: Optional[str] = Query(None, description="Lọc theo stage"),
+    min_value: Optional[float] = Query(None, description="Giá trị tối thiểu"),
+    max_value: Optional[float] = Query(None, description="Giá trị tối đa"),
+    close_date_from: Optional[date] = Query(None, description="Ngày dự kiến đóng từ ngày"),
+    close_date_to: Optional[date] = Query(None, description="Ngày dự kiến đóng đến ngày"),
+    owner_id: Optional[str] = Query(None, description="Lọc theo người phụ trách"),
+    product_id: Optional[str] = Query(None, description="Lọc theo sản phẩm"),
+    deal_ids: Optional[str] = Query(None, description="Danh sách ID các deal (phân cách bằng dấu phẩy)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Xuất danh sách deals ra Excel tuân thủ Data Scope (S6-04). Hỗ trợ xuất tất cả hoặc theo deal được chọn."""
+    selected_ids = [d.strip() for d in deal_ids.split(",") if d.strip()] if deal_ids else None
     deals = DealService.get_deals_for_export(
         db=db,
         user=current_user,
         search=search,
         stage=stage,
-        outcome=_validate_outcome(outcome),
+        min_value=min_value,
+        max_value=max_value,
+        close_date_from=close_date_from,
+        close_date_to=close_date_to,
+        owner_id=owner_id,
+        product_id=product_id,
+        deal_ids=selected_ids,
     )
+    headers = [
+        "Mã Deal",
+        "Tiêu đề",
+        "Giá trị (VNĐ)",
+        "Giai đoạn (Stage)",
+        "Xác suất (%)",
+        "Tên Khách Hàng",
+        "Người Phụ Trách",
+        "Ngày dự kiến đóng",
+        "Ngày đóng thực tế",
+        "Doanh thu thực tế (VNĐ)",
+        "Sản phẩm",
+        "Trạng thái ứ đọng",
+        "Ngày tạo",
+    ]
     rows = [
         [
-            deal.id,
-            deal.title,
-            float(deal.value),
-            deal.stage,
-            deal.status,
-            float(deal.actual_value) if deal.actual_value is not None else "",
-            deal.signed_date.isoformat() if deal.signed_date else "",
-            deal.lost_reason.reason if deal.lost_reason else "",
-            deal.competitor.name if deal.competitor else "",
-            deal.owner_id,
+            d.id,
+            d.title,
+            float(d.value) if d.value is not None else 0.0,
+            d.stage,
+            d.probability,
+            d.customer.full_name if d.customer else (d.customer_id or ""),
+            d.owner.full_name if d.owner else (d.owner_id or ""),
+            d.expected_close_date.isoformat() if d.expected_close_date else "",
+            d.close_date.isoformat() if d.close_date else "",
+            float(d.actual_value) if d.actual_value is not None else "",
+            ", ".join([it.product_name for it in d.deal_items if it.product_name]) if d.deal_items else "",
+            "Có" if d.is_stalled else "Không",
+            d.created_at.strftime("%Y-%m-%d %H:%M:%S") if d.created_at else "",
         ]
         for deal in deals
     ]
@@ -248,263 +150,178 @@ def export_deals(
     )
 
 
-@router.post("", response_model=DealDTO, status_code=status.HTTP_201_CREATED, summary="Create deal")
+# ==============================================================================
+# S5-01, S5-02, S6-01, S6-02, S6-03: DEAL LIST & KANBAN CRUD
+# ==============================================================================
+
+@router.get("", response_model=List[DealDTO], summary="Lấy danh sách các cơ hội bán hàng (S6-01, S6-02, S6-03)")
+def get_deals(
+    search: Optional[str] = Query(None, description="Tìm kiếm theo tiêu đề cơ hội"),
+    stage: Optional[str] = Query(None, description="Lọc theo stage: lead, contact, proposal, negotiation, won, lost"),
+    is_stalled: Optional[bool] = Query(None, description="Lọc deal ứ đọng"),
+    campaign_id: Optional[str] = Query(None, description="Lọc theo chiến dịch"),
+    min_value: Optional[float] = Query(None, description="Lọc giá trị tối thiểu (S6-01, S6-02)"),
+    max_value: Optional[float] = Query(None, description="Lọc giá trị tối đa (S6-01, S6-02)"),
+    close_date_from: Optional[date] = Query(None, description="Lọc ngày đóng từ (S6-01, S6-02)"),
+    close_date_to: Optional[date] = Query(None, description="Lọc ngày đóng đến (S6-01, S6-02)"),
+    owner_id: Optional[str] = Query(None, description="Lọc theo người phụ trách (S6-01, S6-02, S6-03)"),
+    product_id: Optional[str] = Query(None, description="Lọc theo sản phẩm (S6-02)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[DealDTO]:
+    deals: List[Deal] = DealService.get_deals(
+        db=db,
+        user=current_user,
+        search=search,
+        stage=stage,
+        is_stalled=is_stalled,
+        campaign_id=campaign_id,
+        min_value=min_value,
+        max_value=max_value,
+        close_date_from=close_date_from,
+        close_date_to=close_date_to,
+        owner_id=owner_id,
+        product_id=product_id,
+    )
+    return [DealService.map_to_dto(d) for d in deals]
+
+
+@router.post("", response_model=DealDTO, status_code=status.HTTP_201_CREATED, summary="Tạo mới cơ hội bán hàng (S5-01)")
 def create_deal(
     dto: CreateDealDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DealDTO:
-    return _to_deal_dto(DealService.create_deal(db=db, dto=dto, user=current_user))
+    deal: Deal = DealService.create_deal(db=db, dto=dto, user=current_user)
+    return DealService.map_to_dto(deal)
 
 
-@router.get("/{deal_id}/history", response_model=List[DealOutcomeHistoryDTO], summary="Deal close/reopen history")
-def get_deal_history(
-    deal_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> List[DealOutcomeHistoryDTO]:
-    deal = DealService.get_deal_by_id(db=db, deal_id=deal_id, user=current_user)
-    return [DealOutcomeHistoryDTO.model_validate(item) for item in deal.outcome_history]
-
-
-@router.post("/{deal_id}/close", response_model=DealDTO, summary="Close deal")
-def close_deal(
-    deal_id: str,
-    dto: CloseDealDTO,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealDTO:
-    return _to_deal_dto(DealService.close_deal(db=db, deal_id=deal_id, dto=dto, user=current_user))
-
-
-@router.post("/{deal_id}/reopen", response_model=DealDTO, summary="Reopen deal")
-def reopen_deal(
-    deal_id: str,
-    dto: ReopenDealDTO,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealDTO:
-    return _to_deal_dto(DealService.reopen_deal(db=db, deal_id=deal_id, dto=dto, user=current_user))
-
-
-@router.get("/{deal_id}", response_model=DealDTO, summary="Get deal")
+@router.get("/{deal_id}", response_model=DealDTO, summary="Xem chi tiết cơ hội bán hàng kèm sản phẩm (S5-01)")
 def get_deal_detail(
     deal_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DealDTO:
-    return _to_deal_dto(DealService.get_deal_by_id(db=db, deal_id=deal_id, user=current_user))
+    deal = DealService.get_deal_by_id(db=db, deal_id=deal_id, user=current_user)
+    if not deal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
+    return DealService.map_to_dto(deal)
 
 
-@router.patch("/{deal_id}", response_model=DealDTO, summary="Update deal")
+@router.put("/{deal_id}", response_model=DealDTO, summary="Cập nhật thông tin cơ hội bán hàng (S5-01)")
 def update_deal(
     deal_id: str,
     dto: UpdateDealDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DealDTO:
-    return _to_deal_dto(DealService.update_deal(db=db, deal_id=deal_id, dto=dto, user=current_user))
+    updated = DealService.update_deal(db=db, deal_id=deal_id, dto=dto, user=current_user)
+    return DealService.map_to_dto(updated)
 
 
-@router.patch("/{deal_id}/stage", response_model=DealDTO, summary="Move deal stage")
+@router.post("/{deal_id}/stage", response_model=DealDTO, summary="Di chuyển stage của deal trên bảng Kanban (POST alias)")
+@router.patch("/{deal_id}/stage", response_model=DealDTO, summary="Di chuyển stage của deal trên bảng Kanban kèm kiểm tra Exit Conditions (S5-02 & S5-04)")
 def move_stage(
     deal_id: str,
     dto: MoveDealStageDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DealDTO:
-    deal = DealService.move_stage(db=db, deal_id=deal_id, new_stage=dto.stage, user=current_user)
-    if deal is None:
-        raise HTTPException(status_code=404, detail="Không tìm thấy cơ hội bán hàng.")
-    return _to_deal_dto(deal)
-
-
-# ==============================================================================
-# 3. CHIA SẺ CƠ HỘI BÁN HÀNG & PHÂN QUYỀN CỘNG TÁC (DEAL COLLABORATION - SCRUM-207)
-# ==============================================================================
-
-@router.get("/{deal_id}/members", response_model=List[DealMemberResponse], summary="Lấy danh sách toàn bộ thành viên phối hợp theo dõi Deal (SCRUM-207)")
-def get_deal_members(
-    deal_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> List[DealMemberResponse]:
-    return DealMemberService(db).get_members(deal_id=deal_id, current_user=current_user)
-
-
-@router.post("/{deal_id}/members", response_model=DealMemberResponse, status_code=status.HTTP_201_CREATED, summary="Thêm một nhân viên vào danh sách cùng tham gia (SCRUM-207)")
-def add_deal_member(
-    deal_id: str,
-    dto: DealMemberCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealMemberResponse:
-    return DealMemberService(db).add_member(deal_id=deal_id, dto=dto, current_user=current_user)
-
-
-@router.delete("/{deal_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa thành viên khỏi cơ hội bán hàng (SCRUM-207)")
-def remove_deal_member(
-    deal_id: str,
-    user_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> Response:
-    DealMemberService(db).remove_member(deal_id=deal_id, user_id=user_id, current_user=current_user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ==============================================================================
-# 4. CHUYỂN QUYỀN SỞ HỮU CƠ HỘI & GHI NHẬT KÝ BẮT BUỘC (TRANSFER OWNER - SCRUM-207)
-# ==============================================================================
-
-@router.post("/{deal_id}/transfer-owner", response_model=DealDTO, summary="Chuyển quyền sở hữu cơ hội & Ghi nhật ký bắt buộc (SCRUM-207)")
-def transfer_deal_owner(
-    deal_id: str,
-    dto: DealTransferOwnerRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealDTO:
-    deal = DealMemberService(db).transfer_owner(deal_id=deal_id, request=dto, current_user=current_user)
-    return _to_deal_dto(deal)
-
-
-# ==============================================================================
-# 5. PHÂN QUYỀN GHI HOẠT ĐỘNG LIÊN QUAN ĐẾN CƠ HỘI (ACTIVITIES - SCRUM-207)
-# ==============================================================================
-
-@router.post("/{deal_id}/activities", response_model=ActivityDTO, status_code=status.HTTP_201_CREATED, summary="Ghi nhận hoạt động tương tác cho Deal (SCRUM-207)")
-def create_deal_activity(
-    deal_id: str,
-    dto: DealActivityCreateDTO,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> ActivityDTO:
-    activity = DealMemberService(db).create_deal_activity(deal_id=deal_id, dto=dto, current_user=current_user)
-    return ActivityDTO(
-        id=activity.id,
-        customerId=activity.customer_id,
-        userId=activity.user_id,
-        type=activity.type,
-        title=activity.title,
-        description=activity.description,
-        createdAt=activity.created_at.isoformat() if activity.created_at else None,
+    """
+    S5-02 & S5-04: Cập nhật giai đoạn phễu.
+    Kiểm tra danh sách điều kiện thoát giai đoạn (Stage Requirements).
+    Nếu không đạt và không có cờ override, hệ thống sẽ trả về lỗi 400 kèm lý do chi tiết.
+    """
+    deal = DealService.move_stage(
+        db=db,
+        deal_id=deal_id,
+        new_stage=dto.stage,
+        user=current_user,
+        override=dto.override,
     )
+    return DealService.map_to_dto(deal)
 
 
-@router.get("/{deal_id}/activities", response_model=List[ActivityDTO], summary="Lấy danh sách hoạt động tương tác của Deal (SCRUM-207)")
-def get_deal_activities(
+# ==============================================================================
+# S5-03: PRODUCTS AND DEAL ITEMS
+# ==============================================================================
+
+@router.get("/{deal_id}/items", response_model=List[DealItemDTO], summary="Lấy danh sách sản phẩm thuộc cơ hội bán hàng (S5-03)")
+def get_deal_items(
     deal_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[ActivityDTO]:
-    activities = DealMemberService(db).get_deal_activities(deal_id=deal_id, current_user=current_user)
+) -> List[DealItemDTO]:
+    deal = DealService.get_deal_by_id(db=db, deal_id=deal_id, user=current_user)
+    if not deal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy deal.")
     return [
-        ActivityDTO(
-            id=a.id,
-            customerId=a.customer_id,
-            userId=a.user_id,
-            type=a.type,
-            title=a.title,
-            description=a.description,
-            createdAt=a.created_at.isoformat() if a.created_at else None,
+        DealItemDTO(
+            id=i.id,
+            dealId=i.deal_id,
+            productId=i.product_id,
+            productName=i.product_name,
+            quantity=i.quantity,
+            unitPrice=float(i.unit_price),
+            discountPercent=float(i.discount_percent),
+            billingCycle=i.billing_cycle,
+            subtotal=float(i.subtotal),
         )
-        for a in activities
+        for i in (deal.deal_items or [])
     ]
 
 
-@router.get("/{deal_id}/audit-history", response_model=List[DealHistoryResponse], summary="Lịch sử thay đổi cơ hội (Deal History / Audit Log - SCRUM-207)")
-def get_deal_audit_history(
+@router.post("/{deal_id}/items", response_model=DealItemDTO, status_code=status.HTTP_201_CREATED, summary="Thêm sản phẩm vào cơ hội bán hàng (S5-03)")
+def add_deal_item(
     deal_id: str,
+    dto: CreateDealItemDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[DealHistoryResponse]:
-    return DealMemberService(db).get_deal_history(deal_id=deal_id, current_user=current_user)
+) -> DealItemDTO:
+    """
+    S5-03: Thêm sản phẩm từ danh mục vào Deal.
+    Hệ thống tự động tính subtotal và cập nhật lại tổng giá trị Deal authoritative trên backend.
+    """
+    item = DealService.add_deal_item(db=db, deal_id=deal_id, dto=dto, user=current_user)
+    return DealItemDTO(
+        id=item.id,
+        dealId=item.deal_id,
+        productId=item.product_id,
+        productName=item.product_name,
+        quantity=item.quantity,
+        unitPrice=float(item.unit_price),
+        discountPercent=float(item.discount_percent),
+        billingCycle=item.billing_cycle,
+        subtotal=float(item.subtotal),
+    )
 
 
-@router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Xóa cơ hội bán hàng (Chặn thành viên phối hợp)")
-def delete_deal(
+@router.delete("/{deal_id}/items/{item_id}", summary="Xóa sản phẩm khỏi cơ hội bán hàng (S5-03)")
+def remove_deal_item(
     deal_id: str,
+    item_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Response:
-    DealMemberService(db).delete_deal(deal_id=deal_id, current_user=current_user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+):
+    new_value = DealService.remove_deal_item(db=db, deal_id=deal_id, item_id=item_id, user=current_user)
+    return {"message": "Đã xóa dòng sản phẩm thành công.", "newDealValue": new_value}
 
 
 # ==============================================================================
-# 4. ĐÍNH KÈM VÀ QUẢN LÝ TÀI LIỆU TRONG CƠ HỘI (DEAL ATTACHMENTS - SCRUM-208)
+# S5-05: CLOSE WON / CLOSE LOST WORKFLOW
 # ==============================================================================
 
-@router.post(
-    "/{deal_id}/attachments",
-    response_model=List[DealAttachmentResponse],
-    status_code=status.HTTP_201_CREATED,
-    summary="Tải lên một hoặc nhiều tài liệu vào cơ hội (SCRUM-208)",
-)
-async def upload_deal_attachments(
+@router.post("/{deal_id}/close", response_model=DealDTO, summary="Đóng cơ hội bán hàng Won hoặc Lost (S5-05)")
+def close_deal(
     deal_id: str,
-    files: List[UploadFile] = File(..., description="Danh sách tệp tài liệu đính kèm (tối đa 20MB/tệp)"),
+    dto: CloseDealDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[DealAttachmentResponse]:
-    return await DealAttachmentService(db).upload_attachments(
-        deal_id=deal_id, files=files, current_user=current_user
-    )
-
-
-@router.get(
-    "/{deal_id}/attachments",
-    response_model=DealAttachmentListResponse,
-    summary="Lấy danh sách tài liệu đính kèm của cơ hội (SCRUM-208)",
-)
-def get_deal_attachments(
-    deal_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> DealAttachmentListResponse:
-    return DealAttachmentService(db).get_attachments(
-        deal_id=deal_id, current_user=current_user
-    )
-
-
-@router.get(
-    "/{deal_id}/attachments/{attachment_id}/download",
-    summary="Tải xuống tài liệu đính kèm (Bảo mật phân quyền - SCRUM-208)",
-)
-def download_deal_attachment(
-    deal_id: str,
-    attachment_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> FileResponse:
-    abs_path, filename, media_type = DealAttachmentService(db).download_attachment(
-        deal_id=deal_id, attachment_id=attachment_id, current_user=current_user
-    )
-    quoted_filename = urllib.parse.quote(filename)
-    headers = {
-        "Content-Disposition": f"attachment; filename=\"{quoted_filename}\"; filename*=UTF-8''{quoted_filename}"
-    }
-    return FileResponse(
-        path=abs_path,
-        filename=filename,
-        media_type=media_type or "application/octet-stream",
-        headers=headers,
-    )
-
-
-@router.delete(
-    "/{deal_id}/attachments/{attachment_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Xóa tài liệu đính kèm (SCRUM-208)",
-)
-def delete_deal_attachment(
-    deal_id: str,
-    attachment_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    DealAttachmentService(db).delete_attachment(
-        deal_id=deal_id, attachment_id=attachment_id, current_user=current_user
-    )
-    return {"message": "Đã xóa tài liệu đính kèm thành công."}
-
+) -> DealDTO:
+    """
+    S5-05: Đóng deal:
+    - Nếu Won: yêu cầu giá trị ký thực tế và ngày ký kết hợp đồng.
+    - Nếu Lost: yêu cầu lý do thất bại và đối thủ cạnh tranh.
+    Ghi nhận lịch sử kiểm toán AuditLog đầy đủ.
+    """
+    return DealService.close_deal(db=db, deal_id=deal_id, dto=dto, user=current_user)

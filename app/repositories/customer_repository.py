@@ -1,12 +1,13 @@
-from typing import Optional, List, Tuple, Sequence
-from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import or_, and_, exists, false
+from datetime import datetime
+from typing import Optional, List, Tuple, Dict, Any, Set
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, desc
 
-from app.models.customer import Customer, Contact
+from app.models.customer import Customer
 from app.models.activity import Activity, Note
 from app.models.user import User
 from app.repositories.base_repository import BaseRepository
-from app.core.customer_search import escape_like, normalize_phone, normalize_text, normalize_tax_code
 
 
 class CustomerRepository(BaseRepository):
@@ -21,86 +22,67 @@ class CustomerRepository(BaseRepository):
         db: Session,
         user: Optional[User] = None,
         search: Optional[str] = None,
-        status: Optional[Sequence[str]] = None,
-        industry: Optional[Sequence[str]] = None,
-        company_size: Optional[Sequence[str]] = None,
-        region: Optional[Sequence[str]] = None,
-        owner_ids: Optional[Sequence[str]] = None,
-        include_unassigned: bool = False,
-        sort: str = "created_at",
-        descending: bool = True,
+        status: Optional[str] = None,
+        industry: Optional[str] = None,
+        tier: Optional[str] = None,
+        owner_id: Optional[str] = None,
+        risk_only: Optional[bool] = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Customer], int]:
-        query = db.query(Customer).filter(or_(Customer.is_deleted == False, Customer.is_deleted.is_(None)))
+        """
+        Lấy danh sách khách hàng có phân trang, tìm kiếm nâng cao và lọc động.
+        LUÔN áp dụng Centralized Data Scope Filter ở mức câu lệnh CSDL.
+        Loại trừ các bản ghi đã xóa mềm (is_deleted == False).
+        """
+        query = db.query(Customer).filter(Customer.is_deleted == False)
+
+        # 1. Áp dụng Data Scope Filter trước tiên
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Customer)
 
+        # 2. Tìm kiếm đa trường (Công ty, MST, SĐT, Email, Tên đại diện)
         if search and search.strip():
-            normalized_query = normalize_text(search)
-            normalized_tax = normalize_tax_code(search)
-            normalized_phone = normalize_phone(search)
-            predicates = []
-            if normalized_query:
-                predicates.append(Customer.normalized_name.like(f"%{escape_like(normalized_query)}%", escape="\\"))
-            if normalized_tax:
-                predicates.append(Customer.normalized_tax_code.like(f"{escape_like(normalized_tax)}%", escape="\\"))
-            raw_pattern = f"%{escape_like(search.strip())}%"
-            predicates.extend(
-                [
-                    Customer.email.ilike(raw_pattern, escape="\\"),
-                    Customer.phone.ilike(raw_pattern, escape="\\"),
-                    Customer.company.ilike(raw_pattern, escape="\\"),
-                ]
-            )
-            if normalized_phone:
-                phone_pattern = f"%{escape_like(normalized_phone)}%"
-                predicates.extend(
-                    [
-                        Customer.normalized_phone.like(phone_pattern, escape="\\"),
-                        exists().where(
-                            and_(
-                                Contact.customer_id == Customer.id,
-                                Contact.normalized_phone.like(phone_pattern, escape="\\"),
-                            )
-                        ),
-                    ]
+            search_pattern = f"%{search.strip()}%"
+            query = query.filter(
+                or_(
+                    Customer.full_name.ilike(search_pattern),
+                    Customer.email.ilike(search_pattern),
+                    Customer.phone.ilike(search_pattern),
+                    Customer.company.ilike(search_pattern),
+                    Customer.tax_code.ilike(search_pattern),
                 )
-            query = query.filter(or_(*predicates) if predicates else false())
+            )
 
-        if status:
-            query = query.filter(Customer.status.in_(list(status)))
-        if industry:
-            query = query.filter(Customer.industry.in_(list(industry)))
-        if company_size:
-            query = query.filter(Customer.company_size.in_(list(company_size)))
-        if region:
-            query = query.filter(Customer.region.in_(list(region)))
-        if owner_ids or include_unassigned:
-            owner_predicates = []
-            if owner_ids:
-                owner_predicates.append(Customer.assigned_user_id.in_(list(owner_ids)))
-            if include_unassigned:
-                owner_predicates.append(Customer.assigned_user_id.is_(None))
-            query = query.filter(or_(*owner_predicates))
+        # 3. Lọc theo trạng thái
+        if status and status.lower() != "all":
+            query = query.filter(Customer.status == status.lower())
+
+        # 4. Lọc nâng cao (S3-07)
+        if industry and industry.strip() and industry.lower() != "all":
+            query = query.filter(Customer.industry.ilike(f"%{industry.strip()}%"))
+
+        if tier and tier.strip() and tier.lower() != "all":
+            query = query.filter(Customer.tier.ilike(f"%{tier.strip()}%"))
+
+        if owner_id and owner_id.strip() and owner_id.lower() != "all":
+            from app.core.scope import get_user_data_scope, DataScope
+            if user is None or get_user_data_scope(user) != DataScope.OWN:
+                query = query.filter(Customer.assigned_user_id == owner_id.strip())
+
+        if risk_only:
+            query = query.filter(Customer.risk_flag == True)
+
+        if min_value is not None:
+            query = query.filter(Customer.total_contract_value >= min_value)
+
+        if max_value is not None:
+            query = query.filter(Customer.total_contract_value <= max_value)
 
         total = query.count()
-        sort_columns = {
-            "name": Customer.normalized_name,
-            "created_at": Customer.created_at,
-            "status": Customer.status,
-            "owner": Customer.assigned_user_id,
-            "industry": Customer.industry,
-            "company_size": Customer.company_size,
-            "region": Customer.region,
-        }
-        sort_column = sort_columns.get(sort, Customer.created_at)
-        direction = sort_column.desc() if descending else sort_column.asc()
-        query = query.options(
-            joinedload(Customer.assigned_user),
-            selectinload(Customer.contacts),
-        )
-        customers = query.order_by(direction, Customer.id.asc()).offset(skip).limit(limit).all()
+        customers = query.order_by(Customer.created_at.desc()).offset(skip).limit(limit).all()
         return customers, total
 
     @staticmethod
@@ -112,9 +94,8 @@ class CustomerRepository(BaseRepository):
     ) -> List[Customer]:
         """
         Lấy toàn bộ danh sách khách hàng thỏa mãn Data Scope để xuất file Excel.
-        Sử dụng chung logic lọc với danh sách để tránh thất thoát dữ liệu.
         """
-        query = db.query(Customer).filter(or_(Customer.is_deleted == False, Customer.is_deleted.is_(None)))
+        query = db.query(Customer).filter(Customer.is_deleted == False)
         query = BaseRepository.apply_data_scope_filter(query, user, Customer)
 
         if search and search.strip():
@@ -125,6 +106,7 @@ class CustomerRepository(BaseRepository):
                     Customer.email.ilike(search_pattern),
                     Customer.phone.ilike(search_pattern),
                     Customer.company.ilike(search_pattern),
+                    Customer.tax_code.ilike(search_pattern),
                 )
             )
 
@@ -136,28 +118,55 @@ class CustomerRepository(BaseRepository):
     @staticmethod
     def get_by_id(db: Session, customer_id: str) -> Optional[Customer]:
         """Truy vấn khách hàng theo ID không kiểm tra scope (Dùng nội bộ)."""
-        return (
-            db.query(Customer)
-            .options(joinedload(Customer.assigned_user))
-            .filter(Customer.id == customer_id)
-            .first()
-        )
+        return db.query(Customer).filter(
+            Customer.id == customer_id,
+            Customer.is_deleted == False,
+        ).first()
+
+    @staticmethod
+    def get_by_id_include_deleted(db: Session, customer_id: str) -> Optional[Customer]:
+        """Truy vấn khách hàng theo ID bao gồm cả đã xóa mềm."""
+        return db.query(Customer).filter(Customer.id == customer_id).first()
+
+    @staticmethod
+    def get_by_tax_code(db: Session, tax_code: str) -> Optional[Customer]:
+        """Tìm khách hàng theo Mã số thuế (MST)."""
+        if not tax_code or not str(tax_code).strip():
+            return None
+        return db.query(Customer).filter(
+            Customer.tax_code == str(tax_code).strip(),
+            Customer.is_deleted == False,
+        ).first()
 
     @staticmethod
     def get_scoped_by_id(db: Session, customer_id: str, user: User) -> Customer:
         """
         Truy vấn chi tiết khách hàng có bảo vệ phân quyền phạm vi:
-        - Không tồn tại -> HTTP 404
+        - Không tồn tại hoặc đã xóa mềm -> HTTP 404
         - Tồn tại nhưng không thuộc quyền hạn -> HTTP 403 Forbidden
         """
-        return BaseRepository.get_scoped_record_or_raise(
-            db=db,
-            model=Customer,
-            record_id=customer_id,
+        customer = db.query(Customer).filter(
+            Customer.id == customer_id,
+            Customer.is_deleted == False,
+        ).first()
+        if not customer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy khách hàng.",
+            )
+
+        scoped_query = BaseRepository.apply_data_scope_filter(
+            query=db.query(Customer).filter(Customer.is_deleted == False),
             user=user,
-            not_found_msg="Không tìm thấy khách hàng.",
-            forbidden_msg="Bạn không có quyền truy cập dữ liệu này.",
+            model=Customer,
         )
+        scoped_customer = scoped_query.filter(Customer.id == customer_id).first()
+        if not scoped_customer:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền truy cập dữ liệu này.",
+            )
+        return scoped_customer
 
     @staticmethod
     def create(db: Session, customer: Customer) -> Customer:
@@ -167,8 +176,27 @@ class CustomerRepository(BaseRepository):
         return customer
 
     @staticmethod
+    def update(db: Session, customer: Customer, update_data: Dict[str, Any]) -> Customer:
+        """Cập nhật thông tin khách hàng từ từ điển thuộc tính."""
+        for key, value in update_data.items():
+            if hasattr(customer, key) and value is not None:
+                setattr(customer, key, value)
+        customer.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(customer)
+        return customer
+
+    @staticmethod
+    def soft_delete(db: Session, customer: Customer) -> None:
+        """Xóa mềm khách hàng (đặt cờ is_deleted = True)."""
+        customer.is_deleted = True
+        customer.updated_at = datetime.utcnow()
+        db.commit()
+
+    @staticmethod
     def update_status(db: Session, customer: Customer, new_status: str) -> Customer:
         customer.status = new_status
+        customer.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(customer)
         return customer
@@ -188,15 +216,81 @@ class CustomerRepository(BaseRepository):
         return activity
 
     @staticmethod
+    def get_stagnant(
+        db: Session,
+        cutoff_date: datetime,
+        user: Optional[User] = None,
+        limit: int = 100,
+    ) -> List[Customer]:
+        """
+        S3-09: Truy vấn danh sách khách hàng cần chăm sóc định kỳ:
+        - last_interaction_at < cutoff_date HOẶC last_interaction_at IS NULL
+        - Sắp xếp ưu tiên: total_contract_value giảm dần
+        - Tuân thủ Data Scope Filter
+        """
+        query = db.query(Customer).filter(Customer.is_deleted == False)
+
+        if user is not None:
+            query = BaseRepository.apply_data_scope_filter(query, user, Customer)
+
+        query = query.filter(
+            or_(
+                Customer.last_interaction_at < cutoff_date,
+                Customer.last_interaction_at.is_(None),
+            )
+        )
+
+        return query.order_by(desc(Customer.total_contract_value)).limit(limit).all()
+
+    @staticmethod
+    def get_children(db: Session, parent_id: str) -> List[Customer]:
+        """Lấy danh sách công ty con trực tiếp của một công ty."""
+        return db.query(Customer).filter(
+            Customer.parent_customer_id == parent_id,
+            Customer.is_deleted == False,
+        ).all()
+
+    @staticmethod
+    def is_descendant(db: Session, root_id: str, target_id: str) -> bool:
+        """
+        Kiểm tra xem target_id có phải là hậu duệ (con/cháu/...) của root_id hay không.
+        Dùng để chống vòng lặp cha - con (Circular Reference Prevention).
+        """
+        if root_id == target_id:
+            return True
+
+        visited: Set[str] = set()
+        queue = [root_id]
+
+        while queue:
+            curr = queue.pop(0)
+            if curr in visited:
+                continue
+            visited.add(curr)
+
+            children = db.query(Customer.id).filter(
+                Customer.parent_customer_id == curr,
+                Customer.is_deleted == False,
+            ).all()
+
+            for (child_id,) in children:
+                if child_id == target_id:
+                    return True
+                if child_id not in visited:
+                    queue.append(child_id)
+
+        return False
+
+    @staticmethod
     def count_all(db: Session, user: Optional[User] = None) -> int:
-        query = db.query(Customer)
+        query = db.query(Customer).filter(Customer.is_deleted == False)
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Customer)
         return query.count()
 
     @staticmethod
     def count_by_status(db: Session, status: str, user: Optional[User] = None) -> int:
-        query = db.query(Customer)
+        query = db.query(Customer).filter(Customer.is_deleted == False)
         if user is not None:
             query = BaseRepository.apply_data_scope_filter(query, user, Customer)
         return query.filter(Customer.status == status.lower()).count()

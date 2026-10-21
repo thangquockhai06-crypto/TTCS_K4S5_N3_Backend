@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class AuditLogSchema(BaseModel):
@@ -18,6 +18,13 @@ class AuditLogSchema(BaseModel):
     action: Optional[str] = None
     details: Optional[str] = None
     created_at: datetime
+    timestamp: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def populate_timestamp(self) -> "AuditLogSchema":
+        if self.timestamp is None:
+            self.timestamp = self.created_at
+        return self
 
 
 
@@ -26,3 +33,6 @@ class AuditLogPaginatedResponse(BaseModel):
     page: int
     limit: int
     data: List[AuditLogSchema]
+    items: Optional[List[AuditLogSchema]] = None
+    pages: Optional[int] = None
+

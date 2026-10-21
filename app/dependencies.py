@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -73,37 +73,3 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Bạn không có quyền thực hiện thao tác quản trị này.",
         )
     return current_user
-
-
-def require_roles(allowed_roles: List[str]):
-    """
-    Dependency factory kiểm tra vai trò người dùng theo danh sách vai trò cho phép.
-    Ví dụ: require_roles(["TEAM_LEAD", "DIRECTOR"])
-    Chặn 403 Forbidden nếu không đủ thẩm quyền.
-    """
-    normalized_allowed = {r.strip().lower().replace("_", " ") for r in allowed_roles}
-    expanded_allowed = set()
-    for r in normalized_allowed:
-        expanded_allowed.add(r)
-        if r in ["team lead", "team leader", "lead"]:
-            expanded_allowed.update([
-                "team lead", "team leader", "lead", "sales leader",
-                "sales manager", "manager", "trưởng nhóm", "trưởng phòng", "revops lead"
-            ])
-        if r in ["director", "sales director", "admin", "super admin"]:
-            expanded_allowed.update([
-                "super admin", "admin", "quản trị viên", "sales director",
-                "director", "vp of sales", "giám đốc kinh doanh"
-            ])
-
-    def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        user_role = (current_user.role or "").strip().lower().replace("_", " ")
-        if user_role not in expanded_allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn không có quyền thực hiện thao tác này. Yêu cầu quyền Trưởng nhóm trở lên.",
-            )
-        return current_user
-
-    return role_checker
-
