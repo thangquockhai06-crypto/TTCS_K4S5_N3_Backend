@@ -6,26 +6,19 @@ from app.models.contact import Contact
 from app.models.support_ticket import SupportTicket
 from app.models.saved_filter import SavedFilterPreset
 from app.models.deal import Deal
-from app.models.deal_item import DealItem
-from app.models.deal_history import DealHistory
-from app.models.campaign import Campaign
-from app.models.lead import Lead, LeadRoutingRule
 from app.models.activity import Activity, Note
-from app.models.quotation import Quotation, QuoteItem, QuoteApprovalHistory
+from app.models.quotation import Quotation
 from app.models.role import Role, user_roles
 from app.models.team import Team, user_teams
-from app.models.audit_log import AuditLog
 from app.models.product import Product, PriceList
 from app.models.category import Category
 from app.models.custom_field import CustomField
 from app.models.pipeline_stage import PipelineStage
 from app.models.win_loss import WinLossReason, Competitor
 from app.models.user_import_job import UserImportJob
-from app.models.task import Task
-from app.models.contract import Contract, ContractItem
-from app.models.pdf_template import PdfTemplate
-from app.models.notification import Notification
-from app.models.automation import AutomationRule, AutomationLog
+from app.models.lead import Lead
+from app.models.campaign import Campaign
+from app.models.lead_scoring import LeadScoringRule, LeadScoringSettings
 
 __all__ = [
     "Base",
@@ -36,22 +29,9 @@ __all__ = [
     "SupportTicket",
     "SavedFilterPreset",
     "Deal",
-    "DealItem",
-    "DealHistory",
-    "Campaign",
-    "Lead",
-    "LeadRoutingRule",
     "Activity",
     "Note",
     "Quotation",
-    "QuoteItem",
-    "QuoteApprovalHistory",
-    "Contract",
-    "ContractItem",
-    "PdfTemplate",
-    "Notification",
-    "AutomationRule",
-    "AutomationLog",
     "Role",
     "user_roles",
     "Team",
@@ -65,5 +45,8 @@ __all__ = [
     "WinLossReason",
     "Competitor",
     "UserImportJob",
-    "Task",
+    "Lead",
+    "Campaign",
+    "LeadScoringRule",
+    "LeadScoringSettings",
 ]

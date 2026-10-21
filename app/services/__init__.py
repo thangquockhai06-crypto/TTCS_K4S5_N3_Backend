@@ -9,6 +9,8 @@ from app.services.customer_excel_import_service import CustomerExcelImportServic
 from app.services.support_ticket_service import SupportTicketService
 from app.services.saved_filter_service import SavedFilterService
 from app.services.deal_service import DealService
+from app.services.lead_service import LeadService
+from app.services.lead_duplicate_service import LeadDuplicateService
 
 __all__ = [
     "UserService",
@@ -22,4 +24,6 @@ __all__ = [
     "SupportTicketService",
     "SavedFilterService",
     "DealService",
+    "LeadService",
+    "LeadDuplicateService",
 ]

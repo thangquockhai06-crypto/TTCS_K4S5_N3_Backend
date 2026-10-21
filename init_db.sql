@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS users (
     title VARCHAR(150) DEFAULT 'Quản trị viên hệ thống',
     department VARCHAR(150) DEFAULT 'Ban Quản Trị & Vận Hành Doanh Thu',
     avatar_url TEXT,
-    avatar_thumbnail_url TEXT,
     workspace_name VARCHAR(150) DEFAULT 'NexusCRM Enterprise VN',
     team_id VARCHAR(50) DEFAULT NULL,
     data_scope VARCHAR(20) DEFAULT NULL,
@@ -70,9 +69,11 @@ CREATE TABLE IF NOT EXISTS deals (
     probability INT NOT NULL DEFAULT 20,
     customer_id VARCHAR(36) NOT NULL,
     owner_id VARCHAR(36) NOT NULL,
+    campaign_id VARCHAR(36) DEFAULT NULL,
     expected_close_date DATE DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_deals_campaign_id (campaign_id),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -166,22 +167,49 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. BẢNG LỊCH SỬ THAY ĐỔI CƠ HỘI BÁN HÀNG (DEAL_HISTORIES / SCRUM-91)
-CREATE TABLE IF NOT EXISTS deal_histories (
+-- 11. BẢNG CHIẾN DỊCH TIẾP THỊ (CAMPAIGNS) - SPRINT 4 (SCRUM-44)
+CREATE TABLE IF NOT EXISTS campaigns (
     id VARCHAR(36) PRIMARY KEY,
-    deal_id VARCHAR(36) NOT NULL,
-    field_name VARCHAR(50) NOT NULL,
-    old_value TEXT DEFAULT NULL,
-    new_value TEXT DEFAULT NULL,
-    changed_by VARCHAR(36) DEFAULT NULL,
-    changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_deal_histories_deal (deal_id),
-    INDEX idx_deal_histories_field (field_name),
-    INDEX idx_deal_histories_changed_at (changed_at),
-    INDEX idx_deal_histories_deal_changed_at (deal_id, changed_at),
-    INDEX idx_deal_histories_deal_field (deal_id, field_name),
-    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
-    FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+    name VARCHAR(200) NOT NULL,
+    channel VARCHAR(100) NOT NULL,
+    budget DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+    description TEXT DEFAULT NULL,
+    created_by VARCHAR(36) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_campaigns_name (name),
+    INDEX idx_campaigns_channel (channel),
+    INDEX idx_campaigns_status (status),
+    INDEX idx_campaigns_created_by (created_by),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. BẢNG KHÁCH HÀNG TIỀM NĂNG (LEADS) - SPRINT 4 (SCRUM-40 / SCRUM-44)
+CREATE TABLE IF NOT EXISTS leads (
+    id VARCHAR(36) PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(150) DEFAULT NULL,
+    company VARCHAR(255) DEFAULT NULL,
+    interest_need TEXT DEFAULT NULL,
+    source VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'NEW',
+    notes TEXT DEFAULT NULL,
+    created_by VARCHAR(36) DEFAULT NULL,
+    campaign_id VARCHAR(36) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_leads_phone (phone),
+    INDEX idx_leads_email (email),
+    INDEX idx_leads_source (source),
+    INDEX idx_leads_status (status),
+    INDEX idx_leads_created_by (created_by),
+    INDEX idx_leads_campaign_id (campaign_id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================================

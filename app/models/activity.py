@@ -8,18 +8,20 @@ class Activity(Base):
     __tablename__ = "activities"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=True)
-    deal_id = Column(String(36), ForeignKey("deals.id", ondelete="SET NULL"), nullable=True, index=True)
+    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=True, index=True)
+    lead_id = Column(String(36), ForeignKey("leads.id", ondelete="CASCADE"), nullable=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type = Column(String(50), nullable=False, default="call")
+    type = Column(
+        Enum("call", "meeting", "email", "deal_change", "status_change", name="activity_type_enum"),
+        nullable=False,
+    )
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     customer = relationship("Customer", back_populates="activities")
-    deal = relationship("Deal")
+    lead = relationship("Lead", back_populates="activities", foreign_keys=[lead_id])
     user = relationship("User")
 
 class Note(Base):
