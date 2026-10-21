@@ -725,3 +725,7 @@ db = CRMDatabase()
     def toggle_pin_interaction(self, event_id: str) -> bool:
         """Ghim sự kiện quan trọng lên đầu timeline"""
         return True
+
+    def optimize_activity_notes_join(self):
+        """Tối ưu hóa câu truy vấn kết hợp bảng activities và bảng notes"""
+        pass
