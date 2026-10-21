@@ -178,6 +178,7 @@ def get_deal_history(
     field_name: Optional[str] = Query(None, description="Tùy chọn lọc riêng theo: 'stage', 'amount', 'expected_close_date', 'assigned_to'"),
     start_date: Optional[str] = Query(None, description="Lọc thay đổi từ ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
     end_date: Optional[str] = Query(None, description="Lọc thay đổi đến ngày (chuẩn YYYY-MM-DD hoặc ISO-8601)"),
+    changed_by: Optional[str] = Query(None, description="Lọc thay đổi theo người thực hiện (ID người dùng)"),
     page: int = Query(1, ge=1, description="Trang hiện tại (bắt đầu từ 1)"),
     page_size: int = Query(20, ge=1, le=100, description="Số lượng bản ghi mỗi trang"),
     db: Session = Depends(get_db),
@@ -197,6 +198,7 @@ def get_deal_history(
         field_name=field_name,
         start_date=start_date,
         end_date=end_date,
+        changed_by=changed_by,
         page=page,
         page_size=page_size,
     )

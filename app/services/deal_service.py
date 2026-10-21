@@ -796,6 +796,7 @@ class DealService:
         field_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        changed_by: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> DealHistoryListResponse:
@@ -804,7 +805,7 @@ class DealService:
         - DIRECTOR: Xem toàn bộ lịch sử cơ hội trong hệ thống.
         - TEAM_LEAD: Xem lịch sử của các cơ hội thuộc nhân viên trong nhóm mình quản lý.
         - SALES_REP: Chỉ xem được lịch sử cơ hội do chính mình được giao phụ trách.
-        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date.
+        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date, và người thực hiện changed_by.
         """
         # 1. Kiểm tra tồn tại của deal_id (unscoped)
         deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -881,6 +882,7 @@ class DealService:
             field_name=field_name,
             start_date=parsed_start,
             end_date=parsed_end,
+            changed_by=changed_by.strip() if changed_by and changed_by.strip() else None,
             skip=skip,
             limit=page_size,
         )

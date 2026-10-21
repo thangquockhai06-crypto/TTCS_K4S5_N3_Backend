@@ -196,12 +196,13 @@ class DealRepository(BaseRepository):
         field_name: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        changed_by: Optional[str] = None,
         skip: int = 0,
         limit: int = 20,
     ) -> Tuple[List[DealHistory], int]:
         """
         Lấy danh sách lịch sử thay đổi của cơ hội bán hàng.
-        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date.
+        Hỗ trợ lọc theo field_name, khoảng thời gian start_date - end_date, và người thực hiện changed_by.
         Sắp xếp mặc định: ORDER BY changed_at DESC.
         """
         query = db.query(DealHistory).filter(DealHistory.deal_id == deal_id)
@@ -221,6 +222,8 @@ class DealRepository(BaseRepository):
             query = query.filter(DealHistory.changed_at >= start_date)
         if end_date:
             query = query.filter(DealHistory.changed_at <= end_date)
+        if changed_by and changed_by.strip():
+            query = query.filter(DealHistory.changed_by == changed_by.strip())
 
         total = query.count()
         histories = query.order_by(desc(DealHistory.changed_at)).offset(skip).limit(limit).all()
