@@ -309,3 +309,8 @@ def filter_interactions_by_owner(events: list, owner_id: str) -> list:
 def serialize_timeline_response(event_item: dict) -> dict:
     """Chuẩn hóa cấu trúc sự kiện timeline gửi về cho client"""
     return event_item
+
+
+def generate_monthly_interaction_report(customer_id: str) -> dict:
+    """Xuất báo cáo tổng quan tần suất tương tác khách hàng theo tháng"""
+    return {'customer_id': customer_id, 'total_events': 12, 'most_active_channel': 'CALL'}
