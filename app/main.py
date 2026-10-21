@@ -13,12 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import engine, Base, ensure_schema_compatibility
+from app.database import engine, Base, run_ep03_migrations, run_ep04_ep05_migrations, run_ep06_migrations, run_ep07_migrations
 from app.routers import (
     auth_router,
-    user_import_router,
     users_router,
     customers_router,
+    contacts_router,
+    support_tickets_router,
+    saved_filters_router,
     deals_router,
     opportunities_router,
     activities_router,
@@ -31,6 +33,15 @@ from app.routers import (
     custom_fields_router,
     pipelines_router,
     win_loss_router,
+    user_import_router,
+    leads_router,
+    campaigns_router,
+    tasks_router,
+    contracts_router,
+    pdf_templates_router,
+    notifications_router,
+    automations_router,
+    public_quotes_router,
 )
 
 @asynccontextmanager
@@ -38,8 +49,11 @@ async def lifespan(app: FastAPI):
     # Tu dong tao cac bang trong CSDL neu chua ton tai
     try:
         Base.metadata.create_all(bind=engine)
-        ensure_schema_compatibility()
-        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
+        run_ep03_migrations(engine)
+        run_ep04_ep05_migrations(engine)
+        run_ep06_migrations(engine)
+        run_ep07_migrations(engine)
+        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03, EP-04, EP-05, EP-06, EP-07 san sang).")
         try:
             import seed
             seed.seed_database()
@@ -56,7 +70,8 @@ app = FastAPI(
     description=(
         "Backend API cho hệ thống NexusCRM (TTCS_K4S5_N3). "
         "Triển khai xác thực JWT an toàn, bảo vệ Brute-force 15 phút (SCRUM-32), "
-        "và duy trì/thu hồi phiên đăng xuất (SCRUM-34)."
+        "duy trì/thu hồi phiên đăng xuất (SCRUM-34), "
+        "và Phân hệ Quản lý Khách hàng Doanh nghiệp Toàn diện (Sprint 3 EP-03: S3-01 -> S3-09)."
     ),
     lifespan=lifespan,
     docs_url="/docs",
@@ -73,14 +88,33 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=[
+        "*",
+        "X-Total-Count",
+        "x-total-count",
+        "X-Total-Pages",
+        "x-total-pages",
+        "X-Current-Page",
+        "x-current-page",
+        "X-Page-Size",
+        "x-page-size",
+    ],
 )
+
+# Phục vụ file uploads tĩnh (ảnh đại diện, tài liệu đính kèm)
+import os
+from fastapi.staticfiles import StaticFiles
+_uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(_uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 # Mount các Router API
 app.include_router(auth_router, prefix=settings.API_V1_STR)
-app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
+app.include_router(contacts_router, prefix=settings.API_V1_STR)
+app.include_router(support_tickets_router, prefix=settings.API_V1_STR)
+app.include_router(saved_filters_router, prefix=settings.API_V1_STR)
 app.include_router(deals_router, prefix=settings.API_V1_STR)
 app.include_router(opportunities_router, prefix=settings.API_V1_STR)
 app.include_router(activities_router, prefix=settings.API_V1_STR)
@@ -93,6 +127,15 @@ app.include_router(org_tree_router, prefix=settings.API_V1_STR)
 app.include_router(custom_fields_router, prefix=settings.API_V1_STR)
 app.include_router(pipelines_router, prefix=settings.API_V1_STR)
 app.include_router(win_loss_router, prefix=settings.API_V1_STR)
+app.include_router(user_import_router, prefix=settings.API_V1_STR)
+app.include_router(leads_router, prefix=settings.API_V1_STR)
+app.include_router(campaigns_router, prefix=settings.API_V1_STR)
+app.include_router(tasks_router, prefix=settings.API_V1_STR)
+app.include_router(contracts_router, prefix=settings.API_V1_STR)
+app.include_router(pdf_templates_router, prefix=settings.API_V1_STR)
+app.include_router(notifications_router, prefix=settings.API_V1_STR)
+app.include_router(automations_router, prefix=settings.API_V1_STR)
+app.include_router(public_quotes_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")
 def root():
@@ -101,12 +144,10 @@ def root():
         "service": settings.PROJECT_NAME,
         "docsUrl": "/docs",
         "version": "1.0.0",
-        "scrum_stories": ["SCRUM-32 (Login & 15m Lockout)", "SCRUM-34 (Session & Logout Revocation)"],
+        "sprint": "Sprint 3 (EP-03 Customer Management)",
+        "scrum_stories": [
+            "SCRUM-32 (Login & 15m Lockout)",
+            "SCRUM-34 (Session & Logout Revocation)",
+            "S3-01 -> S3-09 (Full Customer Management)",
+        ],
     }
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"message": "Đã xảy ra lỗi máy chủ nội bộ.", "details": str(exc) if settings.DEBUG else None},
-    )

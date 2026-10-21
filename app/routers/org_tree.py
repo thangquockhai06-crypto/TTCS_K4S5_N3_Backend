@@ -26,6 +26,55 @@ class UpdateOrgNodeDTO(BaseModel):
     region: Optional[str] = None
 
 
+class CreateOrgNodeDTO(BaseModel):
+    name: str
+    parent_id: Optional[str] = None
+    region: Optional[str] = "Toàn quốc"
+    leader_name: Optional[str] = None
+    description: Optional[str] = None
+
+
+@router.post("", response_model=OrgNodeDTO, status_code=status.HTTP_201_CREATED, summary="Thêm mới đơn vị vào cây tổ chức (S2-06)")
+def create_org_node(
+    dto: CreateOrgNodeDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> OrgNodeDTO:
+    clean_name = dto.name.strip() if dto.name else ""
+    if not clean_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tên đơn vị không được để trống.")
+
+    existing = db.query(Team).filter(Team.name == clean_name).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Đơn vị '{clean_name}' đã tồn tại trong hệ thống.")
+
+    if dto.parent_id:
+        parent = db.query(Team).filter(Team.id == dto.parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Đơn vị cấp trên không tồn tại.")
+
+    new_team = Team(
+        name=clean_name,
+        parent_id=dto.parent_id if dto.parent_id else None,
+        region=dto.region or "Toàn quốc",
+        leader_name=dto.leader_name.strip() if dto.leader_name else None,
+        description=dto.description,
+    )
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+
+    return OrgNodeDTO(
+        id=new_team.id,
+        name=new_team.name,
+        region=new_team.region,
+        leader_id=new_team.leader_id,
+        leader_name=new_team.leader_name,
+        member_count=0,
+        children=[],
+    )
+
+
 @router.get("", response_model=List[OrgNodeDTO], summary="Lấy toàn bộ cây tổ chức đa cấp (S2-06)")
 def get_org_tree(
     db: Session = Depends(get_db),

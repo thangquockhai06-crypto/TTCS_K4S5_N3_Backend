@@ -1,6 +1,9 @@
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.customers import router as customers_router
+from app.routers.contacts import router as contacts_router
+from app.routers.support_tickets import router as support_tickets_router
+from app.routers.saved_filters import router as saved_filters_router
 from app.routers.deals import router as deals_router
 from app.routers.opportunities import router as opportunities_router
 from app.routers.activities import router as activities_router
@@ -14,12 +17,22 @@ from app.routers.custom_fields import router as custom_fields_router
 from app.routers.pipelines import router as pipelines_router
 from app.routers.win_loss import router as win_loss_router
 from app.routers.user_import import router as user_import_router
+from app.routers.leads import router as leads_router
+from app.routers.campaigns import router as campaigns_router
+from app.routers.tasks import router as tasks_router
+from app.routers.contracts import router as contracts_router
+from app.routers.pdf_templates import router as pdf_templates_router
+from app.routers.notifications import router as notifications_router
+from app.routers.automations import router as automations_router
+from app.routers.public_quotes import router as public_quotes_router
 
 __all__ = [
     "auth_router",
-    "user_import_router",
     "users_router",
     "customers_router",
+    "contacts_router",
+    "support_tickets_router",
+    "saved_filters_router",
     "deals_router",
     "opportunities_router",
     "activities_router",
@@ -32,4 +45,13 @@ __all__ = [
     "custom_fields_router",
     "pipelines_router",
     "win_loss_router",
+    "user_import_router",
+    "leads_router",
+    "campaigns_router",
+    "tasks_router",
+    "contracts_router",
+    "pdf_templates_router",
+    "notifications_router",
+    "automations_router",
+    "public_quotes_router",
 ]

@@ -92,18 +92,59 @@ def create_category(
     )
 
 
+@router.put("/{category_id}", response_model=CategoryDTO, summary="Cập nhật danh mục")
+def update_category(
+    category_id: str,
+    dto: UpdateCategoryDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CategoryDTO:
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy danh mục.")
+
+    if dto.name is not None and dto.name.strip():
+        cat.name = dto.name.strip()
+    if dto.code is not None and dto.code.strip():
+        cat.code = dto.code.strip().upper()
+    if dto.order_index is not None:
+        cat.order_index = dto.order_index
+
+    db.commit()
+    db.refresh(cat)
+    return CategoryDTO(
+        id=cat.id,
+        type=cat.type,
+        code=cat.code,
+        name=cat.name,
+        order_index=cat.order_index,
+        is_system=cat.is_system,
+        usage_count=cat.usage_count,
+    )
+
+
+@router.post("/reorder", summary="Cập nhật thứ tự sắp xếp danh mục (S2-07)")
 @router.put("/reorder", summary="Cập nhật thứ tự sắp xếp kéo thả danh mục (S2-07)")
 def reorder_categories(
     dto: ReorderCategoriesDTO,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    for item in dto.items:
-        cat = db.query(Category).filter(Category.id == item.id).first()
-        if cat:
-            cat.order_index = item.order_index
-    db.commit()
-    return {"message": "Cập nhật thứ tự hiển thị thành công."}
+    if dto.ordered_ids:
+        for idx, cat_id in enumerate(dto.ordered_ids):
+            cat = db.query(Category).filter(Category.id == cat_id).first()
+            if cat:
+                cat.order_index = idx
+        db.commit()
+        return {"message": "Cập nhật thứ tự hiển thị thành công."}
+    elif dto.items:
+        for item in dto.items:
+            cat = db.query(Category).filter(Category.id == item.id).first()
+            if cat:
+                cat.order_index = item.order_index
+        db.commit()
+        return {"message": "Cập nhật thứ tự hiển thị thành công."}
+    return {"message": "Không có dữ liệu thay đổi thứ tự."}
 
 
 @router.delete("/{category_id}", summary="Xóa danh mục (ngăn chặn nếu đang được sử dụng)")
