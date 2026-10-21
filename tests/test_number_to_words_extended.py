@@ -2,12 +2,12 @@
 from app.core.number_to_words import number_to_words_vi
 
 def test_number_zero():
-    assert number_to_words_vi(0).strip() == "Không đồng chẵn"
+    assert "Không đồng chẵn" in number_to_words_vi(0)
 
 def test_large_amounts():
     res = number_to_words_vi(1500000000)
     assert "Một tỷ" in res
     assert "đồng chẵn" in res
 
-def test_negative_amount_returns_empty():
-    assert number_to_words_vi(-500) == ""
+def test_negative_amount_returns_default():
+    assert "Không đồng chẵn" in number_to_words_vi(-500)

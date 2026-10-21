@@ -77,3 +77,5 @@ def convert_number_to_vietnamese_words(amount: float) -> str:
     full_sentence = " ".join(full_sentence.split())
     # Capitalize the first letter
     return full_sentence[0].upper() + full_sentence[1:]
+
+number_to_words_vi = convert_number_to_vietnamese_words
