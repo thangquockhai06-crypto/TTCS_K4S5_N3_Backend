@@ -45,6 +45,7 @@ def get_unread_count(
 
 
 @router.post("/{notification_id}/read", response_model=NotificationDTO, summary="Đánh dấu một thông báo đã đọc (S7-08)")
+@router.patch("/{notification_id}/read", response_model=NotificationDTO, summary="Đánh dấu một thông báo đã đọc qua PATCH")
 def mark_notification_read(
     notification_id: str,
     db: Session = Depends(get_db),
@@ -54,9 +55,10 @@ def mark_notification_read(
 
 
 @router.post("/mark-all-read", summary="Đánh dấu toàn bộ thông báo đã đọc (S7-08)")
+@router.patch("/mark-all-read", summary="Đánh dấu toàn bộ thông báo đã đọc qua PATCH")
 def mark_all_read(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     count = NotificationService.mark_all_read(db=db, user=current_user)
-    return {"success": True, "markedCount": count}
+    return {"status": "success", "success": True, "markedCount": count}

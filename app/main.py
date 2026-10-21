@@ -18,9 +18,6 @@ from app.database import (
     engine,
     Base,
     run_ep03_migrations,
-    run_ep04_ep05_migrations,
-    run_ep06_migrations,
-    run_ep07_migrations,
     run_sprint4_migrations,
 )
 from app.routers import (
@@ -61,9 +58,7 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
         run_ep03_migrations(engine)
         run_sprint4_migrations(engine)
-        run_ep04_ep05_migrations(engine)
-        run_ep06_migrations(engine)
-        run_ep07_migrations(engine)
+
         print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong.")
         try:
             import seed

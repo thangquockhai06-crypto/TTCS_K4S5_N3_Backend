@@ -1,5 +1,7 @@
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 
 class DealItemDTO(BaseModel):
