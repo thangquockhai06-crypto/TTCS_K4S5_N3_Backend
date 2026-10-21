@@ -6,3 +6,6 @@
 - **Sprint 5**: Cơ hội bán hàng (Deal), Kanban phễu bán hàng, quản lý lý do Thắng/Thua.
 - **Sprint 6**: Lịch sử tương tác Khách hàng, quản lý Công việc (Tasks) và Dòng thời gian Timeline.
 - **Sprint 7**: Quản lý Báo giá (Quotation), Hợp đồng (Contract), Tự động hóa quy trình và Thông báo in-app.
+
+---
+*Ghi chu*: Cau hinh moi truong va tai lieu ky thuat duoc cap nhat dong bo cho nhom phat trien.
