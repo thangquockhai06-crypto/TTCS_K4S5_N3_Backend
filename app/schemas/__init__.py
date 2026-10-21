@@ -46,6 +46,7 @@ from app.schemas.deal import (
 from app.schemas.deal_history import (
     DealHistoryItemResponse,
     DealHistoryListResponse,
+    DealHistorySummaryResponse,
 )
 
 __all__ = [
@@ -82,4 +83,5 @@ __all__ = [
     "UpdateDealDTO",
     "DealHistoryItemResponse",
     "DealHistoryListResponse",
+    "DealHistorySummaryResponse",
 ]

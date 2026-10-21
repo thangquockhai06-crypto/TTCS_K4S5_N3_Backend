@@ -16,7 +16,10 @@ from app.schemas.deal import (
     BulkReassignDealsDTO,
     SalesForecastDTO,
 )
-from app.schemas.deal_history import DealHistoryListResponse
+from app.schemas.deal_history import (
+    DealHistoryListResponse,
+    DealHistorySummaryResponse,
+)
 from app.services.deal_service import DealService
 from app.core.export import export_to_excel
 
@@ -201,6 +204,24 @@ def get_deal_history(
         changed_by=changed_by,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get("/{deal_id}/history/summary", response_model=DealHistorySummaryResponse, summary="Thống kê tổng quan lịch sử thay đổi của một cơ hội (SCRUM-91)")
+def get_deal_history_summary(
+    deal_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DealHistorySummaryResponse:
+    """
+    SCRUM-91: Báo cáo tổng hợp các chỉ số thay đổi của cơ hội bán hàng.
+    Bao gồm số lần đổi stage, đổi giá trị, thời điểm đầu/cuối và thống kê theo nhân viên.
+    Phân quyền tương tự Record-level Security của Deal History.
+    """
+    return DealService.get_deal_history_summary(
+        db=db,
+        deal_id=deal_id,
+        user=current_user,
     )
 
 

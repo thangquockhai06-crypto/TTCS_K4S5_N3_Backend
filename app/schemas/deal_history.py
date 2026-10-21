@@ -155,3 +155,44 @@ class DealHistoryListResponse(BaseModel):
     page_size: Optional[int] = 20
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class FieldChangeStat(BaseModel):
+    """Thống kê số lần thay đổi theo từng trường dữ liệu."""
+    field_name: str
+    field_label: str
+    count: int
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class OperatorChangeStat(BaseModel):
+    """Thống kê số lượt thao tác theo nhân sự."""
+    user_id: str
+    user_name: str
+    count: int
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class DealHistorySummaryResponse(BaseModel):
+    """
+    Schema thống kê tổng hợp lịch sử cơ hội bán hàng (SCRUM-91).
+    Cung cấp các chỉ số audit: tổng số lần đổi, số lần chuyển stage, số lần đổi giá trị, thời điểm đầu/cuối và top người thao tác.
+    """
+    deal_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("deal_id", "dealId"),
+        serialization_alias="deal_id",
+    )
+    total_changes: int = 0
+    stage_changes_count: int = 0
+    amount_changes_count: int = 0
+    expected_close_date_changes_count: int = 0
+    assigned_to_changes_count: int = 0
+    first_change_at: Optional[datetime] = None
+    last_change_at: Optional[datetime] = None
+    changes_by_field: List[FieldChangeStat] = Field(default_factory=list)
+    top_operators: List[OperatorChangeStat] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)

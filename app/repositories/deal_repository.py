@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, desc
+from sqlalchemy import func, or_, and_, desc, asc
 
 from app.models.deal import Deal
 from app.models.deal_item import DealItem
@@ -228,3 +228,9 @@ class DealRepository(BaseRepository):
         total = query.count()
         histories = query.order_by(desc(DealHistory.changed_at)).offset(skip).limit(limit).all()
         return histories, total
+
+    @staticmethod
+    def get_all_deal_histories(db: Session, deal_id: str) -> List[DealHistory]:
+        """Lấy toàn bộ lịch sử thay đổi của một cơ hội (sắp xếp tăng dần theo thời gian)."""
+        return db.query(DealHistory).filter(DealHistory.deal_id == deal_id).order_by(asc(DealHistory.changed_at)).all()
+

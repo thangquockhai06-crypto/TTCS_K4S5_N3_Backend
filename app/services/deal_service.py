@@ -27,6 +27,9 @@ from app.schemas.deal import (
 from app.schemas.deal_history import (
     DealHistoryItemResponse,
     DealHistoryListResponse,
+    DealHistorySummaryResponse,
+    FieldChangeStat,
+    OperatorChangeStat,
     FIELD_LABEL_MAP,
     get_field_label,
     format_field_value_and_description,
@@ -918,3 +921,110 @@ class DealService:
             page=page,
             page_size=page_size,
         )
+
+    @classmethod
+    def get_deal_history_summary(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+    ) -> DealHistorySummaryResponse:
+        """
+        SCRUM-91: Tổng hợp các chỉ số thay đổi của một cơ hội bán hàng (Audit Trail Summary).
+        Bao gồm số lần đổi stage, đổi giá trị, thời điểm đầu/cuối và thống kê theo nhân sự.
+        """
+        # 1. Kiểm tra tồn tại
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        # 2. Phân quyền truy cập
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+
+        # 3. Lấy toàn bộ lịch sử
+        histories = DealRepository.get_all_deal_histories(db, deal.id)
+        total = len(histories)
+
+        stage_count = 0
+        amount_count = 0
+        close_date_count = 0
+        assigned_to_count = 0
+        field_counter: Dict[str, int] = {}
+        operator_counter: Dict[str, Dict[str, Any]] = {}
+
+        for h in histories:
+            fn = h.field_name.lower()
+            if fn == "stage":
+                stage_count += 1
+            elif fn in ("amount", "value"):
+                amount_count += 1
+            elif "close_date" in fn:
+                close_date_count += 1
+            elif "assigned" in fn or "owner" in fn:
+                assigned_to_count += 1
+
+            field_counter[h.field_name] = field_counter.get(h.field_name, 0) + 1
+
+            op_id = h.changed_by or "system"
+            op_name = h.user.full_name if h.user else "Hệ thống"
+            if op_id not in operator_counter:
+                operator_counter[op_id] = {"name": op_name, "count": 0}
+            operator_counter[op_id]["count"] += 1
+
+        first_at = histories[0].changed_at if histories else None
+        last_at = histories[-1].changed_at if histories else None
+
+        changes_by_field = [
+            FieldChangeStat(
+                field_name=k,
+                field_label=FIELD_LABEL_MAP.get(k, get_field_label(k)),
+                count=v,
+            )
+            for k, v in field_counter.items()
+        ]
+
+        top_operators = [
+            OperatorChangeStat(
+                user_id=k,
+                user_name=v["name"],
+                count=v["count"],
+            )
+            for k, v in sorted(operator_counter.items(), key=lambda x: x[1]["count"], reverse=True)
+        ]
+
+        return DealHistorySummaryResponse(
+            deal_id=deal.id,
+            total_changes=total,
+            stage_changes_count=stage_count,
+            amount_changes_count=amount_count,
+            expected_close_date_changes_count=close_date_count,
+            assigned_to_changes_count=assigned_to_count,
+            first_change_at=first_at,
+            last_change_at=last_at,
+            changes_by_field=changes_by_field,
+            top_operators=top_operators,
+        )
+
