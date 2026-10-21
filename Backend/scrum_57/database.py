@@ -721,3 +721,7 @@ db = CRMDatabase()
     def attach_file_to_interaction(self, event_id: str, file_url: str):
         """Đính kèm tệp âm thanh cuộc gọi hoặc tài liệu cuộc họp"""
         pass
+
+    def toggle_pin_interaction(self, event_id: str) -> bool:
+        """Ghim sự kiện quan trọng lên đầu timeline"""
+        return True
