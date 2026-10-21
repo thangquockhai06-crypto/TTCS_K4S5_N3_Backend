@@ -1,0 +1,35 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NexusCRM - Task Reminders & Overdue Notifications API",
+    "version": "1.0.0",
+    "description": "API kỹ thuật phục vụ quản lý công việc, cấu hình mốc nhắc nhở và thống kê cho Trưởng nhóm."
+  },
+  "paths": {
+    "/api/v1/tasks/reminders/settings": {
+      "get": {
+        "summary": "Lấy cấu hình mốc nhắc việc của người dùng hiện tại",
+        "responses": { "200": { "description": "Thành công" } }
+      },
+      "put": {
+        "summary": "Cập nhật cấu hình mốc nhắc việc cá nhân",
+        "responses": { "200": { "description": "Cập nhật thành công" } }
+      }
+    },
+    "/api/v1/tasks/dashboard/personal": {
+      "get": {
+        "summary": "Dashboard công việc cá nhân kèm phân loại quá hạn và sắp đến hạn",
+        "responses": { "200": { "description": "Thành công" } }
+      }
+    },
+    "/api/v1/tasks/statistics/team": {
+      "get": {
+        "summary": "Báo cáo thống kê tình trạng công việc nhóm cho Trưởng nhóm",
+        "responses": {
+          "200": { "description": "Thành công" },
+          "403": { "description": "Không có quyền Trưởng nhóm" }
+        }
+      }
+    }
+  }
+}
