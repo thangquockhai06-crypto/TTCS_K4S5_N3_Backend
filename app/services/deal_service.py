@@ -1057,3 +1057,74 @@ class DealService:
             top_operators=top_operators,
         )
 
+    @classmethod
+    def get_deal_history_for_export(
+        cls,
+        db: Session,
+        deal_id: str,
+        user: User,
+        field_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        changed_by: Optional[str] = None,
+    ) -> tuple[Deal, List[DealHistory]]:
+        """
+        SCRUM-91: Truy xuất toàn bộ lịch sử thỏa mãn điều kiện lọc để chuẩn bị xuất báo cáo Excel/CSV.
+        Kiểm tra quyền truy cập theo vai trò (Record-level Security).
+        """
+        deal = db.query(Deal).filter(Deal.id == deal_id).first()
+        if not deal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy cơ hội bán hàng.",
+            )
+
+        role_norm = (user.role or "").strip().lower().replace("_", " ")
+        scope = get_user_data_scope(user)
+
+        if role_norm in ("sales rep", "sales representative", "employee", "nhân viên", "nhân viên kinh doanh") or scope == DataScope.OWN:
+            if deal.owner_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội này.",
+                )
+        elif role_norm in ("team leader", "team lead", "sales manager", "leader", "trưởng nhóm", "trưởng phòng") or scope == DataScope.TEAM:
+            if not user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn chưa được gán nhóm nên không có quyền truy cập dữ liệu nhóm.",
+                )
+            deal_owner = db.query(User).filter(User.id == deal.owner_id).first()
+            if not deal_owner or deal_owner.team_id != user.team_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền truy cập lịch sử cơ hội thuộc nhóm khác.",
+                )
+
+        parsed_start = None
+        if start_date and start_date.strip():
+            try:
+                parsed_start = datetime.fromisoformat(start_date.strip())
+            except ValueError:
+                parsed_start = datetime.combine(date.fromisoformat(start_date.strip()), datetime.min.time())
+
+        parsed_end = None
+        if end_date and end_date.strip():
+            try:
+                parsed_end = datetime.fromisoformat(end_date.strip())
+            except ValueError:
+                parsed_end = datetime.combine(date.fromisoformat(end_date.strip()), datetime.max.time())
+
+        histories, _ = DealRepository.get_deal_histories(
+            db=db,
+            deal_id=deal.id,
+            field_name=field_name,
+            start_date=parsed_start,
+            end_date=parsed_end,
+            changed_by=changed_by.strip() if changed_by and changed_by.strip() else None,
+            skip=0,
+            limit=10000,
+        )
+        return deal, histories
+
+
