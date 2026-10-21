@@ -177,6 +177,8 @@ CREATE TABLE IF NOT EXISTS deal_histories (
     INDEX idx_deal_histories_deal (deal_id),
     INDEX idx_deal_histories_field (field_name),
     INDEX idx_deal_histories_changed_at (changed_at),
+    INDEX idx_deal_histories_deal_changed_at (deal_id, changed_at),
+    INDEX idx_deal_histories_deal_field (deal_id, field_name),
     FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
     FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

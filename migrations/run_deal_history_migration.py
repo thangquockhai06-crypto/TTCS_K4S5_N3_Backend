@@ -71,6 +71,8 @@ def upgrade(target_engine=None):
             ("idx_deal_histories_deal", "CREATE INDEX idx_deal_histories_deal ON deal_histories(deal_id)"),
             ("idx_deal_histories_field", "CREATE INDEX idx_deal_histories_field ON deal_histories(field_name)"),
             ("idx_deal_histories_changed_at", "CREATE INDEX idx_deal_histories_changed_at ON deal_histories(changed_at)"),
+            ("idx_deal_histories_deal_changed_at", "CREATE INDEX idx_deal_histories_deal_changed_at ON deal_histories(deal_id, changed_at)"),
+            ("idx_deal_histories_deal_field", "CREATE INDEX idx_deal_histories_deal_field ON deal_histories(deal_id, field_name)"),
         ]
         for idx_name, idx_sql in indexes_to_create:
             try:

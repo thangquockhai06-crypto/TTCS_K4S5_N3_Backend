@@ -29,3 +29,9 @@ class DealHistory(Base):
     # Relationships
     deal = relationship("Deal", back_populates="deal_histories")
     user = relationship("User", foreign_keys=[changed_by], lazy="joined")
+
+    # Composite indexes tối ưu hóa truy vấn sắp xếp và tìm kiếm theo cơ hội
+    __table_args__ = (
+        Index("ix_deal_histories_deal_id_changed_at", "deal_id", "changed_at"),
+        Index("ix_deal_histories_deal_id_field_name", "deal_id", "field_name"),
+    )
