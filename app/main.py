@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
-from app.database import engine, Base, run_ep03_migrations, run_ep04_ep05_migrations, run_ep06_migrations
+from app.database import engine, Base, run_ep03_migrations, run_ep04_ep05_migrations, run_ep06_migrations, run_ep07_migrations
 from app.routers import (
     auth_router,
     users_router,
@@ -35,6 +35,11 @@ from app.routers import (
     leads_router,
     campaigns_router,
     tasks_router,
+    contracts_router,
+    pdf_templates_router,
+    notifications_router,
+    automations_router,
+    public_quotes_router,
 )
 
 @asynccontextmanager
@@ -45,7 +50,8 @@ async def lifespan(app: FastAPI):
         run_ep03_migrations(engine)
         run_ep04_ep05_migrations(engine)
         run_ep06_migrations(engine)
-        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03, EP-04, EP-05, EP-06 san sang).")
+        run_ep07_migrations(engine)
+        print("[DATABASE] Da ket noi va dong bo cau truc bang thanh cong (EP-03, EP-04, EP-05, EP-06, EP-07 san sang).")
         try:
             import seed
             seed.seed_database()
@@ -120,6 +126,11 @@ app.include_router(user_import_router, prefix=settings.API_V1_STR)
 app.include_router(leads_router, prefix=settings.API_V1_STR)
 app.include_router(campaigns_router, prefix=settings.API_V1_STR)
 app.include_router(tasks_router, prefix=settings.API_V1_STR)
+app.include_router(contracts_router, prefix=settings.API_V1_STR)
+app.include_router(pdf_templates_router, prefix=settings.API_V1_STR)
+app.include_router(notifications_router, prefix=settings.API_V1_STR)
+app.include_router(automations_router, prefix=settings.API_V1_STR)
+app.include_router(public_quotes_router, prefix=settings.API_V1_STR)
 
 @app.get("/", summary="Health Check")
 def root():
