@@ -46,3 +46,5 @@ class Customer(Base):
     activities = relationship("Activity", back_populates="customer", cascade="all, delete-orphan")
     notes = relationship("Note", back_populates="customer", cascade="all, delete-orphan")
     support_tickets = relationship("SupportTicket", back_populates="customer", cascade="all, delete-orphan")
+
+from app.models.contact import Contact  # backward compatibility re-export

@@ -88,3 +88,17 @@ def get_user_data_scope(user: Optional[object]) -> DataScope:
 
     normalized_role_spaced = normalized_role.replace("_", " ")
     return ROLE_SCOPE_MAPPING.get(normalized_role_spaced, DataScope.OWN)
+
+
+def check_data_scope_access(user, record_owner_id=None) -> bool:
+    if isinstance(user, dict):
+        role = str(user.get("role") or "").upper()
+        scope = str(user.get("data_scope") or "").upper()
+        uid = user.get("id")
+    else:
+        role = str(getattr(user, "role", "") or "").upper()
+        scope = str(getattr(user, "data_scope", "") or "").upper()
+        uid = getattr(user, "id", None)
+    if role in ("ADMIN", "SUPER ADMIN", "SALES DIRECTOR", "DIRECTOR") or scope in ("GLOBAL", "ALL"):
+        return True
+    return uid == record_owner_id
