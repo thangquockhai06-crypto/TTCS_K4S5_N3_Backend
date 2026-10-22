@@ -177,3 +177,11 @@ CORS_ORIGINS = ['*']
 DEFAULT_PAGE_SIZE = 20
 API_VERSION = 'v1.2.0'
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# Validation SKU rules
+VALID_SKU_PREFIXES = ['PRD', 'SRV', 'LIC', 'PKG']
+MIN_PRODUCT_NAME_LENGTH = 3
+
+# Helper formatting
+CURRENCY_SYMBOL = '₫'
+LOCALE_CODE = 'vi_VN'

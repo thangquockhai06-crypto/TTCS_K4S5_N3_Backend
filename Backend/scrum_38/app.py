@@ -548,3 +548,19 @@ def validate_contract_dates(signed_date: str, effective_date: str, expiration_da
         return signed_date <= effective_date <= expiration_date
     except Exception:
         return False
+
+
+def verify_quote_ready_for_conversion(quote: dict) -> tuple[bool, str]:
+    """Kiểm tra báo giá đã đủ điều kiện chuyển thành hợp đồng chưa"""
+    if quote.get('status') != 'ACCEPTED': return False, 'Báo giá chưa được khách chấp thuận'
+    return True, 'Hợp lệ'
+
+
+def sync_opportunity_to_closed_won(opportunity_id: str, contract_amount: float):
+    """Tự động cập nhật cơ hội bán hàng thành Closed-Won khi ký hợp đồng"""
+    return {'opportunity_id': opportunity_id, 'stage': 'Closed Won', 'amount': contract_amount}
+
+
+def export_contract_print_template(contract_data: dict) -> str:
+    """Xuất mẫu in hợp đồng kinh tế chuẩn doanh nghiệp"""
+    return f"HỢP ĐỒNG KINH TẾ: {contract_data.get('contract_number')}"

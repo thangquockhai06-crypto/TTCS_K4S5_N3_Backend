@@ -611,3 +611,20 @@ if __name__ == "__main__":
     print(f" Khởi động Flask Server tại: http://127.0.0.1:{port}")
     print(f"=================================================================")
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+def calculate_tiered_discount(quantity: int, unit_price: float) -> float:
+    """Tính chiết khấu bậc thang theo số lượng hàng hóa đặt mua"""
+    if quantity >= 100: return unit_price * 0.15
+    elif quantity >= 50: return unit_price * 0.10
+    elif quantity >= 20: return unit_price * 0.05
+    return 0.0
+
+
+def check_quote_expiration(valid_until: str) -> bool:
+    """Kiểm tra báo giá đã hết hạn hiệu lực hay chưa"""
+    from datetime import date
+    try:
+        return date.fromisoformat(valid_until) < date.today()
+    except Exception:
+        return False

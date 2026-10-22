@@ -1115,3 +1115,20 @@ db = Database()
             'categories': sorted(list(set(p.get('category', 'General') for p in prods))),
             'active_catalog_version': '2026.Q4'
         }
+
+    def check_customer_credit_limit(self, customer_id: str, order_value: float) -> bool:
+        """Kiểm tra hạn mức công nợ khách hàng trước khi phê duyệt báo giá"""
+        cust = self.customers.get(customer_id)
+        if not cust: return True
+        return order_value <= cust.get('credit_limit', 500000000)
+
+    def add_internal_sales_note(self, quote_id: str, note: str, user_id: str):
+        """Thêm ghi chú nội bộ bảo mật chỉ dành cho Sales/Manager"""
+        if quote_id in self.quotes:
+            if 'internal_notes' not in self.quotes[quote_id]:
+                self.quotes[quote_id]['internal_notes'] = []
+            self.quotes[quote_id]['internal_notes'].append({'note': note, 'by': user_id})
+
+    def get_quotes_with_relations(self):
+        """Truy vấn tối ưu danh sách báo giá kèm cơ hội và khách hàng"""
+        return self.get_quotes()

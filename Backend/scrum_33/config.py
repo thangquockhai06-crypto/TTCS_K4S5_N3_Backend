@@ -167,3 +167,9 @@ PRODUCT_CATALOG = [
 
 # Thuế VAT mặc định
 DEFAULT_VAT_PERCENT = 8.0
+
+# Extended approval threshold
+DIRECTOR_APPROVAL_MIN_AMOUNT = 500000000 # 500M VND
+
+# Indexing optimization configuration
+ENABLE_COMPOSITE_INDEX_APPROVAL = True

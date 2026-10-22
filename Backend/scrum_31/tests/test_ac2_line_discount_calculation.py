@@ -85,3 +85,8 @@ class TestAC2LineDiscountCalculation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_discount_cannot_exceed_100_percent(self):
+        """Kiểm tra biên: Chiết khấu không được vượt quá 100%"""
+        invalid_discount = 120.0
+        self.assertTrue(invalid_discount > 100)

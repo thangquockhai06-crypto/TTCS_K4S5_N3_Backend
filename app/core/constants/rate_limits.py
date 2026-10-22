@@ -1,0 +1,2 @@
+TASK_API_RATE_LIMIT = '100/minute'
+NOTIF_API_RATE_LIMIT = '200/minute'

@@ -243,3 +243,9 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Modern Timeline Icons */
+.timeline-icon-call { color: #3b82f6; }
+.timeline-icon-email { color: #f59e0b; }
+.timeline-icon-meeting { color: #10b981; }
+.timeline-icon-zalo { color: #0068ff; }

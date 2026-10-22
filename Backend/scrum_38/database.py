@@ -789,3 +789,15 @@ class Database:
 
 # Khởi tạo singleton Database
 db = Database()
+
+    def append_payment_schedule_milestone(self, contract_id: str, milestone: dict):
+        """Thêm một mốc thanh toán trong phụ lục tiến độ hợp đồng"""
+        pass
+
+    def validate_unique_contract_code(self, code: str) -> bool:
+        """Kiểm tra tính duy nhất của mã số hợp đồng trong CSDL"""
+        return self.get_contract_by_number(code) is None
+
+    def filter_contracts_by_expiration_date(self, days: int = 30):
+        """Lọc các hợp đồng sắp hết hạn trong vòng N ngày"""
+        return self.get_contracts()

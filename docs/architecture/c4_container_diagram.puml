@@ -1,0 +1,5 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+Container(api, 'FastAPI Backend')
+ContainerDb(db, 'MySQL Database')
+@enduml

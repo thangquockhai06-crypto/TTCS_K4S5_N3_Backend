@@ -136,3 +136,10 @@ DELIVERY_TERMS_OPTIONS = [
     "Bàn giao hệ thống trong 15 ngày làm việc kèm biên bản nghiệm thu kỹ thuật",
     "Giao hàng tận nơi tại trụ sở khách hàng kèm hướng dẫn sử dụng"
 ]
+
+# Version changelog labels
+VERSION_CHANGE_TYPES = ['DISCOUNT_CHANGE', 'PRODUCT_CHANGE', 'TERMS_UPDATE']
+
+# Cache configuration for historical snapshots
+ENABLE_VERSION_CACHE = True
+VERSION_CACHE_TTL = 3600

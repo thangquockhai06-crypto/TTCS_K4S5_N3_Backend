@@ -776,3 +776,7 @@ textarea.form-control {
         grid-template-columns: 1fr;
     }
 }
+
+/* Urgent Priority highlight */
+.badge-urgent { background-color: #ef4444; color: #fff; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }

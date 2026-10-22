@@ -805,3 +805,8 @@ body {
 .diff-highlight-add { background-color: rgba(16, 185, 129, 0.15); border-left: 3px solid #10b981; }
 .diff-highlight-mod { background-color: rgba(245, 158, 11, 0.15); border-left: 3px solid #f59e0b; }
 .diff-badge-status { font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 9999px; }
+
+/* Responsive diff view */
+@media (max-width: 768px) {
+    .diff-container { flex-direction: column; }
+}

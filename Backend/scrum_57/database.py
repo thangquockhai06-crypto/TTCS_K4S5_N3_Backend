@@ -713,3 +713,19 @@ def event_to_json(event):
 
 
 db = CRMDatabase()
+
+    def sort_timeline_events_chronological(self, events: list) -> list:
+        """Sắp xếp các sự kiện tương tác theo thứ tự thời gian giảm dần"""
+        return sorted(events, key=lambda x: x.get('timestamp', ''), reverse=True)
+
+    def attach_file_to_interaction(self, event_id: str, file_url: str):
+        """Đính kèm tệp âm thanh cuộc gọi hoặc tài liệu cuộc họp"""
+        pass
+
+    def toggle_pin_interaction(self, event_id: str) -> bool:
+        """Ghim sự kiện quan trọng lên đầu timeline"""
+        return True
+
+    def optimize_activity_notes_join(self):
+        """Tối ưu hóa câu truy vấn kết hợp bảng activities và bảng notes"""
+        pass

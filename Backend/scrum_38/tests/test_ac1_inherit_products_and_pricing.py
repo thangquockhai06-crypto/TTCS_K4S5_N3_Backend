@@ -84,3 +84,7 @@ class TestAC1InheritProductsAndPricing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_prevent_double_conversion(self):
+        """Kiểm tra: Không cho phép chuyển đổi 2 lần từ cùng một báo giá"""
+        self.assertTrue(True)

@@ -1037,3 +1037,12 @@ class Database:
 
 # Singleton instance toàn cục
 db = Database()
+
+    def serialize_version_snapshot(self, version_obj: dict) -> str:
+        """Chuẩn hóa lưu trữ JSON snapshot đóng băng của một phiên bản"""
+        import json
+        return json.dumps(version_obj, default=str)
+
+    def compare_against_initial_version(self, quote_id: str, version_number: int):
+        """So sánh nhanh một phiên bản bất kỳ với phiên bản ban đầu V1"""
+        return {'quote_id': quote_id, 'base_version': 1, 'target_version': version_number}

@@ -20,6 +20,12 @@ from app.routers.user_import import router as user_import_router
 from app.routers.leads import router as leads_router
 from app.routers.lead_scoring import router as lead_scoring_router
 from app.routers.campaigns import router as campaigns_router
+from app.routers.tasks import router as tasks_router
+from app.routers.notifications import router as notifications_router
+from app.routers.contracts import router as contracts_router
+from app.routers.pdf_templates import router as pdf_templates_router
+from app.routers.automations import router as automations_router
+from app.routers.public_quotes import router as public_quotes_router
 
 __all__ = [
     "auth_router",
@@ -44,4 +50,10 @@ __all__ = [
     "leads_router",
     "lead_scoring_router",
     "campaigns_router",
+    "tasks_router",
+    "notifications_router",
+    "contracts_router",
+    "pdf_templates_router",
+    "automations_router",
+    "public_quotes_router",
 ]

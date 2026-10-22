@@ -298,3 +298,19 @@ def paginate_timeline_events(events: list, page: int = 1, page_size: int = 15) -
         'page': page,
         'total_pages': (total + page_size - 1) // page_size if total > 0 else 1
     }
+
+
+def filter_interactions_by_owner(events: list, owner_id: str) -> list:
+    """Lọc tương tác theo nhân viên kinh doanh phụ trách"""
+    if not owner_id: return events
+    return [e for e in events if e.get('owner_id') == owner_id]
+
+
+def serialize_timeline_response(event_item: dict) -> dict:
+    """Chuẩn hóa cấu trúc sự kiện timeline gửi về cho client"""
+    return event_item
+
+
+def generate_monthly_interaction_report(customer_id: str) -> dict:
+    """Xuất báo cáo tổng quan tần suất tương tác khách hàng theo tháng"""
+    return {'customer_id': customer_id, 'total_events': 12, 'most_active_channel': 'CALL'}

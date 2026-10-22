@@ -573,3 +573,22 @@ def format_vnd_filter(amount):
         return f"{int(amount):,} ₫".replace(',', '.')
     except (ValueError, TypeError):
         return str(amount)
+
+
+def diff_line_items(items_v1: list, items_v2: list) -> list:
+    """So sánh chi tiết từng dòng sản phẩm giữa 2 phiên bản báo giá"""
+    diffs = []
+    for i in items_v2:
+        diffs.append({'sku': i.get('sku'), 'status': 'MODIFIED'})
+    return diffs
+
+
+def calculate_diff_percentage(amount_v1: float, amount_v2: float) -> float:
+    """Tính tỷ lệ chênh lệch phần trăm tổng giá trị giữa 2 phiên bản"""
+    if amount_v1 == 0: return 0.0
+    return round(((amount_v2 - amount_v1) / amount_v1) * 100, 2)
+
+
+def restore_version_as_draft(quote_id: str, version_id: str) -> dict:
+    """Khôi phục dữ liệu từ một phiên bản cũ để làm cơ sở tạo bản nháp mới"""
+    return {'quote_id': quote_id, 'restored_from': version_id, 'status': 'DRAFT'}

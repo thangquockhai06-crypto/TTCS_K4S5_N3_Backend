@@ -189,3 +189,69 @@ Bộ test bao gồm:
 - `tests/test_scrum79_excel_import.py` (6 tests chi tiết xử lý tải template, preview & batch import)
 
 
+
+## Opportunity close/reopen lifecycle
+
+The existing `deals` table is the opportunity entity. Both `/api/v1/opportunities` and
+`/api/v1/deals` expose the same lifecycle:
+
+- `POST /api/v1/opportunities/{id}/close`
+  - WON: `{"outcome":"WON","actualValue":"125000000.00","signedDate":"2026-03-31"}`
+  - LOST: `{"outcome":"LOST","lostReasonId":"<reason-id>","lostReasonNote":"...","competitorId":"<optional-id>"}`
+- `POST /api/v1/opportunities/{id}/reopen`
+  - `{"reopenReason":"Customer changed approval path"}`
+- `GET /api/v1/opportunities/{id}/history`
+
+Responses include `outcome`, `status`, `closedAt`, `closedBy`, `actualValue`,
+`signedDate`, lost-reason and competitor fields, reopen metadata, and append-only
+close/reopen history. List queries support `outcome`, `closedFrom`/`closedTo`,
+`signedFrom`/`signedTo`, and `lostReasonId` (snake-case query aliases are also accepted).
+
+WON requires an actual value greater than zero and a signing date no later than the
+server's current date. LOST requires an active LOST catalog reason; `OTHER` also
+requires a non-empty note. Closed deals are immutable until a Team Lead or higher
+role reopens them within the existing data scope. Reopening restores the last open
+stage and clears current close-only fields; the prior values remain in history.
+
+There is no existing KPI persistence module. `KPIService.get_won_value_for_owner`
+and `GET /api/v1/dashboard/kpi/won-value` aggregate active WON rows by owner and
+the inclusive `signed_date` period. Reopened rows are excluded automatically, so a
+re-close is counted once. Currency remains the existing single-currency VND
+convention and database money columns use `DECIMAL(15,2)`.
+
+The project uses startup compatibility migrations rather than versioned migration
+files. `run_auto_migrations()` adds the close/reopen columns, creates the history
+table, seeds the `OTHER` fallback, and backfills legacy `stage=won/lost` rows:
+WON uses the legacy value and close timestamp; LOST uses the active `OTHER` reason.
+
+---
+
+## SCRUM-24 (Sprint 4 / Story S4-01): Thu thập Lead từ Biểu mẫu nhúng trên Website (Web-to-Lead Form)
+
+### 1. Mô tả tính năng
+Cho phép Marketing và Admin tạo, quản lý và sinh mã nhúng biểu mẫu (Script / Iframe) để đặt trên bất kỳ website hoặc Landing Page bên ngoài nào.
+Khi người dùng truy cập điền biểu mẫu, hệ thống tự động:
+- Kiểm tra tính hợp lệ của số điện thoại di động Việt Nam (10 số, đầu số `03`, `05`, `07`, `08`, `09`) và Email.
+- Kích hoạt cơ chế chống bot spam qua Honeypot hidden fields (`_hp`, `website_hp`). Nếu bot điền dữ liệu vào các trường này, hệ thống âm thầm trả về thành công giả lập nhưng không lưu vào CSDL.
+- Kích hoạt IP Rate Limiting (tối đa 5 request / phút / địa chỉ IP Client). Vượt quá ngưỡng trả về `HTTP 429 Too Many Requests` kèm header `Retry-After`.
+- Tự động tạo bản ghi mới trong bảng `leads` với trạng thái `status = 'NEW'`, nguồn `source = form.lead_source` và ghi nhận `client_ip`.
+
+### 2. Danh sách Endpoints
+- **Quản lý biểu mẫu (Yêu cầu JWT Bearer Token - Marketing / Admin):**
+  - `POST /api/v1/forms`: Tạo cấu hình form mới (tự động sinh `form_key` định danh duy nhất).
+  - `GET /api/v1/forms`: Lấy danh sách biểu mẫu kèm mã nhúng và tổng số lead.
+  - `GET /api/v1/forms/{id}`: Xem chi tiết một biểu mẫu.
+  - `GET /api/v1/forms/{id}/embed-code`: Lấy đoạn mã nhúng Javascript và HTML Iframe.
+  - `PUT /api/v1/forms/{id}`: Cập nhật thông tin form (tên, nguồn lead, trạng thái `is_active`).
+  - `DELETE /api/v1/forms/{id}`: Xóa biểu mẫu.
+  - `GET /api/v1/forms/{id}/leads`: Lấy danh sách lead được thu thập từ biểu mẫu cụ thể.
+- **Quản lý danh sách Lead tổng thể (Yêu cầu JWT Bearer Token):**
+  - `GET /api/v1/leads`: Lấy danh sách Lead toàn hệ thống kèm phân trang và lọc (`status`, `form_id`, `source`, `q`).
+  - `PUT /api/v1/leads/{id}/status`: Cập nhật trạng thái xử lý Lead (`NEW`, `CONTACTED`, `QUALIFIED`, `CONVERTED`, `REJECTED`).
+- **Endpoint Công khai (Public API - Hỗ trợ CORS Cross-Origin):**
+  - `POST /api/v1/public/forms/{form_key}/submit`: Endpoint tiếp nhận submit thông tin lead từ website bất kỳ (không cần JWT token).
+  - `OPTIONS /api/v1/public/forms/{form_key}/submit`: Preflight CORS handler.
+  - `GET /api/v1/public/forms/{form_key}`: Lấy metadata tiêu đề form.
+  - `GET /api/v1/public/forms/{form_key}/render`: Giao diện biểu mẫu HTML hoàn chỉnh dùng cho Iframe độc lập.
+  - `GET /static/form-loader.js` (hoặc `/api/v1/public/forms/loader.js`): File Javascript loader tải và nhúng biểu mẫu tự động.
+

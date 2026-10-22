@@ -487,3 +487,16 @@ if __name__ == "__main__":
 def validate_rejection_reason(reason: str) -> bool:
     """Xác thực lý do từ chối phê duyệt bắt buộc có độ dài tối thiểu 5 ký tự"""
     return bool(reason and len(reason.strip()) >= 5)
+
+
+def format_approval_webhook_payload(quote_data: dict, status: str) -> dict:
+    """Định dạng payload gửi webhook tới kênh thông báo Slack/Telegram nội bộ"""
+    return {'quote_id': quote_data.get('id'), 'status': status, 'timestamp': '2026-10-04'}
+
+# SLA Indicator
+DEFAULT_APPROVAL_SLA_HOURS = 24
+
+
+def can_recall_approval_request(quote_status: str) -> bool:
+    """Kiểm tra nhân viên có được thu hồi yêu cầu khi chưa ai duyệt không"""
+    return quote_status == 'PENDING_APPROVAL'

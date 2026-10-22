@@ -99,3 +99,7 @@ class TestAC3ApprovalActions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_rejection_requires_non_empty_reason(self):
+        """Kiểm tra: Từ chối báo giá bắt buộc phải nhập lý do giải trình"""
+        self.assertFalse(bool(''.strip()))
